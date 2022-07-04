@@ -1,0 +1,21 @@
+﻿"ITTER107","Territorio","TIPO_DATO15","Tipo di indicatore demografico","SEXISTAT1","Sesso","ETA1","Età","STATCIV2","Stato civile","TIME","Seleziona periodo","Value","Flag Codes","Flags"
+"033032","Piacenza","JAN","popolazione al 1º gennaio","9","totale","TOTAL","totale","99","totale","2019","2019",103904,,
+"033032","Piacenza","JAN","popolazione al 1º gennaio","9","totale","TOTAL","totale","99","totale","2020","2020",104260,,
+"033032","Piacenza","JAN","popolazione al 1º gennaio","9","totale","TOTAL","totale","99","totale","2021","2021",102731,,
+"033032","Piacenza","JAN","popolazione al 1º gennaio","9","totale","TOTAL","totale","99","totale","2022","2022",102902,"e","dato stimato"
+"018110","Pavia","JAN","popolazione al 1º gennaio","9","totale","TOTAL","totale","99","totale","2019","2019",71943,,
+"018110","Pavia","JAN","popolazione al 1º gennaio","9","totale","TOTAL","totale","99","totale","2020","2020",71882,,
+"018110","Pavia","JAN","popolazione al 1º gennaio","9","totale","TOTAL","totale","99","totale","2021","2021",71122,,
+"018110","Pavia","JAN","popolazione al 1º gennaio","9","totale","TOTAL","totale","99","totale","2022","2022",71159,"e","dato stimato"
+"018095","Montebello della Battaglia","JAN","popolazione al 1º gennaio","9","totale","TOTAL","totale","99","totale","2019","2019",1546,,
+"018095","Montebello della Battaglia","JAN","popolazione al 1º gennaio","9","totale","TOTAL","totale","99","totale","2020","2020",1525,,
+"018095","Montebello della Battaglia","JAN","popolazione al 1º gennaio","9","totale","TOTAL","totale","99","totale","2021","2021",1512,,
+"018095","Montebello della Battaglia","JAN","popolazione al 1º gennaio","9","totale","TOTAL","totale","99","totale","2022","2022",1476,"e","dato stimato"
+"018153","Stradella","JAN","popolazione al 1º gennaio","9","totale","TOTAL","totale","99","totale","2019","2019",11699,,
+"018153","Stradella","JAN","popolazione al 1º gennaio","9","totale","TOTAL","totale","99","totale","2020","2020",11689,,
+"018153","Stradella","JAN","popolazione al 1º gennaio","9","totale","TOTAL","totale","99","totale","2021","2021",11448,,
+"018153","Stradella","JAN","popolazione al 1º gennaio","9","totale","TOTAL","totale","99","totale","2022","2022",11430,"e","dato stimato"
+"018182","Voghera","JAN","popolazione al 1º gennaio","9","totale","TOTAL","totale","99","totale","2019","2019",39051,,
+"018182","Voghera","JAN","popolazione al 1º gennaio","9","totale","TOTAL","totale","99","totale","2020","2020",39006,,
+"018182","Voghera","JAN","popolazione al 1º gennaio","9","totale","TOTAL","totale","99","totale","2021","2021",38435,,
+"018182","Voghera","JAN","popolazione al 1º gennaio","9","totale","TOTAL","totale","99","totale","2022","2022",38455,"e","dato stimato"
