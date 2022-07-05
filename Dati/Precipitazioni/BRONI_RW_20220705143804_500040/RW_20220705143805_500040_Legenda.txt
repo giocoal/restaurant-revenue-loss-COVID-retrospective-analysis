@@ -1,0 +1,14 @@
+﻿Legenda
+-999 Valore mancante o invalido
+Legenda dei valori speciali
+Valore, Descrizione
+777,calma
+7777,calma
+888,variabile
+8888,variabile
+Nota: i gradi di Direzione del Vento sono riferiti al Nord
+
+Riepilogo estrazione
+Id_Stazione,Nome_Stazione,Id_Sensore,Nome_Sensore,Unita_Misura,Periodo_Dal,Periodo_Al,Operatore
+1862,Broni ,17437,Precipitazione,mm,2018/03/23 00:00,2022/04/30 00:00,Cumulata
+I dati sono estratti in ORA SOLARE (UTC + 1)
