@@ -1,0 +1,380 @@
+# SETTING PROGETTO -------------------------------------------------------------
+
+set.seed(100)
+
+# Setting librerie utili
+# Package names
+packages <- c("readxl",  "readr", "forecast", "dplyr", "magrittr", "ggplot2",
+              "forcats", "lubridate", "RQuantLib", "devtools", "patchwork", "KFAS",
+              "caret", "tseries", "urca", "TSstudio", "gridExtra", "randomForest",
+              "prophet", "xts", "corrplot", "rstan") 
+
+# Install packages if not yet installed
+installed_packages <- packages %in% rownames(installed.packages())
+if (any(installed_packages == FALSE)) {
+  install.packages(packages[!installed_packages])
+}
+
+# Packages loading
+invisible(lapply(packages, library, character.only = TRUE))
+
+
+# Setting working directory
+# working_dir = percorso cartella dati
+working_dir = "~/GitHub/Data-Science-Lab"
+setwd(working_dir)
+
+# Funzione utile 
+mape <- function(actual,pred){
+  mape <- mean(abs((actual - pred)/actual))*100
+  return (mape)
+}
+
+# Caricamento datasets
+ristorante1 <- read.csv("ristorante1.csv")
+
+# Presenza di NaN
+
+sum(is.na(ristorante1$scontrini)) # 300 NA
+# which(is.na(ristorante1$scontrini))
+subset(ristorante1[,c(2,6)], is.na(ristorante1$scontrini))
+# Fino alla riga 243 la presenza di NaN è causata dal fatto che i dati sono
+# aggregati mensilmente. Dopodichè c'è tutto il periodo COVID (da 802 a 857) e 
+# alcune festività
+
+### Metto a 0 i Na, per comodità
+
+ristorante1$lordototale[is.na(ristorante1$lordototale)] <- 0
+ristorante1$scontrini[is.na(ristorante1$scontrini)] <- 0  
+ristorante1$Prezzo_medio_per_scontrino[is.na(ristorante1$Prezzo_medio_per_scontrino)] <- 0
+
+# Definisco il formato della data
+
+ristorante1$data <- parse_date(ristorante1$data, "%Y-%m-%d", locale = locale("it"))
+
+# Creo una copia togliendo i dati aggregati mensilmente dei primi 8 mesi del 2018
+
+copy_ristorante1 <- ristorante1[-c(1:243),]
+
+# Vendite giornaliere 
+vendite1_day <- ts(copy_ristorante1$lordototale, start = decimal_date(as.Date("2018-09-01")), frequency=365)
+
+print(
+  autoplot(vendite1_day) +
+    ggtitle("Ristorante 1: vendite giornaliere") +
+    xlab("Anno") +
+    ylab("Vendite")
+)
+
+# Vendite settimanali medie
+# Per comodità utilizzo il dataset completo perchè il 01-01-2018 è un lunedì.
+# Poi toglierò i dati delle prime 35 settimane perchè sono aggregati mensilmente
+week_rist1 <- as.Date(cut(ristorante1$data, "week"))
+vendite1_sett_avg <- aggregate(lordototale ~ week_rist1, data = ristorante1, mean)
+# Tolgo le settimane nei periodi in cui ho dati mensili (la prima settimana
+# considerata parte dal 03-09-2018)
+vendite1_sett_avg <- vendite1_sett_avg[-c(1:35),]
+vendite1_sett_avg <- vendite1_sett_avg$lordototale
+vendite1_sett_avg <- ts(vendite1_sett_avg, start = decimal_date(as.Date("2018-09-03")), frequency=52)
+
+print(
+  autoplot(vendite1_sett_avg) +
+    ggtitle("Ristorante 1: vendite medie settimanali") +
+    xlab("Anno") +
+    ylab("Vendite")
+)
+
+# Vendite mensili medie
+# Uso direttamente il dataset completo, considerando anche i dati già aggregati
+# mensilmente
+month_rist1 <- as.Date(cut(ristorante1$data, "month"))
+
+vendite1_mens_avg <- aggregate(lordototale ~ month_rist1, data = ristorante1, mean)
+vendite1_mens_avg <- vendite1_mens_avg$lordototale
+vendite1_mens_avg <- ts(vendite1_mens_avg, start=2018, frequency=12)
+
+print(
+  autoplot(vendite1_mens_avg) +
+    ggtitle("Ristorante 1: vendite medie mensili") +
+    xlab("Anno") +
+    ylab("Vendite")
+)
+
+### Vendite giornaliere/settimanali/mensili periodo pre-COVID
+# Prendo come data di riferimeno quella in cui le autorità cinesi hanno identificato
+# il virus
+data_covid <- as.Date("2020-01-07", format = "%Y-%m-%d")
+# Ristorante 1 pre-COVID
+ristorante1_pre_covid <- ristorante1 %>% filter(ristorante1$data < data_covid)
+copy_ristorante1_pre_covid <- copy_ristorante1 %>% filter(copy_ristorante1$data < data_covid)
+
+# Vendite giornaliere pre-COVID
+pre_covid_1_day <- ts(copy_ristorante1_pre_covid$lordototale, start = decimal_date(as.Date("2018-09-01")), frequency=365)
+
+print(
+  autoplot(pre_covid_1_day) +
+    ggtitle("Ristorante 1: vendite giornaliere pre-COVID") +
+    xlab("Anno") +
+    ylab("Vendite")
+)
+
+# Vendite settimanali pre-COVID
+# Per comodità utilizzo il dataset completo perchè il 01-01-2018 è un lunedì.
+# Poi toglierò i dati delle prime 35 settimane perchè sono aggregati mensilmente
+week_rist1_pre_covid <- as.Date(cut(ristorante1_pre_covid$data, "week"))
+pre_covid_1_sett_avg <- aggregate(lordototale ~ week_rist1_pre_covid, data = ristorante1_pre_covid, mean)
+# Tolgo le settimane nei periodi in cui ho dati mensili (la prima settimana
+# considerata parte dal 03-09-2018)
+pre_covid_1_sett_avg <- pre_covid_1_sett_avg[-c(1:35),]
+pre_covid_1_sett_avg <- pre_covid_1_sett_avg$lordototale
+pre_covid_1_sett_avg <- ts(pre_covid_1_sett_avg, start = decimal_date(as.Date("2018-09-03")), frequency=52)
+
+print(
+  autoplot(pre_covid_1_sett_avg) +
+    ggtitle("Ristorante 1: vendite medie settimanali pre-COVID") +
+    xlab("Anno") +
+    ylab("Vendite")
+)
+
+# Vendite mensili pre-COVID
+# Uso direttamente il dataset completo, considerando anche i dati già aggregati
+# mensilmente
+month_rist1_pre_covid <- as.Date(cut(ristorante1_pre_covid$data, "month"))
+
+pre_covid_1_mens_avg <- aggregate(lordototale ~ month_rist1_pre_covid, data = ristorante1_pre_covid, mean)
+pre_covid_1_mens_avg <- pre_covid_1_mens_avg$lordototale
+pre_covid_1_mens_avg <- ts(pre_covid_1_mens_avg, start=2018, frequency=12)
+
+print(
+  autoplot(pre_covid_1_mens_avg) +
+    ggtitle("Ristorante 1: vendite medie mensili pre-COVID") +
+    xlab("Anno") +
+    ylab("Vendite")
+)
+
+
+### Faccio la stessa analisi precedente sul numero di scontrini
+
+# Scontrini giornalieri 
+scontrini1_day <- ts(copy_ristorante1$scontrini, start = decimal_date(as.Date("2018-09-01")), frequency=365)
+
+print(
+  autoplot(scontrini1_day) +
+    ggtitle("Ristorante 1: scontrini giornalieri") +
+    xlab("Anno") +
+    ylab("Scontrini")
+)
+
+# Scontrini settimanali medi
+# Per comodità utilizzo il dataset completo perchè il 01-01-2018 è un lunedì.
+# Poi toglierò i dati delle prime 35 settimane perchè sono aggregati mensilmente
+week_rist1 <- as.Date(cut(ristorante1$data, "week"))
+scontrini1_sett_avg <- aggregate(scontrini ~ week_rist1, data = ristorante1, mean)
+# Tolgo le settimane nei periodi in cui ho dati mensili (la prima settimana
+# considerata parte dal 03-09-2018)
+scontrini1_sett_avg <- scontrini1_sett_avg[-c(1:35),]
+scontrini1_sett_avg <- scontrini1_sett_avg$scontrini
+scontrini1_sett_avg <- ts(scontrini1_sett_avg, start = decimal_date(as.Date("2018-09-03")), frequency=52)
+
+print(
+  autoplot(scontrini1_sett_avg) +
+    ggtitle("Ristorante 1: scontrini medi settimanali") +
+    xlab("Anno") +
+    ylab("Scontrini")
+)
+
+# Scontrini mensili medi
+# Uso direttamente il dataset completo, considerando anche i dati già aggregati
+# mensilmente
+month_rist1 <- as.Date(cut(ristorante1$data, "month"))
+
+scontrini1_mens_avg <- aggregate(scontrini ~ month_rist1, data = ristorante1, mean)
+scontrini1_mens_avg <- scontrini1_mens_avg$scontrini
+scontrini1_mens_avg <- ts(scontrini1_mens_avg, start=2018, frequency=12)
+
+print(
+  autoplot(scontrini1_mens_avg) +
+    ggtitle("Ristorante 1: scontrini medi mensili") +
+    xlab("Anno") +
+    ylab("Scontrini")
+)
+
+### Vendite giornaliere/settimanali/mensili periodo pre-COVID
+
+# Vendite giornaliere pre-COVID
+scontrini_pre_covid_1_day <- ts(copy_ristorante1_pre_covid$scontrini, start = decimal_date(as.Date("2018-09-01")), frequency=365)
+
+print(
+  autoplot(scontrini_pre_covid_1_day) +
+    ggtitle("Ristorante 1: scontrini giornalieri pre-COVID") +
+    xlab("Anno") +
+    ylab("Scontrini")
+)
+
+# Scontrini settimanali pre-COVID
+# Per comodità utilizzo il dataset completo perchè il 01-01-2018 è un lunedì.
+# Poi toglierò i dati delle prime 35 settimane perchè sono aggregati mensilmente
+week_rist1_pre_covid <- as.Date(cut(ristorante1_pre_covid$data, "week"))
+scontrini_pre_covid_1_sett_avg <- aggregate(scontrini ~ week_rist1_pre_covid, data = ristorante1_pre_covid, mean)
+# Tolgo le settimane nei periodi in cui ho dati mensili (la prima settimana
+# considerata parte dal 03-09-2018)
+scontrini_pre_covid_1_sett_avg <- scontrini_pre_covid_1_sett_avg[-c(1:35),]
+scontrini_pre_covid_1_sett_avg <- scontrini_pre_covid_1_sett_avg$scontrini
+scontrini_pre_covid_1_sett_avg <- ts(scontrini_pre_covid_1_sett_avg, start = decimal_date(as.Date("2018-09-03")), frequency=52)
+
+print(
+  autoplot(scontrini_pre_covid_1_sett_avg) +
+    ggtitle("Ristorante 1: scontrini medi settimanali pre-COVID") +
+    xlab("Anno") +
+    ylab("Scontrini")
+)
+
+# Scontrini mensili pre-COVID
+# Uso direttamente il dataset completo, considerando anche i dati già aggregati
+# mensilmente
+month_rist1_pre_covid <- as.Date(cut(ristorante1_pre_covid$data, "month"))
+
+scontrini_pre_covid_1_mens_avg <- aggregate(scontrini ~ month_rist1_pre_covid, data = ristorante1_pre_covid, mean)
+scontrini_pre_covid_1_mens_avg <- scontrini_pre_covid_1_mens_avg$scontrini
+scontrini_pre_covid_1_mens_avg <- ts(scontrini_pre_covid_1_mens_avg, start=2018, frequency=12)
+
+print(
+  autoplot(scontrini_pre_covid_1_mens_avg) +
+    ggtitle("Ristorante 1: scontrini medi mensili pre-COVID") +
+    xlab("Anno") +
+    ylab("Scontrini")
+)
+
+
+### Stagionalità considerando tutti gli anni
+
+print(
+  ggseasonplot(vendite1_sett_avg, year.labels=TRUE, year.labels.left=TRUE) +
+    ylab("euro") +
+    ggtitle("Seasonal plot Ristorante 1: vendite settimanali")
+)
+
+# Nel grafico precedente c'è un problema sull'anno 2018, che dovrebbe partire dalla
+# settimana 36 ma per qualche motivo "interpola" a partire dalla settimana 1. 
+# Non ho trovato come risolvere questa cosa
+
+print(
+  ggseasonplot(vendite1_mens_avg, year.labels=TRUE, year.labels.left=TRUE) +
+    ylab("euro") +
+    ggtitle("Seasonal plot Ristorante 1: vendite mensili")
+)
+
+### Seasonal sub series plot
+print(
+  ggsubseriesplot(vendite1_mens_avg) +
+    ylab("euro") +
+    ggtitle("Seasonal subseries plot Ristorante 1: vendite medie mensili"))
+
+
+### Stagionalità considerando il periodo pre-COVID
+
+print(
+  ggseasonplot(pre_covid_1_sett_avg, year.labels=TRUE, year.labels.left=TRUE) +
+    ylab("euro") +
+    ggtitle("Seasonal plot Ristorante 1: vendite settimanali pre-COVID")
+)
+
+print(
+  ggseasonplot(pre_covid_1_mens_avg, year.labels=TRUE, year.labels.left=TRUE) +
+    ylab("euro") +
+    ggtitle("Seasonal plot Ristorante 1: vendite mensili pre-COVID")
+)
+
+### Seasonal sub series plot
+
+print(
+  ggsubseriesplot(pre_covid_1_mens_avg) +
+    ylab("euro") +
+    ggtitle("Seasonal subseries plot Ristorante 1: vendite medie mensili pre-COVID")
+)
+
+
+### Analisi correlazione tra vendite e scontrini
+
+scon_vend_sett_avg_1 <- ts.intersect(vendite1_sett_avg, scontrini1_sett_avg)
+
+print(
+  autoplot(scon_vend_sett_avg_1, facets=TRUE) +
+    xlab("Anni") + ylab("") +
+    ggtitle("Confronto scontrini e vendite Ristorante 1")
+)
+
+print(
+  qplot(lordototale, scontrini, data=as.data.frame(copy_ristorante1)) +
+    ylab("Scontrini") + xlab("Vendite")+
+    ggtitle("Correlazione scontrini e vendite Ristorante 1")
+)
+
+# Ho usato la copia senza dati aggregati mensilmente
+
+
+### Analisi autocorrelazione considerando tutti gli anni
+# Per una serie con trend l'autocorrelazione è alta a lag vicini e si abbassa
+# piano piano. Se c'è stagionalità, invece, l'autocorrelazione presenta delle
+# regolarità nel suo andamento
+
+print(
+  ggAcf(vendite1_day, lag=28) +
+    ggtitle("Ristorante 1: Autocorrelation vendite giornaliere")
+)
+
+print(
+  ggAcf(vendite1_sett_avg, lag=104) +
+    ggtitle("Ristorante 1: Autocorrelation vendite medie settimanali")
+)
+
+print(
+  ggAcf(vendite1_mens_avg, lag=36) +
+    ggtitle("Ristorante 1: Autocorrelation vendite medie mensili")
+)
+
+### Analisi autocorrelazione pre-COVID
+
+print(
+  ggAcf(pre_covid_1_day, lag=28) +
+    ggtitle("Ristorante 1: Autocorrelation vendite giornaliere pre-COVID")
+)
+
+print(
+  ggAcf(pre_covid_1_sett_avg, lag=104) +
+    ggtitle("Ristorante 1: Autocorrelation vendite medie settimanali pre-COVID")
+)
+
+print(
+  ggAcf(pre_covid_1_mens_avg, lag=24) +
+    ggtitle("Ristorante 1: Autocorrelation vendite medie mensili pre-COVID")
+)
+
+
+### Decomposizione serie storica
+# Decomposizione giornaliera 
+multi_vendite1 <- msts(copy_ristorante1$lordototale, ts.frequency = 365, start = decimal_date(as.Date("2018-09-03")), seasonal.periods = c(7,365))
+multi_vendite1_dec <- mstl(multi_vendite1, s.window = "periodic")
+print(autoplot(multi_vendite1_dec) + ggtitle("Ristorante 1: Decomposizione giornaliera"))
+
+# Decomposizione settimanale
+vendite1_sett.fit <- stl(vendite1_sett_avg, s.window="periodic")
+trend.vendite1_sett <- vendite1_sett.fit$time.series[,2]
+stag.vendite1_sett <- vendite1_sett.fit$time.series[,1]
+res.vendite1_sett <- vendite1_sett.fit$time.series[,3]
+print(autoplot(vendite1_sett.fit) + ggtitle("Ristorante 1: Decomposizione settimanale"))
+
+# Decomposizione mensile 
+vendite1_mens.fit <- stl(vendite1_mens_avg,s.window="periodic")
+trend.vendite1_mens <- vendite1_mens.fit$time.series[,2]
+stag.vendite1_mens <- vendite1_mens.fit$time.series[,1]
+res.vendite1_mens <- vendite1_mens.fit$time.series[,3]
+print(autoplot(vendite1_mens.fit) + ggtitle("Ristorante 1: Decomposizione mensile"))
+
+# Alternativa
+# components.ts_1 = decompose(vendite1_mens_avg)
+# plot(components.ts_1)
+
+### Decomposizione serie storica pre-COVID
+# Non so quanto senso possa avere farla, dal momento che i nostri dati coprono
+# poco più di un anno prima del COVID
