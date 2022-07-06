@@ -1,6 +1,3 @@
-Arpae-SIMC
-
-Piacenza urbana
 Inizio validità (UTC),Fine validità (UTC),Precipitazione cumulata giornaliera (KG/M**2)
 2017-12-31 00:00:00+00:00,2018-01-01 00:00:00+00:00,0.0
 2018-01-01 00:00:00+00:00,2018-01-02 00:00:00+00:00,10.0
@@ -1585,16 +1582,3 @@ Inizio validità (UTC),Fine validità (UTC),Precipitazione cumulata giornaliera 
 2022-04-29 00:00:00+00:00,2022-04-30 00:00:00+00:00,0.0
 2022-04-30 00:00:00+00:00,2022-05-01 00:00:00+00:00,0.0
 2022-05-01 00:00:00+00:00,2022-05-02 00:00:00+00:00,1.4
-
-Piacenza Urbana
-Inizio validità (UTC),Fine validità (UTC),Precipitazione cumulata giornaliera (KG/M**2)
-
-
-
-Nome della stazione,Rete di misura,Comune,Provincia,Regione,Nazione,Altezza (Metri sul livello del mare),Longitudine (Gradi Centesimali),Latitudine (Gradi Centesimali),Bacino
-Piacenza Urbana,idrost,PIACENZA,PIACENZA,EMILIA-ROMAGNA,ITALY,71.0,9.679647,45.054924,PIANURA FRA TREBBIA E NURE
-Piacenza urbana,urbane,PIACENZA,PIACENZA,EMILIA-ROMAGNA,ITALY,71.0,9.679647,45.054924,PIANURA FRA TREBBIA E NURE
-
-
-Nome della variabile,Unita' di misura
-Precipitazione cumulata giornaliera,KG/M**2
