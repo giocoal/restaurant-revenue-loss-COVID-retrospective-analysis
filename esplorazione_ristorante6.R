@@ -378,3 +378,35 @@ print(autoplot(vendite6_mens.fit) + ggtitle("Ristorante 6: Decomposizione mensil
 ### Decomposizione serie storica pre-COVID
 # Non so quanto senso possa avere farla, dal momento che i nostri dati coprono
 # poco più di un anno prima del COVID
+
+
+# Confronto estati 2019/2020/2021 (pre-durante-post COVID)
+
+r6_estate_2019 <- subset(copy_ristorante6, Year==2019 & Season == 'Summer')
+r6_estate_2020 <- subset(copy_ristorante6, Year==2020 & Season == 'Summer')
+r6_estate_2021 <- subset(copy_ristorante6, Year==2021 & Season == 'Summer')
+
+r6_totale_estati <- rbind(r6_estate_2019, r6_estate_2020, r6_estate_2021)
+
+# Creo un attributo per creare le label del grafico
+r6_totale_estati$Year <- format(r6_totale_estati$data, "%Y")
+r6_totale_estati$Month <- format(r6_totale_estati$data, "%b")
+r6_totale_estati$Giorno <- format(r6_totale_estati$data, "%d")
+r6_totale_estati$MonthDay <- format(r6_totale_estati$data, "%d-%b")
+
+# Per le label ne tengo una ogni 3 giorni
+r6_totale_estati$MonthDay2 <- r6_totale_estati$MonthDay
+r6_totale_estati$MonthDay2[as.numeric(row.names(r6_totale_estati))%%3!=0] <- ""
+labels <- r6_totale_estati$MonthDay2
+
+# Calcolo la media per anno
+mean <- r6_totale_estati %>% group_by(Year) %>% summarise(mean_val=mean(lordototale))
+
+p <- ggplot(data=r6_totale_estati, mapping=aes(x=MonthDay, y=lordototale, shape=Year, color=Year)) + geom_point() +
+  geom_line(aes(group = 1)) + geom_hline(data = mean, aes(yintercept = mean_val, col=Year), linetype = 'dashed')
+p <- p + facet_grid(facets = Year ~ ., margins = FALSE) + theme_bw()
+print(
+  p + scale_y_continuous() + scale_x_discrete(labels=labels) + 
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, size = 8)) +
+    ggtitle("Ristorante 6: confronto estati")
+)

@@ -227,3 +227,34 @@ print(autoplot(vendite3_mens.fit) + ggtitle("Ristorante 3: Decomposizione mensil
 # Alternativa
 # components.ts_3 = decompose(vendite3_mens_avg)
 # plot(components.ts_3)
+
+
+# Confronto estati 2020/2021 (durante-post COVID, ristorante 3 ha dati da novembre 2019)
+
+r3_estate_2020 <- subset(ristorante3, Year==2020 & Season == 'Summer')
+r3_estate_2021 <- subset(ristorante3, Year==2021 & Season == 'Summer')
+
+r3_totale_estati <- rbind(r3_estate_2020, r3_estate_2021)
+
+# Creo un attributo per creare le label del grafico
+r3_totale_estati$Year <- format(r3_totale_estati$data, "%Y")
+r3_totale_estati$Month <- format(r3_totale_estati$data, "%b")
+r3_totale_estati$Giorno <- format(r3_totale_estati$data, "%d")
+r3_totale_estati$MonthDay <- format(r3_totale_estati$data, "%d-%b")
+
+# Per le label ne tengo una ogni 3 giorni
+r3_totale_estati$MonthDay2 <- r3_totale_estati$MonthDay
+r3_totale_estati$MonthDay2[as.numeric(row.names(r3_totale_estati))%%3!=0] <- ""
+labels <- r3_totale_estati$MonthDay2
+
+# Calcolo la media per anno
+mean <- r3_totale_estati %>% group_by(Year) %>% summarise(mean_val=mean(lordototale))
+
+p <- ggplot(data=r3_totale_estati, mapping=aes(x=MonthDay, y=lordototale, shape=Year, color=Year)) + geom_point() +
+  geom_line(aes(group = 1)) + geom_hline(data = mean, aes(yintercept = mean_val, col=Year), linetype = 'dashed')
+p <- p + facet_grid(facets = Year ~ ., margins = FALSE) + theme_bw()
+print(
+  p + scale_y_continuous() + scale_x_discrete(labels=labels) + 
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, size = 8)) +
+    ggtitle("Ristorante 3: confronto estati")
+)
