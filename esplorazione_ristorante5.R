@@ -56,6 +56,166 @@ ristorante5$data <- parse_date(ristorante5$data, "%Y-%m-%d", locale = locale("it
 
 copy_ristorante5 <- ristorante5[-c(1:243),]
 
+### Creo alcuni boxplot potenzialmente utili
+
+# Rendo gli attributi Giorno, Month, Year, ... dei fattori. In questo modo riesco a
+# manipolari i boxplot correttamente
+copy_ristorante5$Giorno <- as.factor(copy_ristorante5$Giorno)
+copy_ristorante5$Giorno <- factor(copy_ristorante5$Giorno, 
+                                            levels=c('Monday','Tuesday','Wednesday',
+                                                     'Thursday','Friday','Saturday',
+                                                     'Sunday'))
+
+copy_ristorante5$Month <- as.factor(copy_ristorante5$Month)
+
+copy_ristorante5$Year <- as.factor(copy_ristorante5$Year)
+
+copy_ristorante5$Season <- as.factor(copy_ristorante5$Season)
+copy_ristorante5$Season <- factor(copy_ristorante5$Season, 
+                                            levels=c('Spring','Summer','Autumn',
+                                                     'Winter'))
+
+copy_ristorante5$Weekend <- as.factor(copy_ristorante5$Weekend)
+
+copy_ristorante5$Festivo <- as.factor(copy_ristorante5$Festivo)
+
+copy_ristorante5$Pioggia <- as.factor(copy_ristorante5$Pioggia)
+
+# Creo i diversi boxplot (sia vendite che scontrini)
+
+### Giorno della settimana
+ggplot(copy_ristorante5, aes(Giorno, lordototale)) + geom_boxplot() +
+  theme_bw() +
+  ggtitle("Box-plot vendite per giorno della settimana")  +
+  theme(strip.placement = "outside",
+        strip.background = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.border = element_rect(colour="grey70"),
+        panel.spacing=unit(0,"cm"))
+
+ggplot(copy_ristorante5, aes(Giorno, scontrini)) + geom_boxplot() +
+  theme_bw() +
+  ggtitle("Box-plot scontrini per giorno della settimana")  +
+  theme(strip.placement = "outside",
+        strip.background = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.border = element_rect(colour="grey70"),
+        panel.spacing=unit(0,"cm"))
+
+### Mese dell'anno
+ggplot(copy_ristorante5, aes(Month, lordototale)) + geom_boxplot() +
+  theme_bw() +
+  ggtitle("Box-plot vendite per mese dell'anno")  +
+  theme(strip.placement = "outside",
+        strip.background = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.border = element_rect(colour="grey70"),
+        panel.spacing=unit(0,"cm"))
+
+ggplot(copy_ristorante5, aes(Month, scontrini)) + geom_boxplot() +
+  theme_bw() +
+  ggtitle("Box-plot scontrini per mese dell'anno")  +
+  theme(strip.placement = "outside",
+        strip.background = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.border = element_rect(colour="grey70"),
+        panel.spacing=unit(0,"cm"))
+
+### Anno
+ggplot(copy_ristorante5, aes(Year, lordototale)) + geom_boxplot() +
+  theme_bw() +
+  ggtitle("Box-plot vendite per anno")  +
+  theme(strip.placement = "outside",
+        strip.background = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.border = element_rect(colour="grey70"),
+        panel.spacing=unit(0,"cm"))
+
+ggplot(copy_ristorante5, aes(Year, scontrini)) + geom_boxplot() +
+  theme_bw() +
+  ggtitle("Box-plot scontrini per anno")  +
+  theme(strip.placement = "outside",
+        strip.background = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.border = element_rect(colour="grey70"),
+        panel.spacing=unit(0,"cm"))
+
+### Stagione
+ggplot(copy_ristorante5, aes(Season, lordototale)) + geom_boxplot() +
+  theme_bw() +
+  ggtitle("Box-plot vendite per stagione")  +
+  theme(strip.placement = "outside",
+        strip.background = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.border = element_rect(colour="grey70"),
+        panel.spacing=unit(0,"cm"))
+
+ggplot(copy_ristorante5, aes(Season, scontrini)) + geom_boxplot() +
+  theme_bw() +
+  ggtitle("Box-plot scontrini per stagione")  +
+  theme(strip.placement = "outside",
+        strip.background = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.border = element_rect(colour="grey70"),
+        panel.spacing=unit(0,"cm"))
+
+### Weekend/settimana (il venerdì è considerato giorno della settimana)
+ggplot(copy_ristorante5, aes(Weekend, lordototale)) + geom_boxplot() +
+  theme_bw() +
+  ggtitle("Box-plot vendite weekend vs. giorno della settimana")  +
+  theme(strip.placement = "outside",
+        strip.background = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.border = element_rect(colour="grey70"),
+        panel.spacing=unit(0,"cm"))
+
+ggplot(copy_ristorante5, aes(Weekend, scontrini)) + geom_boxplot() +
+  theme_bw() +
+  ggtitle("Box-plot scontrini weekend vs. giorno della settimana")  +
+  theme(strip.placement = "outside",
+        strip.background = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.border = element_rect(colour="grey70"),
+        panel.spacing=unit(0,"cm"))
+
+### Giorno feriale vs. festivo
+ggplot(copy_ristorante5, aes(Festivo, lordototale)) + geom_boxplot() +
+  theme_bw() +
+  ggtitle("Box-plot vendite giorno festivo vs. feriale")  +
+  theme(strip.placement = "outside",
+        strip.background = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.border = element_rect(colour="grey70"),
+        panel.spacing=unit(0,"cm"))
+
+ggplot(copy_ristorante5, aes(Festivo, scontrini)) + geom_boxplot() +
+  theme_bw() +
+  ggtitle("Box-plot scontrini giorno festivo vs. feriale")  +
+  theme(strip.placement = "outside",
+        strip.background = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.border = element_rect(colour="grey70"),
+        panel.spacing=unit(0,"cm"))
+
+### Pioggia si/no
+ggplot(copy_ristorante5, aes(Pioggia, lordototale)) + geom_boxplot() +
+  theme_bw() +
+  ggtitle("Box-plot vendite giorni di pioggia")  +
+  theme(strip.placement = "outside",
+        strip.background = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.border = element_rect(colour="grey70"),
+        panel.spacing=unit(0,"cm"))
+
+ggplot(copy_ristorante5, aes(Pioggia, scontrini)) + geom_boxplot() +
+  theme_bw() +
+  ggtitle("Box-plot scontrini giorni di pioggia")  +
+  theme(strip.placement = "outside",
+        strip.background = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.border = element_rect(colour="grey70"),
+        panel.spacing=unit(0,"cm"))
+
 # Vendite giornaliere 
 vendite5_day <- ts(copy_ristorante5$lordototale, start = decimal_date(as.Date("2018-09-01")), frequency=365)
 

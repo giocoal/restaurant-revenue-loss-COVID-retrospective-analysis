@@ -300,7 +300,7 @@ trend_scontrini_ts_rist3 <- ts(trend_scontrini_rist3, start = decimal_date(as.Da
 autoplot(trend_scontrini_ts_rist3, facets = 1, main = "Ristorante 3: analisi trend scontrini")
 
 # Ristorante 4
-trend_scontrini_rist1 <- data.frame(copy_ristorante4$Prezzo_medio_per_scontrino, copy_ristorante4$scontrini)
+trend_scontrini_rist4 <- data.frame(copy_ristorante4$Prezzo_medio_per_scontrino, copy_ristorante4$scontrini)
 names(trend_scontrini_rist4) <- c("Prezzo medio scontrino", "Scontrini registrati")
 trend_scontrini_ts_rist4 <- ts(trend_scontrini_rist4, start = decimal_date(as.Date("2018-09-01")), frequency = 365)
 autoplot(trend_scontrini_ts_rist4, facets = 1, main = "Ristorante 4: analisi trend scontrini")
@@ -316,3 +316,168 @@ trend_scontrini_rist6 <- data.frame(copy_ristorante6$Prezzo_medio_per_scontrino,
 names(trend_scontrini_rist6) <- c("Prezzo medio scontrino", "Scontrini registrati")
 trend_scontrini_ts_rist6 <- ts(trend_scontrini_rist6, start = decimal_date(as.Date("2018-09-01")), frequency = 365)
 autoplot(trend_scontrini_ts_rist6, facets = 1, main = "Ristorante 6: analisi trend scontrini")
+
+
+### Creo alcuni boxplot potenzialmente utili considerando il dataset completo
+
+# Elimino i dati prima di settembre 2018 dal dataset completo, essendo quelli
+# aggregati mensilmente
+copy_ristorazione_completo <- ristorazione_completo[which(ristorazione_completo$data>'2018-08-31'),]
+
+# Rendo gli attributi Giorno, Month, Year, ... dei fattori. In questo modo riesco a
+# manipolari i boxplot correttamente
+copy_ristorazione_completo$Giorno <- as.factor(copy_ristorazione_completo$Giorno)
+copy_ristorazione_completo$Giorno <- factor(copy_ristorazione_completo$Giorno, 
+                                            levels=c('Monday','Tuesday','Wednesday',
+                                                     'Thursday','Friday','Saturday',
+                                                     'Sunday'))
+
+copy_ristorazione_completo$Month <- as.factor(copy_ristorazione_completo$Month)
+
+copy_ristorazione_completo$Year <- as.factor(copy_ristorazione_completo$Year)
+
+copy_ristorazione_completo$Season <- as.factor(copy_ristorazione_completo$Season)
+copy_ristorazione_completo$Season <- factor(copy_ristorazione_completo$Season, 
+                                            levels=c('Spring','Summer','Autumn',
+                                                     'Winter'))
+
+copy_ristorazione_completo$Weekend <- as.factor(copy_ristorazione_completo$Weekend)
+
+copy_ristorazione_completo$Festivo <- as.factor(copy_ristorazione_completo$Festivo)
+
+copy_ristorazione_completo$Pioggia <- as.factor(copy_ristorazione_completo$Pioggia)
+
+# Creo i diversi boxplot (sia vendite che scontrini)
+
+### Giorno della settimana
+ggplot(copy_ristorazione_completo, aes(Giorno, lordototale)) + geom_boxplot() +
+  theme_bw() +
+  ggtitle("Box-plot vendite per giorno della settimana")  +
+  theme(strip.placement = "outside",
+        strip.background = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.border = element_rect(colour="grey70"),
+        panel.spacing=unit(0,"cm"))
+
+ggplot(copy_ristorazione_completo, aes(Giorno, scontrini)) + geom_boxplot() +
+  theme_bw() +
+  ggtitle("Box-plot scontrini per giorno della settimana")  +
+  theme(strip.placement = "outside",
+        strip.background = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.border = element_rect(colour="grey70"),
+        panel.spacing=unit(0,"cm"))
+
+### Mese dell'anno
+ggplot(copy_ristorazione_completo, aes(Month, lordototale)) + geom_boxplot() +
+  theme_bw() +
+  ggtitle("Box-plot vendite per mese dell'anno")  +
+  theme(strip.placement = "outside",
+        strip.background = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.border = element_rect(colour="grey70"),
+        panel.spacing=unit(0,"cm"))
+
+ggplot(copy_ristorazione_completo, aes(Month, scontrini)) + geom_boxplot() +
+  theme_bw() +
+  ggtitle("Box-plot scontrini per mese dell'anno")  +
+  theme(strip.placement = "outside",
+        strip.background = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.border = element_rect(colour="grey70"),
+        panel.spacing=unit(0,"cm"))
+
+### Anno
+ggplot(copy_ristorazione_completo, aes(Year, lordototale)) + geom_boxplot() +
+  theme_bw() +
+  ggtitle("Box-plot vendite per anno")  +
+  theme(strip.placement = "outside",
+        strip.background = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.border = element_rect(colour="grey70"),
+        panel.spacing=unit(0,"cm"))
+
+ggplot(copy_ristorazione_completo, aes(Year, scontrini)) + geom_boxplot() +
+  theme_bw() +
+  ggtitle("Box-plot scontrini per anno")  +
+  theme(strip.placement = "outside",
+        strip.background = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.border = element_rect(colour="grey70"),
+        panel.spacing=unit(0,"cm"))
+
+### Stagione
+ggplot(copy_ristorazione_completo, aes(Season, lordototale)) + geom_boxplot() +
+  theme_bw() +
+  ggtitle("Box-plot vendite per stagione")  +
+  theme(strip.placement = "outside",
+        strip.background = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.border = element_rect(colour="grey70"),
+        panel.spacing=unit(0,"cm"))
+
+ggplot(copy_ristorazione_completo, aes(Season, scontrini)) + geom_boxplot() +
+  theme_bw() +
+  ggtitle("Box-plot scontrini per stagione")  +
+  theme(strip.placement = "outside",
+        strip.background = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.border = element_rect(colour="grey70"),
+        panel.spacing=unit(0,"cm"))
+
+### Weekend/settimana (il venerdì è considerato giorno della settimana)
+ggplot(copy_ristorazione_completo, aes(Weekend, lordototale)) + geom_boxplot() +
+  theme_bw() +
+  ggtitle("Box-plot vendite weekend vs. giorno della settimana")  +
+  theme(strip.placement = "outside",
+        strip.background = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.border = element_rect(colour="grey70"),
+        panel.spacing=unit(0,"cm"))
+
+ggplot(copy_ristorazione_completo, aes(Weekend, scontrini)) + geom_boxplot() +
+  theme_bw() +
+  ggtitle("Box-plot scontrini weekend vs. giorno della settimana")  +
+  theme(strip.placement = "outside",
+        strip.background = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.border = element_rect(colour="grey70"),
+        panel.spacing=unit(0,"cm"))
+
+### Giorno feriale vs. festivo
+ggplot(copy_ristorazione_completo, aes(Festivo, lordototale)) + geom_boxplot() +
+  theme_bw() +
+  ggtitle("Box-plot vendite giorno festivo vs. feriale")  +
+  theme(strip.placement = "outside",
+        strip.background = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.border = element_rect(colour="grey70"),
+        panel.spacing=unit(0,"cm"))
+
+ggplot(copy_ristorazione_completo, aes(Festivo, scontrini)) + geom_boxplot() +
+  theme_bw() +
+  ggtitle("Box-plot scontrini giorno festivo vs. feriale")  +
+  theme(strip.placement = "outside",
+        strip.background = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.border = element_rect(colour="grey70"),
+        panel.spacing=unit(0,"cm"))
+
+### Pioggia si/no
+ggplot(copy_ristorazione_completo, aes(Pioggia, lordototale)) + geom_boxplot() +
+  theme_bw() +
+  ggtitle("Box-plot vendite giorni di pioggia")  +
+  theme(strip.placement = "outside",
+        strip.background = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.border = element_rect(colour="grey70"),
+        panel.spacing=unit(0,"cm"))
+
+ggplot(copy_ristorazione_completo, aes(Pioggia, scontrini)) + geom_boxplot() +
+  theme_bw() +
+  ggtitle("Box-plot scontrini giorni di pioggia")  +
+  theme(strip.placement = "outside",
+        strip.background = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.border = element_rect(colour="grey70"),
+        panel.spacing=unit(0,"cm"))

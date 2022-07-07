@@ -77,7 +77,7 @@
 1656,R003,Piacenza,Emilia Romagna,Piacenza,2018-03-17,,,,Saturday,3,2018,Winter,True,False,103082,19.0,True,,,,,,,,,,,,,,,,,,,,,,,,,
 1657,R003,Piacenza,Emilia Romagna,Piacenza,2018-03-18,,,,Sunday,3,2018,Winter,True,True,103082,16.0,True,,,,,,,,,,,,,,,,,,,,,,,,,
 1658,R003,Piacenza,Emilia Romagna,Piacenza,2018-03-19,,,,Monday,3,2018,Winter,False,False,103082,8.4,True,,,,,,,,,,,,,,1544.2,1419.38,652.8,1202.52,808.08,385.97,1.5442,1.41938,0.6527999999999999,1.20252,0.80808,0.38597000000000004
-1659,R003,Piacenza,Emilia Romagna,Piacenza,2018-03-20,,,,Tuesday,3,2018,,False,False,103082,,,,,,,,,,,,,,,,,,,,,,,,,,,
+1659,R003,Piacenza,Emilia Romagna,Piacenza,2018-03-20,,,,Tuesday,3,2018,Spring,False,False,103082,,,,,,,,,,,,,,,,,,,,,,,,,,,
 1660,R003,Piacenza,Emilia Romagna,Piacenza,2018-03-21,,,,Wednesday,3,2018,Spring,False,False,103082,,,,,,,,,,,,,,,,,,,,,,,,,,,
 1661,R003,Piacenza,Emilia Romagna,Piacenza,2018-03-22,,,,Thursday,3,2018,Spring,False,False,103082,,,,,,,,,,,,,,,,,,,,,,,,,,,
 1662,R003,Piacenza,Emilia Romagna,Piacenza,2018-03-23,,,,Friday,3,2018,Spring,False,False,103082,,,,,,,,,,,,,,,,,,,,,,,,,,,
@@ -442,7 +442,7 @@
 2021,R003,Piacenza,Emilia Romagna,Piacenza,2019-03-17,610.0,9440.847000000002,15.47679836065574,Sunday,3,2019,Winter,True,True,103904,,,,,,,,,,,,,,,,,,,,,,,,,,,
 2022,R003,Piacenza,Emilia Romagna,Piacenza,2019-03-18,763.0,9914.751,12.994431192660551,Monday,3,2019,Winter,False,False,103904,5.4,True,,,,,,,,,,,,,,1554.03,1496.38,655.33,1310.76,861.2,495.44,1.55403,1.49638,0.6553300000000001,1.31076,0.8612000000000001,0.49544
 2023,R003,Piacenza,Emilia Romagna,Piacenza,2019-03-19,800.0,11299.527000000002,14.124408750000002,Tuesday,3,2019,Winter,False,False,103904,,,,,,,,,,,,,,,,,,,,,,,,,,,
-2024,R003,Piacenza,Emilia Romagna,Piacenza,2019-03-20,796.0,10962.297,13.771729899497489,Wednesday,3,2019,,False,False,103904,,,,,,,,,,,,,,,,,,,,,,,,,,,
+2024,R003,Piacenza,Emilia Romagna,Piacenza,2019-03-20,796.0,10962.297,13.771729899497489,Wednesday,3,2019,Spring,False,False,103904,,,,,,,,,,,,,,,,,,,,,,,,,,,
 2025,R003,Piacenza,Emilia Romagna,Piacenza,2019-03-21,773.0,10030.122,12.975578266494178,Thursday,3,2019,Spring,False,False,103904,,,,,,,,,,,,,,,,,,,,,,,,,,,
 2026,R003,Piacenza,Emilia Romagna,Piacenza,2019-03-22,866.0,11830.833,13.661469976905313,Friday,3,2019,Spring,False,False,103904,,,,,,,,,,,,,,,,,,,,,,,,,,,
 2027,R003,Piacenza,Emilia Romagna,Piacenza,2019-03-23,927.0,13673.718,14.750504854368932,Saturday,3,2019,Spring,True,False,103904,,,,,,,,,,,,,,,,,,,,,,,,,,,
@@ -808,7 +808,7 @@
 2387,R003,Piacenza,Emilia Romagna,Piacenza,2020-03-17,,,,Tuesday,3,2020,Winter,False,False,104260,,,,,,,,,,,,,,,,,,,,,,,,,,,
 2388,R003,Piacenza,Emilia Romagna,Piacenza,2020-03-18,,,,Wednesday,3,2020,Winter,False,False,104260,,,,,,,,,,,,,,,,,,,,,,,,,,,
 2389,R003,Piacenza,Emilia Romagna,Piacenza,2020-03-19,,,,Thursday,3,2020,Winter,False,False,104260,,,,,,,,,,,,,,,,,,,,,,,,,,,
-2390,R003,Piacenza,Emilia Romagna,Piacenza,2020-03-20,,,,Friday,3,2020,,False,False,104260,,,,,,,,,,,,,,,,,,,,,,,,,,,
+2390,R003,Piacenza,Emilia Romagna,Piacenza,2020-03-20,,,,Friday,3,2020,Spring,False,False,104260,,,,,,,,,,,,,,,,,,,,,,,,,,,
 2391,R003,Piacenza,Emilia Romagna,Piacenza,2020-03-21,,,,Saturday,3,2020,Spring,True,False,104260,,,,,,,,,,,,,,,,,,,,,,,,,,,
 2392,R003,Piacenza,Emilia Romagna,Piacenza,2020-03-22,,,,Sunday,3,2020,Spring,True,True,104260,,,,,,,,,,,,,,,,,,,,,,,,,,,
 2393,R003,Piacenza,Emilia Romagna,Piacenza,2020-03-23,,,,Monday,3,2020,Spring,False,False,104260,,,,,,,,,,,,,,,,1477.47,1368.48,615.6,1140.57,708.45,322.5,1.47747,1.36848,0.6156,1.1405699999999999,0.70845,0.3225
@@ -1173,7 +1173,7 @@
 2752,R003,Piacenza,Emilia Romagna,Piacenza,2021-03-17,322.0,5892.345,18.299208074534164,Wednesday,3,2021,Winter,False,False,102731,,,rosso,5799.0,7858.0,68.0,,,,423791.0,212087.0,3835.0,,,,,,,,,,,,,,,
 2753,R003,Piacenza,Emilia Romagna,Piacenza,2021-03-18,380.0,7398.432,19.46955789473684,Thursday,3,2021,Winter,False,False,102731,,,rosso,5675.0,8013.0,101.0,,,,429466.0,220100.0,3936.0,,,,,,,,,,,,,,,
 2754,R003,Piacenza,Emilia Romagna,Piacenza,2021-03-19,392.0,7764.39,19.807117346938778,Friday,3,2021,Winter,False,False,102731,,,rosso,7773.0,7972.0,185.0,,,,437239.0,228072.0,4121.0,,,,,,,,,,,,,,,
-2755,R003,Piacenza,Emilia Romagna,Piacenza,2021-03-20,442.0,8954.766,20.259651583710408,Saturday,3,2021,,True,False,102731,,,rosso,8939.0,6967.0,193.0,,,,446178.0,235039.0,4314.0,,,,,,,,,,,,,,,
+2755,R003,Piacenza,Emilia Romagna,Piacenza,2021-03-20,442.0,8954.766,20.259651583710408,Saturday,3,2021,Spring,True,False,102731,,,rosso,8939.0,6967.0,193.0,,,,446178.0,235039.0,4314.0,,,,,,,,,,,,,,,
 2756,R003,Piacenza,Emilia Romagna,Piacenza,2021-03-21,323.0,8406.288,26.02565944272446,Sunday,3,2021,Spring,True,True,102731,,,rosso,7242.0,4605.0,118.0,,,,453420.0,239644.0,4432.0,,,,,,,,,,,,,,,
 2757,R003,Piacenza,Emilia Romagna,Piacenza,2021-03-22,382.0,7351.965,19.24598167539267,Monday,3,2021,Spring,False,False,102731,,,rosso,10603.0,6876.0,193.0,,,,464023.0,246520.0,4625.0,,,,1578.77,1444.98,660.55,1241.18,795.18,506.22,1.57877,1.44498,0.66055,1.2411800000000002,0.79518,0.50622
 2758,R003,Piacenza,Emilia Romagna,Piacenza,2021-03-23,353.0,6391.953,18.107515580736546,Tuesday,3,2021,Spring,False,False,102731,,,rosso,11906.0,6698.0,214.0,,,,475929.0,253218.0,4839.0,,,,,,,,,,,,,,,
@@ -1538,7 +1538,7 @@
 3117,R003,Piacenza,Emilia Romagna,Piacenza,2022-03-17,552.0,12692.835,22.994266304347825,Thursday,3,2022,Winter,False,False,102902,,,bianco,372.0,926.0,43.0,4883.0,274.0,,3654744.0,3492557.0,167412.0,2918514.0,6032.0,,,,,,,,,,,,,
 3118,R003,Piacenza,Emilia Romagna,Piacenza,2022-03-18,636.0,15298.038,24.053518867924527,Friday,3,2022,Winter,False,False,102902,,,bianco,223.0,497.0,16.0,3085.0,360.0,,3654967.0,3493054.0,167428.0,2921599.0,6392.0,,,,,,,,,,,,,
 3119,R003,Piacenza,Emilia Romagna,Piacenza,2022-03-19,707.0,17475.345,24.717602545968884,Saturday,3,2022,Winter,True,False,102902,,,bianco,286.0,1018.0,39.0,4723.0,154.0,,3655253.0,3494072.0,167467.0,2926322.0,6546.0,,,,,,,,,,,,,
-3120,R003,Piacenza,Emilia Romagna,Piacenza,2022-03-20,507.0,13304.493,26.24160355029586,Sunday,3,2022,,True,True,102902,,,bianco,45.0,198.0,2.0,751.0,18.0,,3655298.0,3494270.0,167469.0,2927073.0,6564.0,,,,,,,,,,,,,
+3120,R003,Piacenza,Emilia Romagna,Piacenza,2022-03-20,507.0,13304.493,26.24160355029586,Sunday,3,2022,Spring,True,True,102902,,,bianco,45.0,198.0,2.0,751.0,18.0,,3655298.0,3494270.0,167469.0,2927073.0,6564.0,,,,,,,,,,,,,
 3121,R003,Piacenza,Emilia Romagna,Piacenza,2022-03-21,538.0,11141.307,20.70874907063197,Monday,3,2022,Spring,False,False,102902,,,bianco,213.0,542.0,24.0,2514.0,186.0,,3655511.0,3494812.0,167493.0,2929587.0,6750.0,,2137.19,2124.56,876.81,1791.4,1157.36,782.22,2.13719,2.12456,0.87681,1.7914,1.15736,0.78222
 3122,R003,Piacenza,Emilia Romagna,Piacenza,2022-03-22,521.0,11542.23,22.153992322456812,Tuesday,3,2022,Spring,False,False,102902,,,bianco,184.0,648.0,25.0,2964.0,218.0,,3655695.0,3495460.0,167518.0,2932551.0,6968.0,,,,,,,,,,,,,
 3123,R003,Piacenza,Emilia Romagna,Piacenza,2022-03-23,582.0,12182.751,20.932561855670105,Wednesday,3,2022,Spring,False,False,102902,,,bianco,149.0,425.0,24.0,1863.0,152.0,,3655844.0,3495885.0,167542.0,2934414.0,7120.0,,,,,,,,,,,,,
