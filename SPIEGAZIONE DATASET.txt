@@ -1,0 +1,10 @@
+dataset_integrato: dataset completo, con tutte le variabili, comprese quelle riferite
+			 alla location dei ristoranti
+
+dataset_clean: dataset completo ma senza le variabili legate alla location dei
+		   ristoranti
+
+info_ristoranti_location: dataset con le informazioni sulla location dei ristoranti
+
+ristorante1, ..., ristorante6: suddivisione di dataset_integrato nei singoli ristoranti
+					 in base al codice ristorante
