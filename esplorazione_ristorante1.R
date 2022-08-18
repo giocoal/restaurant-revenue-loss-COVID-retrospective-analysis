@@ -80,6 +80,7 @@ copy_ristorante1$Weekend <- as.factor(copy_ristorante1$Weekend)
 copy_ristorante1$Festivo <- as.factor(copy_ristorante1$Festivo)
 
 copy_ristorante1$Pioggia <- as.factor(copy_ristorante1$Pioggia)
+copy_ristorante1$ColoreCOVID <- as.factor(copy_ristorante1$ColoreCOVID)
 
 # Creo i diversi boxplot (sia vendite che scontrini)
 
@@ -570,3 +571,206 @@ print(
     theme(axis.text.x = element_text(angle = 90, vjust = 0.5, size = 8)) +
     ggtitle("Ristorante 1: confronto estati")
 )
+
+
+
+
+
+### Random forest ----
+# Le vendite giornaliere pre-COVID (ristorante1_pre_covid$lordototale) vengono divise 
+# in train e test per cercare di modellare i dati a disposizione e cercare di 
+# valutarne la qualità del modello ottenuto.
+# Il seguente modello viene utilizzato per fare previsioni su valori futuri, in 
+# particolar modo per prevedere come le vendite sarebbero andate durante il periodo
+# COVID, durante il quale per alcune settimane le vendite effettive invece sono 
+# state pari a zero
+
+# Uso solo alcune variabili:
+
+r1_pre_covid_rf <- copy_ristorante1_pre_covid[, c('lordototale', 'data', 'Giorno', 
+                                                  'Month', 'Season', 'Weekend',
+                                                  'Festivo', 'Pioggia')]
+
+# divisione in train e test
+index_rf <- sample(1:nrow(r1_pre_covid_rf),
+                   size = 0.7*nrow(r1_pre_covid_rf))
+train_rf <- r1_pre_covid_rf[index_rf,]
+test_rf <- r1_pre_covid_rf[-index_rf,] 
+
+# implementazione modelli
+MRF <- randomForest(lordototale ~ Giorno + Month + Season + Weekend + Festivo +
+                      Pioggia, data = train_rf)
+varImpPlot(MRF)
+print(MRF)
+# % Var explained: 83.65
+
+### SELEZIONARE SOLO VARIABILI PIU' RILEVANTI?
+
+# si valutano le performance del modello sul train e test set
+predictions_rf <- predict(MRF, newdata = train_rf)
+mape(train_rf$lordototale, predictions_rf)
+# MAPE 13.63
+
+predictions_rf <- predict(MRF, newdata = test_rf)
+mape(test_rf$lordototale, predictions_rf)
+# MAPE 16.63
+
+accuracy(predictions_rf, test_rf$lordototale)
+# RMSE 4037.16
+# MAPE 16.63
+
+# Previsioni su valori nuovi (sul periodo covid dove nei dati reali si hanno 0)
+
+copy_ristorante1_rf <- copy_ristorante1[, c('lordototale', 'data', 'Giorno', 'Month', 
+                                        'Season', 'Weekend','Festivo', 'Pioggia')]
+
+# selezione periodo covid (su cui verranno fatte le previsioni)
+reference_date_rf <- as.Date("2020-01-06", format = "%Y-%m-%d")
+ristorante1_periodo_covid <- copy_ristorante1_rf %>%
+  filter(copy_ristorante1_rf$data >= reference_date_rf)
+
+# si seleziona la lunghezza del periodo da prevedere
+# viene selezionato un periodo che include i giorni in cui si registrano 0 
+# vendite/scontrini
+ristorante1_periodo_covid <- ristorante1_periodo_covid[1:133,]
+
+# si utilizza il modello appena creato per fare previsioni
+vendite_forecast_rf <- predict(MRF, ristorante1_periodo_covid)
+vendite_forecast_rf <- as.data.frame(vendite_forecast_rf)
+
+# si uniscono le due serie storiche
+
+# serie storica previsioni durante periodo covid 
+interval_covid <- seq(as.Date("2020-01-06"), as.Date("2020-05-17"), by = "day")
+interval_covid_df <- data.frame(date = interval_covid, 
+                                val=vendite_forecast_rf)
+interval_covid_df$date <- as.Date(interval_covid_df$date)  
+interval_covid_ts <- xts(interval_covid_df$val, interval_covid_df$date)
+
+plot(interval_covid_df$date, interval_covid_df$vendite_forecast_rf, xlab = "data", 
+     ylab = "vendite", type="l", main = "Ristorante 1")
+
+# serie storica dati reali fino a prima covid (r1_pre_covid_rf$lordototale)
+r1_pre_covid_rf <- head(r1_pre_covid_rf, -1) # Andava tolta l'ultima riga
+
+interval_pre_covid <- seq(as.Date("2018-09-01"), as.Date("2020-01-05"), by = "day")
+interval_pre_covid_df <- data.frame(date = interval_pre_covid, 
+                                    val=r1_pre_covid_rf$lordototale)
+
+interval_pre_covid_df$date<-as.Date(interval_pre_covid_df$date)  
+interval_covid_ts_pre <- xts(interval_pre_covid_df$val, interval_pre_covid_df$date)
+
+# si uniscono le due serie storiche
+names(interval_covid_df)[1] <- "data"
+names(interval_covid_df)[2] <- "vendite"
+
+names(interval_pre_covid_df)[1] <- "data"
+names(interval_pre_covid_df)[2] <- "vendite"
+
+interval_complete <- rbind(interval_covid_df, interval_pre_covid_df)
+interval_complete <- interval_complete[order(interval_complete$data), ]
+row.names(interval_complete) <- NULL
+
+par(mfrow=c(2,1))
+
+# serie storica con previsioni
+plot(interval_complete$data, interval_complete$vendite, xlab = "data", ylab = "vendite", 
+     type="l", main = "Ristorante 1 previsioni")
+
+# serie storica originale
+rownames(copy_ristorante1) <- NULL # Ho bisogno di resettare l'indice delle righe
+ristorante1_complete <- copy_ristorante1[1:625,]  # fino al 17 maggio 2020
+ristorante1_complete$lordototale[is.na(ristorante1_complete$vendite1)] <- 0
+plot(ristorante1_complete$data, ristorante1_complete$lordototale, xlab = "data", ylab = "vendite", 
+     type="l", main = "Ristorante 1 dati reali")
+
+# sovrappongo i due grafici
+par(mfrow=c(1,1))
+
+rf_complete <- cbind(interval_complete, ristorante1_complete$lordototale)
+plot(rf_complete$data, rf_complete$vendite, type="l", col="blue", xlab="data", ylab="vendite", lty=1)
+lines(rf_complete$data, rf_complete$`ristorante1_complete$lordototale`, col="red",lty=2)
+
+
+
+### Prophet ----
+# Le vendite giornaliere pre-COVID (ristorante1_pre_covid$lordototale) vengono divise 
+# in train e test  per cercare di modellare i dati a disposizione e cercare di 
+# valutarne la qualità del modello ottenuto.
+# Il seguente modello viene utilizzato per fare previsioni su valori futuri, in 
+# particolar modo per prevedere come le vendite sarebbero andate durante il periodo
+# covid, durante il quale per alcune settimane le vendite effettive invece sono 
+# state pari a zero
+
+prophet_vendite <- copy_ristorante1_pre_covid %>% 
+  select(data, lordototale)
+colnames(prophet_vendite) <- c("ds", "y")
+
+# divisione in train e test
+index_pr <- 344  # train-70% di prophet_vendite (344), test-30% di prophet_vendite (148)
+train_pr <- prophet_vendite[1:344,]
+test_pr <- prophet_vendite[345:493,] 
+
+# si crea il modello
+MPROPHET <- prophet(train_pr)
+
+# vengono fatte le previsioni
+future_prophet <- make_future_dataframe(MPROPHET, periods=281) # fino al 17 maggio 2020
+vendite_forecast_prophet <- predict(MPROPHET, future_prophet)
+tail(vendite_forecast_prophet[c('ds', 'yhat', 'yhat_lower', 'yhat_upper')])
+# yhat containing the vendite_forecast_prophet. It has additional columns for uncertainty 
+# intervals and seasonal components
+
+plot(MPROPHET, vendite_forecast_prophet)
+prophet_plot_components(MPROPHET, vendite_forecast_prophet)
+# prophet_vendite.cv <- cross_validation(MPROPHET, initial=180, period=60, horizon=120, units='days')
+# plot_cross_validation_metric(prophet_vendite.cv, metric='mape')
+dyplot.prophet(MPROPHET, vendite_forecast_prophet)
+
+# performance sul test set
+accuracy(test_pr$y, vendite_forecast_prophet[345:493, "yhat"])
+# RMSE 1353.581
+# MAPE 14.9611
+
+### ABBIAMO POCHI DATI PRIMA DELLA PANDEMIA, QUINDI NON SO SE LE CONCLUSIONI DEI 
+### VARI MODELLI POSSANO ESSERE CONSISTENTI
+
+
+
+
+### TABTS ----
+# Le vendite giornaliere pre-COVID (ristorante1_pre_covid$lordototale) vengono divise 
+# in train e test  per cercare di modellare i dati a disposizione e cercare di 
+# valutarne la qualità del modello ottenuto.
+# Il seguente modello viene utilizzato per fare previsioni su valori futuri, in 
+# particolar modo per prevedere come le vendite sarebbero andate durante il periodo
+# covid, durante il quale per alcune settimane le vendite effettive invece sono 
+# state pari a zero
+
+vendite1_day_pre_split_tbats <- ts_split(pre_covid_1_day)
+train_tbats <- vendite1_day_pre_split_tbats$train
+test_tbats <- vendite1_day_pre_split_tbats$test
+
+tbats_data <- msts(train_tbats, seasonal.periods=c(7,365.25))
+MTABTS <- tbats(tbats_data)
+
+#  considerando test set
+vendite_forecast_tbats <- forecast(MTABTS, h=length(test_tbats))
+autoplot(vendite_forecast_tbats, pre_covid_1_day.colour = 'black')
+
+MTABTS %>%
+  forecast(h=length(test_tbats)) %>%  
+  autoplot() + autolayer(test_tbats)
+
+# performance
+accuracy(vendite_forecast_tbats$mean, test_tbats)
+# RMSE 1431.843
+# MAPE 14.83464
+
+# previsioni periodo covid
+MTABTS %>%
+  forecast(h=320) %>%  # fino a metà maggio circa
+  autoplot() + autolayer(train_tbats)
+
+# cofronto con valori reali
+autoplot(ts(vendite1_day[1:1233], start=2017,frequency=365))
