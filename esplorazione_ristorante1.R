@@ -7,7 +7,7 @@ set.seed(100)
 packages <- c("readxl",  "readr", "forecast", "dplyr", "magrittr", "ggplot2",
               "forcats", "lubridate", "RQuantLib", "devtools", "patchwork", "KFAS",
               "caret", "tseries", "urca", "TSstudio", "gridExtra", "randomForest",
-              "prophet", "xts", "corrplot", "rstan") 
+              "prophet", "xts", "corrplot", "rstan", "hydroTSM") 
 
 # Install packages if not yet installed
 installed_packages <- packages %in% rownames(installed.packages())
@@ -954,3 +954,213 @@ forecast_2022 <- MSARIMAX %>%
   forecast(h=23,  xreg =data.matrix(regressori_forecast_week[, c("week_covid_bin", "week_rossa_bin")])) 
 
 autoplot(forecast_2022)
+
+
+
+### Random forest ----
+# Il modello viene addestrato su tutti i dati (settimanali) a disposizione (vendite1_sett_avg) 
+# per poi utilizzarlo per effettuare previsioni su date per cui non si hanno a 
+# disposizione i dati reali di vendite e scontrini, dunque oltre aprile 2022.
+
+copy_ristorante1$Precipitazioni.mm.[is.na(copy_ristorante1$Precipitazioni.mm.)] <- 0
+
+# implementazione modelli
+MRF_future <- randomForest(lordototale ~ Giorno + Month + Year + Season + Weekend
+                               + Festivo + Pioggia + Precipitazioni.mm. + ColoreCOVID,
+                               data = copy_ristorante1)
+varImpPlot(MRF_future)
+print(MRF_future)
+# % Var explained: 81.03
+
+
+# setto il periodo su cui fare previsioni, considerando i regressori selezionati
+future_interval = seq(as.Date("2022-05-01"), as.Date("2022-09-30"), by="days")
+ristorante1_future <- data.frame(future_interval)
+colnames(ristorante1_future) <- "data"
+
+# colonne Mese, Anno
+ristorante1_future$Month <- month(ristorante1_future$data)
+ristorante1_future$Month <- factor(ristorante1_future$Month, levels = c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"))
+ristorante1_future$Year <- year(ristorante1_future$data)
+ristorante1_future$Year <- factor(ristorante1_future$Year, levels = c("2018", "2019", "2020", "2021", "2022"))
+
+# colonna Giorno, Weekend
+ristorante1_future <- ristorante1_future %>%
+  mutate(weekday = wday(data, label = TRUE, abbr = FALSE,
+                        week_start = getOption("lubridate.week.start", 1),
+                        locale = Sys.getlocale("LC_TIME"))) %>%
+  mutate(tipo_giorno = case_when(
+    (weekday %in% c("Saturday", "Sunday")) ~ "weekend"
+    , (weekday < 7) ~ "weekday"
+    , TRUE ~ "other"
+  )
+)
+ristorante1_future$weekday <- as.factor(ristorante1_future$weekday)
+ristorante1_future["tipo_giorno"][ristorante1_future["tipo_giorno"] == "weekend"] <- "True"
+ristorante1_future["tipo_giorno"][ristorante1_future["tipo_giorno"] == "weekday"] <- "False"
+colnames(ristorante1_future)[which(names(ristorante1_future) == "weekday")] <- "Giorno"
+colnames(ristorante1_future)[which(names(ristorante1_future) == "tipo_giorno")] <- "Weekend"
+ristorante1_future$Weekend <- as.factor(ristorante1_future$Weekend)
+ristorante1_future$Giorno <- factor(ristorante1_future$Giorno, levels = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday",
+                                                                          "Saturday", "Sunday"))
+
+# colonna ColoreCOVID
+ristorante1_future$ColoreCOVID <- "bianco"
+ristorante1_future$ColoreCOVID <- factor(ristorante1_future$ColoreCOVID, levels = c("", "arancione", "bianco", "giallo", "rosso"))
+
+
+# colonna lordototale
+ristorante1_future$lordototale <- 0
+
+# riordino le colonne
+ristorante1_future <- data.frame(ristorante1_future$data,
+                                 ristorante1_future$lordototale,
+                                 ristorante1_future$Giorno,
+                                 ristorante1_future$Month,
+                                 ristorante1_future$Year,
+                                 ristorante1_future$Weekend,
+                                 ristorante1_future$ColoreCOVID)
+
+names(ristorante1_future)<- c("data", 
+                              "lordototale",
+                              "Giorno",
+                              "Month",
+                              "Year",
+                              "Weekend",
+                              "ColoreCOVID")
+
+ristorante1_RF_full <-rbind(copy_ristorante1[,c("data", "lordototale", "Giorno",
+                                                   "Month", "Year", "Weekend", 
+                                                "ColoreCOVID")],
+                            ristorante1_future)
+
+# si selezionano le variabili più rilevanti
+MRF_future_best <- randomForest(lordototale ~ Giorno + Month + Year + Weekend
+                                + ColoreCOVID, data = ristorante1_RF_full[1:1337,]) # faccio così per non avere problemi sui
+                                                                                    # livelli dei factor
+varImpPlot(MRF_future_best)
+print(MRF_future_best)
+# % Var explained: 79.73
+
+# si utilizza il modello appena creato per fare previsioni sul futuro
+vendite_forecast_rf_new <- predict(MRF_future_best, ristorante1_RF_full[1339:1491,])
+vendite_forecast_rf_new <- as.data.frame(vendite_forecast_rf_new)
+
+# si uniscono le tue serie storiche
+
+# serie storica previsioni
+future_interval_df <- data.frame(date = future_interval, 
+                                      val=vendite_forecast_rf_new)
+future_interval_df$date<-as.Date(future_interval_df$date)  
+future_interval_ts <- xts(future_interval_df$val, future_interval_df$date)
+
+plot(future_interval_df$date, future_interval_df$vendite_forecast, xlab = "data", 
+     ylab = "vendite", type="l", main = "Ristorante 1")
+
+# serie storica dati reali fino al 1 maggio 2022
+reference_date_pre <- as.Date("2022-04-30", format = "%Y-%m-%d")
+vendite_pre_aprile <- copy_ristorante1 %>%
+  filter(data <= reference_date_pre) %>%
+  select(data, lordototale)
+
+interval_pre <- seq(as.Date("2018-09-01"), as.Date("2022-04-30"), by = "day")
+interval_pre_df <- data.frame(date = interval_pre, 
+                                     val=vendite_pre_aprile$lordototale)
+
+interval_pre_df$date<-as.Date(interval_pre_df$date)  
+interval_pre_ts <- xts(interval_pre_df$val, interval_pre_df$date)
+
+# si uniscono le due serie storiche
+names(future_interval_df)[1] <- "data"
+names(future_interval_df)[2] <- "vendite"
+
+names(interval_pre_df)[1] <- "data"
+names(interval_pre_df)[2] <- "vendite"
+
+interval_complete_new <- rbind(future_interval_df, interval_pre_df)
+interval_complete_new <- interval_complete_new[order(interval_complete_new$data), ]
+row.names(interval_complete_new) <- NULL
+
+# serie storica con previsioni
+plot(interval_complete_new$data, interval_complete_new$vendite, xlab = "data", 
+     ylab = "vendite", type="l", main = "Ristorante 1 previsioni")
+
+# verifica performance modello
+RMSE.rf <- sqrt(mean((MRF_future_best$predicted - copy_ristorante1$lordototale)^2))  # 1537.093
+
+
+
+
+### Prophet con regressori ----
+# Il modello viene addestrato su tutti i dati (settimanali) a disposizione (vendite1_sett_avg) 
+# per poi utilizzarlo per effettuare previsioni su date per cui non si hanno a 
+# disposizione i dati reali di vendite e scontrini, dunque oltre aprile 2022.
+
+covid <- function(ds) {
+  dates <- as.Date(ds)
+  reference_date_pre <- as.Date("2020-03-09", format = "%Y-%m-%d")
+  as.numeric(dates > reference_date_pre)
+}
+
+# periodo pre maggio 2022
+ristorante1_pre_maggio_prophet <- data.frame(copy_ristorante1$data, 
+                                             copy_ristorante1$ROSSA)
+names(ristorante1_pre_maggio_prophet) <- c("data", "rossa")
+
+# periodo post maggio 2022
+ristorante1_post_maggio_prophet <- data.frame(future_interval)
+ristorante1_post_maggio_prophet$rossa <- 0
+names(ristorante1_post_maggio_prophet) <- c("data", "rossa")
+
+
+# unione periodo pre aprile e periodo post aprile
+vendite_prophet_new <- rbind(ristorante1_pre_maggio_prophet, 
+                             ristorante1_post_maggio_prophet)
+
+# si considerano le vendite fino ad aprile 2022
+prophet_vendite_totali <- copy_ristorante1 %>% 
+  select(data, lordototale)
+colnames(prophet_vendite_totali) <- c("ds", "y")
+prophet_vendite_totali$covid <- covid(prophet_vendite_totali$ds)
+prophet_vendite_totali$rossa <- ristorante1_pre_maggio_prophet$rossa
+
+# si crea il modello
+MPROPHET_NEW <- prophet(daily.seasonality=FALSE)
+MPROPHET_NEW <- add_country_holidays(MPROPHET_NEW, country_name = 'IT')
+MPROPHET_NEW <- add_regressor(MPROPHET_NEW, 'covid')
+MPROPHET_NEW <- add_regressor(MPROPHET_NEW, 'rossa')
+MPROPHET_NEW <- fit.prophet(MPROPHET_NEW, prophet_vendite_totali)
+
+# vengono fatte le previsioni
+future_prophet_regr <- make_future_dataframe(MPROPHET_NEW, periods=153)
+
+future_prophet_regr$covid <- covid(future_prophet_regr$ds)
+future_prophet_regr$rossa <- vendite_prophet_new$rossa
+
+vendite_forecast_prophet_regr <- predict(MPROPHET_NEW, future_prophet_regr)
+
+plot(MPROPHET_NEW, vendite_forecast_prophet_regr)
+prophet_plot_components(MPROPHET_NEW, vendite_forecast_prophet_regr)
+
+dyplot.prophet(MPROPHET_NEW, vendite_forecast_prophet_regr)
+
+sqrt(mean((prophet_vendite_totali$y- vendite_forecast_prophet_regr[1:1563,"yhat"])^2))
+# RMSE 1344.155
+
+
+
+
+### TBATS ----
+# Il modello viene addestrato su tutti i dati (giornalieri) a disposizione (vendite1_day) 
+# per poi utilizzarlo per effettuare previsioni su date per cui non si hanno a 
+# disposizione i dati reali di vendite e scontrini, dunque oltre aprile 2022.
+
+tbats_data_new <- msts(vendite1_day, seasonal.periods=c(7,365.25))
+MTBATS_NEW <- tbats(tbats_data_new)
+
+# previsioni post aprile 2022
+vendite_forecast_tbats_new <- forecast(MTBATS_NEW, h=122)
+autoplot(vendite_forecast_tbats_new, tbats_data = 'black') # non riesco a capire perchè questo andamento
+
+# RMSE
+sqrt(mean((vendite1_day- MTBATS_NEW$fitted.values)^2))  # 1144.543
