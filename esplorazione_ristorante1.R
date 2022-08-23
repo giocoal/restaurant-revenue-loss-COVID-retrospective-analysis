@@ -536,9 +536,11 @@ print(autoplot(vendite1_mens.fit) + ggtitle("Ristorante 1: Decomposizione mensil
 # components.ts_1 = decompose(vendite1_mens_avg)
 # plot(components.ts_1)
 
-### Decomposizione serie storica pre-COVID
-# Non so quanto senso possa avere farla, dal momento che i nostri dati coprono
-# poco pi? di un anno prima del COVID
+### Decomposizione giornaliera serie storica pre-COVID
+
+multi_vendite1_pre_covid <- msts(copy_ristorante1_pre_covid$lordototale, ts.frequency = 365, start = decimal_date(as.Date("2018-09-03")), seasonal.periods = c(7,365))
+multi_vendite1_dec_pre_covid <- mstl(multi_vendite1_pre_covid, s.window = "periodic")
+print(autoplot(multi_vendite1_dec_pre_covid) + ggtitle("Ristorante 1 pre-COVID: Decomposizione giornaliera"))
 
 
 # Confronto estati 2019/2020/2021 (pre-durante-post COVID)
@@ -774,7 +776,6 @@ MTABTS %>%
 
 # cofronto con valori reali
 autoplot(ts(vendite1_day[1:1233], start=2017,frequency=365))
-
 
 
 

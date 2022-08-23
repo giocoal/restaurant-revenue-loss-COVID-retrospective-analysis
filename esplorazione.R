@@ -31,7 +31,7 @@ mape <- function(actual,pred){
 }
 
 # Caricamento datasets
-ristorazione_completo <- read.csv("dataset_integrato.csv")
+ristorazione_completo <- read.csv("dataset_clean.csv")
 ristorante1 <- read.csv("ristorante1.csv")
 ristorante2 <- read.csv("ristorante2.csv")
 ristorante3 <- read.csv("ristorante3.csv")
@@ -45,55 +45,55 @@ ristorante6 <- read.csv("ristorante6.csv")
 sum(is.na(ristorante1$scontrini)) # 300 NA
 # which(is.na(ristorante1$scontrini))
 subset(ristorante1[,c(2,6)], is.na(ristorante1$scontrini))
-# Fino alla riga 243 la presenza di NaN è causata dal fatto che i dati sono
-# aggregati mensilmente. Dopodichè c'è tutto il periodo COVID (da 802 a 857) e 
-# alcune festività
+# Fino alla riga 243 la presenza di NaN ? causata dal fatto che i dati sono
+# aggregati mensilmente. Dopodich? c'? tutto il periodo COVID (da 802 a 857) e 
+# alcune festivit?
 
 ## Ristorante 2
 sum(is.na(ristorante2$scontrini)) # 322 NA
 # which(is.na(ristorante2$scontrini))
 subset(ristorante2[,c(2,6)], is.na(ristorante2$scontrini))
-# Fino alla riga 243 la presenza di NaN è causata dal fatto che i dati sono
-# aggregati mensilmente. Dopodichè c'è tutto il periodo COVID (da 802 a 854) e 
-# alcune festività. Sembrerebbe esserci un periodo di chiusura fra le righe 1366
-# e 1395, ma da 1390 è presente il dato del lordo totale. C'è da sistemare il 
+# Fino alla riga 243 la presenza di NaN ? causata dal fatto che i dati sono
+# aggregati mensilmente. Dopodich? c'? tutto il periodo COVID (da 802 a 854) e 
+# alcune festivit?. Sembrerebbe esserci un periodo di chiusura fra le righe 1366
+# e 1395, ma da 1390 ? presente il dato del lordo totale. C'? da sistemare il 
 # valore medio degli scontrini per quei giorni
 
 ## Ristorante 3
 sum(is.na(ristorante3$scontrini)) # 71 NA
 # which(is.na(ristorante3$scontrini))
 subset(ristorante3[,c(2,6)], is.na(ristorante3$scontrini))
-# I primi 7 valori mancanti sono causati, probabilmente, dall'inizio dell'attività
-# datata 08-11-2019. Dopodichè abbiamo NaN per COVID (da 133 a 188) e festività
+# I primi 7 valori mancanti sono causati, probabilmente, dall'inizio dell'attivit?
+# datata 08-11-2019. Dopodich? abbiamo NaN per COVID (da 133 a 188) e festivit?
 
 ## Ristorante 4
 sum(is.na(ristorante4$scontrini)) # 341 NA
 # which(is.na(ristorante4$scontrini))
 subset(ristorante4[,c(2,6)], is.na(ristorante4$scontrini))
-# Fino alla riga 243 la presenza di NaN è causata dal fatto che i dati sono
-# aggregati mensilmente. Dopodichè c'è tutto il periodo COVID (da 802 a 884, 
-# di diversi giorni più lungo rispetto agli altri ristoranti) e alcune festività
+# Fino alla riga 243 la presenza di NaN ? causata dal fatto che i dati sono
+# aggregati mensilmente. Dopodich? c'? tutto il periodo COVID (da 802 a 884, 
+# di diversi giorni pi? lungo rispetto agli altri ristoranti) e alcune festivit?
 
 ## Ristorante 5
 sum(is.na(ristorante5$scontrini)) # 293 NA
 # which(is.na(ristorante5$scontrini))
 subset(ristorante5[,c(2,6)], is.na(ristorante5$scontrini))
-# Fino alla riga 243 la presenza di NaN è causata dal fatto che i dati sono
-# aggregati mensilmente. Dopodichè c'è tutto il periodo COVID (da 802 a 854) e 
-# alcune festività
+# Fino alla riga 243 la presenza di NaN ? causata dal fatto che i dati sono
+# aggregati mensilmente. Dopodich? c'? tutto il periodo COVID (da 802 a 854) e 
+# alcune festivit?
 
 ## Ristorante 6
 sum(is.na(ristorante6$scontrini)) # 292 NA
 # which(is.na(ristorante6$scontrini))
 subset(ristorante6[,c(2,6)], is.na(ristorante6$scontrini))
-# Fino alla riga 243 la presenza di NaN è causata dal fatto che i dati sono
-# aggregati mensilmente. Dopodichè c'è tutto il periodo COVID (da 802 a 854) e 
-# alcune festività
+# Fino alla riga 243 la presenza di NaN ? causata dal fatto che i dati sono
+# aggregati mensilmente. Dopodich? c'? tutto il periodo COVID (da 802 a 854) e 
+# alcune festivit?
 
 ### C'E' DA CAPIRE COME GESTIRE I CASI DI NUMERO NULLO DI SCONTRINI MA LORDO 
 ### DIVERSO DA 0. AGGIUNGERE VARIABILE APERTO/CHIUSO?
 
-### Metto a 0 i Na, per comodità
+### Metto a 0 i Na, per comodit?
 
 ristorante1$lordototale[is.na(ristorante1$lordototale)] <- 0
 ristorante1$scontrini[is.na(ristorante1$scontrini)] <- 0  
@@ -425,7 +425,7 @@ ggplot(copy_ristorazione_completo, aes(Season, scontrini)) + geom_boxplot() +
         panel.border = element_rect(colour="grey70"),
         panel.spacing=unit(0,"cm"))
 
-### Weekend/settimana (il venerdì è considerato giorno della settimana)
+### Weekend/settimana (il venerd? ? considerato giorno della settimana)
 ggplot(copy_ristorazione_completo, aes(Weekend, lordototale)) + geom_boxplot() +
   theme_bw() +
   ggtitle("Box-plot vendite weekend vs. giorno della settimana")  +
