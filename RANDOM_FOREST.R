@@ -225,6 +225,13 @@ lines(rf_complete$data, rf_complete$datoreale, col="red",lty=2)
 rf_complete$perdite <- rf_complete$previsione - rf_complete$datoreale
 plot(rf_complete$data, rf_complete$perdite, type="l", col="black", xlab="data", ylab="vendite", lty=1)
 
+data_inizio <- as.Date("2020-01-01", format = "%Y-%m-%d")
+stima_trend_rf <- rf_complete %>%
+  filter(rf_complete$data > data_inizio)
+
+perdite_stimate <- msts(stima_trend_rf$perdite, ts.frequency = 365, start = decimal_date(as.Date("2020-01-01")), seasonal.periods = c(7,365))
+perdite_stimate_dec <- mstl(perdite_stimate, s.window = "periodic")
+print(autoplot(perdite_stimate_dec) + ggtitle("Ristorante 1: perdite stimate"))
 
 
 
