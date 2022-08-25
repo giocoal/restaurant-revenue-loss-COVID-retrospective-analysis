@@ -38,13 +38,13 @@ ristorante2 <- read.csv("ristorante2.csv")
 sum(is.na(ristorante2$scontrini)) # 322 NA
 # which(is.na(ristorante2$scontrini))
 subset(ristorante2[,c(2,6)], is.na(ristorante2$scontrini))
-# Fino alla riga 243 la presenza di NaN Ë causata dal fatto che i dati sono
-# aggregati mensilmente. DopodichË c'Ë tutto il periodo COVID (da 802 a 854) e 
-# alcune festivit‡. Sembrerebbe esserci un periodo di chiusura fra le righe 1366
-# e 1395, ma da 1390 Ë presente il dato del lordo totale. C'Ë da sistemare il 
+# Fino alla riga 243 la presenza di NaN ? causata dal fatto che i dati sono
+# aggregati mensilmente. Dopodich? c'? tutto il periodo COVID (da 802 a 854) e 
+# alcune festivit?. Sembrerebbe esserci un periodo di chiusura fra le righe 1366
+# e 1395, ma da 1390 ? presente il dato del lordo totale. C'? da sistemare il 
 # valore medio degli scontrini per quei giorni
 
-### Metto a 0 i Na, per comodit‡
+### Metto a 0 i Na, per comodit?
 
 ristorante2$lordototale[is.na(ristorante2$lordototale)] <- 0
 ristorante2$scontrini[is.na(ristorante2$scontrini)] <- 0  
@@ -161,7 +161,7 @@ ggplot(copy_ristorante2, aes(Season, scontrini)) + geom_boxplot() +
         panel.border = element_rect(colour="grey70"),
         panel.spacing=unit(0,"cm"))
 
-### Weekend/settimana (il venerdÏ Ë considerato giorno della settimana)
+### Weekend/settimana (il venerd? ? considerato giorno della settimana)
 ggplot(copy_ristorante2, aes(Weekend, lordototale)) + geom_boxplot() +
   theme_bw() +
   ggtitle("Box-plot vendite weekend vs. giorno della settimana")  +
@@ -229,8 +229,8 @@ print(
 )
 
 # Vendite settimanali medie
-# Per comodit‡ utilizzo il dataset completo perchË il 01-01-2018 Ë un lunedÏ.
-# Poi toglierÚ i dati delle prime 35 settimane perchË sono aggregati mensilmente
+# Per comodit? utilizzo il dataset completo perch? il 01-01-2018 ? un luned?.
+# Poi toglier? i dati delle prime 35 settimane perch? sono aggregati mensilmente
 week_rist2 <- as.Date(cut(ristorante2$data, "week"))
 vendite2_sett_avg <- aggregate(lordototale ~ week_rist2, data = ristorante2, mean)
 # Tolgo le settimane nei periodi in cui ho dati mensili (la prima settimana
@@ -247,7 +247,7 @@ print(
 )
 
 # Vendite mensili medie
-# Uso direttamente il dataset completo, considerando anche i dati gi‡ aggregati
+# Uso direttamente il dataset completo, considerando anche i dati gi? aggregati
 # mensilmente
 month_rist2 <- as.Date(cut(ristorante2$data, "month"))
 
@@ -263,7 +263,7 @@ print(
 )
 
 ### Vendite giornaliere/settimanali/mensili periodo pre-COVID
-# Prendo come data di riferimeno quella in cui le autorit‡ cinesi hanno identificato
+# Prendo come data di riferimeno quella in cui le autorit? cinesi hanno identificato
 # il virus
 data_covid <- as.Date("2020-01-07", format = "%Y-%m-%d")
 # Ristorante 2 pre-COVID
@@ -281,8 +281,8 @@ print(
 )
 
 # Vendite settimanali pre-COVID
-# Per comodit‡ utilizzo il dataset completo perchË il 01-01-2018 Ë un lunedÏ.
-# Poi toglierÚ i dati delle prime 35 settimane perchË sono aggregati mensilmente
+# Per comodit? utilizzo il dataset completo perch? il 01-01-2018 ? un luned?.
+# Poi toglier? i dati delle prime 35 settimane perch? sono aggregati mensilmente
 week_rist2_pre_covid <- as.Date(cut(ristorante2_pre_covid$data, "week"))
 pre_covid_2_sett_avg <- aggregate(lordototale ~ week_rist2_pre_covid, data = ristorante2_pre_covid, mean)
 # Tolgo le settimane nei periodi in cui ho dati mensili (la prima settimana
@@ -299,7 +299,7 @@ print(
 )
 
 # Vendite mensili pre-COVID
-# Uso direttamente il dataset completo, considerando anche i dati gi‡ aggregati
+# Uso direttamente il dataset completo, considerando anche i dati gi? aggregati
 # mensilmente
 month_rist2_pre_covid <- as.Date(cut(ristorante2_pre_covid$data, "month"))
 
@@ -328,8 +328,8 @@ print(
 )
 
 # Scontrini settimanali medi
-# Per comodit‡ utilizzo il dataset completo perchË il 01-01-2018 Ë un lunedÏ.
-# Poi toglierÚ i dati delle prime 35 settimane perchË sono aggregati mensilmente
+# Per comodit? utilizzo il dataset completo perch? il 01-01-2018 ? un luned?.
+# Poi toglier? i dati delle prime 35 settimane perch? sono aggregati mensilmente
 week_rist2 <- as.Date(cut(ristorante2$data, "week"))
 scontrini2_sett_avg <- aggregate(scontrini ~ week_rist2, data = ristorante2, mean)
 # Tolgo le settimane nei periodi in cui ho dati mensili (la prima settimana
@@ -346,7 +346,7 @@ print(
 )
 
 # Scontrini mensili medi
-# Uso direttamente il dataset completo, considerando anche i dati gi‡ aggregati
+# Uso direttamente il dataset completo, considerando anche i dati gi? aggregati
 # mensilmente
 month_rist2 <- as.Date(cut(ristorante2$data, "month"))
 
@@ -374,8 +374,8 @@ print(
 )
 
 # Scontrini settimanali pre-COVID
-# Per comodit‡ utilizzo il dataset completo perchË il 01-01-2018 Ë un lunedÏ.
-# Poi toglierÚ i dati delle prime 35 settimane perchË sono aggregati mensilmente
+# Per comodit? utilizzo il dataset completo perch? il 01-01-2018 ? un luned?.
+# Poi toglier? i dati delle prime 35 settimane perch? sono aggregati mensilmente
 week_rist2_pre_covid <- as.Date(cut(ristorante2_pre_covid$data, "week"))
 scontrini_pre_covid_2_sett_avg <- aggregate(scontrini ~ week_rist2_pre_covid, data = ristorante2_pre_covid, mean)
 # Tolgo le settimane nei periodi in cui ho dati mensili (la prima settimana
@@ -392,7 +392,7 @@ print(
 )
 
 # Scontrini mensili pre-COVID
-# Uso direttamente il dataset completo, considerando anche i dati gi‡ aggregati
+# Uso direttamente il dataset completo, considerando anche i dati gi? aggregati
 # mensilmente
 month_rist2_pre_covid <- as.Date(cut(ristorante2_pre_covid$data, "month"))
 
@@ -408,7 +408,7 @@ print(
 )
 
 
-### Stagionalit‡ considerando tutti gli anni
+### Stagionalit? considerando tutti gli anni
 
 print(
   ggseasonplot(vendite2_sett_avg, year.labels=TRUE, year.labels.left=TRUE) +
@@ -416,7 +416,7 @@ print(
     ggtitle("Seasonal plot Ristorante 2: vendite settimanali")
 )
 
-# Nel grafico precedente c'Ë un problema sull'anno 2018, che dovrebbe partire dalla
+# Nel grafico precedente c'? un problema sull'anno 2018, che dovrebbe partire dalla
 # settimana 36 ma per qualche motivo "interpola" a partire dalla settimana 1. 
 # Non ho trovato come risolvere questa cosa
 
@@ -433,7 +433,7 @@ print(
     ggtitle("Seasonal subseries plot Ristorante 2: vendite medie mensili"))
 
 
-### Stagionalit‡ considerando il periodo pre-COVID
+### Stagionalit? considerando il periodo pre-COVID
 
 print(
   ggseasonplot(pre_covid_2_sett_avg, year.labels=TRUE, year.labels.left=TRUE) +
@@ -476,9 +476,9 @@ print(
 
 
 ### Analisi autocorrelazione considerando tutti gli anni
-# Per una serie con trend l'autocorrelazione Ë alta a lag vicini e si abbassa
-# piano piano. Se c'Ë stagionalit‡, invece, l'autocorrelazione presenta delle
-# regolarit‡ nel suo andamento
+# Per una serie con trend l'autocorrelazione ? alta a lag vicini e si abbassa
+# piano piano. Se c'? stagionalit?, invece, l'autocorrelazione presenta delle
+# regolarit? nel suo andamento
 
 print(
   ggAcf(vendite2_day, lag=28) +
@@ -539,7 +539,7 @@ print(autoplot(vendite2_mens.fit) + ggtitle("Ristorante 2: Decomposizione mensil
 
 ### Decomposizione serie storica pre-COVID
 # Non so quanto senso possa avere farla, dal momento che i nostri dati coprono
-# poco pi˘ di un anno prima del COVID
+# poco pi? di un anno prima del COVID
 
 
 # Confronto estati 2019/2020/2021 (pre-durante-post COVID)
@@ -571,6 +571,49 @@ print(
   p + scale_y_continuous() + scale_x_discrete(labels=labels) + 
     theme(axis.text.x = element_text(angle = 90, vjust = 0.5, size = 8)) +
     ggtitle("Ristorante 2: confronto estati")
+)
+
+
+# Analisi andamento scontrino medio
+
+df_scontrino_medio <- copy_ristorante2[, c("data", "Prezzo_medio_per_scontrino")]
+
+# Divido in due parti i miei dati: il pre-covid, che arriva fino al 11-03-2020 compreso (ultimo giorno di 
+# apertura prima della quarantena), e il post-covid, che parte dal 07-05-2020 compreso (primo giorno di 
+# riapertura)
+
+df_scontrino_medio <- df_scontrino_medio %>%
+  mutate(Periodo = case_when(
+    (data <= "2020-03-11") ~ "Pre"
+    , TRUE ~ "Post"
+  )
+  )
+
+# Elimino le righe del periodo di chisura, che non mi interessano
+
+df_scontrino_medio <- df_scontrino_medio %>% filter(df_scontrino_medio$data <= "2020-03-11" |
+                                                      df_scontrino_medio$data >= "2020-05-07")
+
+# Decido di eliminare gli outlier, per una stima pi√π consistente della media
+
+Q1 <- quantile(df_scontrino_medio$Prezzo_medio_per_scontrino, .25)
+Q3 <- quantile(df_scontrino_medio$Prezzo_medio_per_scontrino, .75)
+IQR <- IQR(df_scontrino_medio$Prezzo_medio_per_scontrino)
+
+df_scontrino_medio_no_out <- subset(df_scontrino_medio, df_scontrino_medio$Prezzo_medio_per_scontrino > (Q1 - 1.5*IQR)
+                                    & df_scontrino_medio$Prezzo_medio_per_scontrino < (Q3 + 1.5*IQR))
+
+# Calcolo la media per periodo
+mean_scontrino <- df_scontrino_medio_no_out %>% group_by(Periodo) %>% 
+  summarise(mean_val=mean(Prezzo_medio_per_scontrino))
+
+p <- ggplot(df_scontrino_medio_no_out, aes(x = data, y = Prezzo_medio_per_scontrino,
+                                           col = Periodo)) + geom_line() + 
+  geom_hline(data = mean_scontrino, aes(yintercept = mean_val, col=Periodo), linetype = 'dashed')
+# + stat_smooth(color = "#FC4E07", fill = "#FC4E07", method = "loess") aggiunge una sorta di trend
+print(
+  p + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, size = 8)) +
+    ggtitle("Ristorante 2: confronto scontrino medio pre/post COVID")
 )
 
 
@@ -780,8 +823,8 @@ autoplot(ts(vendite2_day[1:1233], start=2017,frequency=365))
 
 # PREVISIONE ANDAMENTO VENDITE POST APRILE 2022 --------------------------------
 # Le previsioni sono state fatte per il periodo che va dal 1 maggio 2022 al 
-# 30 settembre 2022. Si puÚ tranquillamente estendere
-# In questo caso non vi Ë una suddivisione in train e test dei dati a disposizione
+# 30 settembre 2022. Si pu? tranquillamente estendere
+# In questo caso non vi ? una suddivisione in train e test dei dati a disposizione
 
 
 ### HoltWinters ----
@@ -790,7 +833,7 @@ autoplot(ts(vendite2_day[1:1233], start=2017,frequency=365))
 # disposizione i dati reali di vendite e scontrini, dunque oltre aprile 2022. 
 
 # Metodo lisciamento esponenziale
-MHW <- HoltWinters(vendite2_sett_avg)  # il modello permette di catturare trend e stagionalit‡
+MHW <- HoltWinters(vendite2_sett_avg)  # il modello permette di catturare trend e stagionalit?
 plot(MHW)
 
 # parametri
@@ -821,7 +864,7 @@ plot(MHW, vendite_forecast_hw)
 
 # setting regressori
 
-# dati "COVID" su base settimanale (somma, si contano i giorni della settimana in cui c'Ë il covid)
+# dati "COVID" su base settimanale (somma, si contano i giorni della settimana in cui c'? il covid)
 # aggiungo la colonna COVID SI (1)/NO (0)
 copy_ristorante2$COVID <- 0
 copy_ristorante2[copy_ristorante2$data > "2020-03-09",]$COVID <- 1
@@ -833,7 +876,7 @@ week_covid_sum <- aggregate(COVID ~ week_rist2_sarimax, copy_ristorante2, sum)
 week_covid_sum <- week_covid_sum$COVID
 copy_ristorante2$COVID <- as.factor(copy_ristorante2$COVID)
 
-# dati "chiuso" su base settimanale (somma, si contano i giorni della settimana in cui il ristorante Ë chiuso, quindi senza vendite)
+# dati "chiuso" su base settimanale (somma, si contano i giorni della settimana in cui il ristorante ? chiuso, quindi senza vendite)
 # aggiungo la colonna CHIUSO SI (1)/NO (0)
 copy_ristorante2$CHIUSO <- 0
 copy_ristorante2[copy_ristorante2$lordototale == 0,]$CHIUSO <- 1
@@ -844,7 +887,7 @@ week_chiuso_sum <- aggregate(CHIUSO ~ week_rist2_sarimax, copy_ristorante2, sum)
 week_chiuso_sum <- week_chiuso_sum$CHIUSO
 copy_ristorante2$CHIUSO <- as.factor(copy_ristorante2$CHIUSO)
 
-# dati "zona rossa" su base settimanale (somma, si contano i giorni della settimana in cui c'Ë zona rossa)
+# dati "zona rossa" su base settimanale (somma, si contano i giorni della settimana in cui c'? zona rossa)
 # aggiungo la colonna ROSSA SI (1)/NO (0)
 copy_ristorante2$ROSSA <- 0
 copy_ristorante2[copy_ristorante2$ColoreCOVID == "rosso",]$ROSSA <- 1
@@ -863,14 +906,14 @@ regressori_week <- regressori_week %>%
 #regressori_week$week_covid_bin <- as.factor(regressori_week$week_covid_bin)
 
 regressori_week <- regressori_week %>%
-  mutate(week_chiuso_bin = ifelse(week_chiuso_sum>3, 1, 0))  # se un ristorante durante la settimana rimane chiuso per pi˘ di 3 giorni allora tale settimana viene etichettata come settimana chiusa
+  mutate(week_chiuso_bin = ifelse(week_chiuso_sum>3, 1, 0))  # se un ristorante durante la settimana rimane chiuso per pi? di 3 giorni allora tale settimana viene etichettata come settimana chiusa
 #regressori_week$week_chiuso_bin <- as.factor(regressori_week$week_chiuso_bin)
 
 regressori_week <- regressori_week %>%
-  mutate(week_rossa_bin = ifelse(week_rossa_sum>3, 1, 0))  # se un ristorante durante la settimana Ë in zona rossa per pi˘ di 3 giorni allora tale settimana viene etichettata come settimana rossa
+  mutate(week_rossa_bin = ifelse(week_rossa_sum>3, 1, 0))  # se un ristorante durante la settimana ? in zona rossa per pi? di 3 giorni allora tale settimana viene etichettata come settimana rossa
 #regressori_week$week_rossa_bin <- as.factor(regressori_week$week_rossa_bin)
 
-# verifica collinearit‡ variabili
+# verifica collinearit? variabili
 numeric.var <- sapply(regressori_week, is.numeric)
 corr.matrix <- cor(regressori_week[,numeric.var])
 corrplot(corr.matrix, main="\n\nCorrelation Plot for Numerical Variables", method="number")
@@ -879,7 +922,7 @@ corrplot(corr.matrix, main="\n\nCorrelation Plot for Numerical Variables", metho
 
 MSARIMAX <- auto.arima(vendite2_sett_avg, seasonal = TRUE, 
                        xreg = data.matrix(regressori_week[c(-1), c("week_covid_bin", "week_rossa_bin")])) 
-# tolto la prima settimana di regressori_week per uniformare dimensionalit‡
+# tolto la prima settimana di regressori_week per uniformare dimensionalit?
 summary(MSARIMAX) 
 # AIC 3548.42
 # BIC 3568.87
@@ -910,9 +953,9 @@ autoplot(MSARIMAX$fitted) + autolayer(vendite2_sett_avg)
 # vendite, valori che dunque vengono previsti utilizzando il modello precedente
 # e i regressori ottenuti per le nuove date
 
-# NB. Il 30 settembre Ë un venerdÏ, quindi non viene presa in considerazione la 
-# settimana intera ma ciÚ non influenza il valore dei regressori (la settimana 
-# Ë comunque etichettata covid, non ci sono possibili chiusure e non c'Ë zona rossa)
+# NB. Il 30 settembre ? un venerd?, quindi non viene presa in considerazione la 
+# settimana intera ma ci? non influenza il valore dei regressori (la settimana 
+# ? comunque etichettata covid, non ci sono possibili chiusure e non c'? zona rossa)
 
 # Per procedere bisogna prima avere i valori dei regressori per le date per cui
 # verranno eseguite le previsioni
@@ -922,7 +965,7 @@ date_previsione <- seq(as.Date("2022-05-01"), as.Date("2022-09-30"), by="days")
 regressori_forecast_day <- data.frame(date_previsione)
 regressori_forecast_day$COVID <- 1
 regressori_forecast_day$CHIUSO <- 0 # non ci sono date in cui sicuramente i ristoranti sono stati chiusi
-regressori_forecast_day$ROSSA <- 0 # non ci sono pi˘ state date in zona rossa
+regressori_forecast_day$ROSSA <- 0 # non ci sono pi? state date in zona rossa
 
 # divisione in settimane
 week_new_rist2 <- as.Date(cut(regressori_forecast_day$date_previsione, "week"))
@@ -1033,9 +1076,9 @@ ristorante2_RF_full <-rbind(copy_ristorante2[,c("data", "lordototale", "Giorno",
                                                 "ColoreCOVID")],
                             ristorante2_future)
 
-# si selezionano le variabili pi˘ rilevanti
+# si selezionano le variabili pi? rilevanti
 MRF_future_best <- randomForest(lordototale ~ Giorno + Month + Year + Weekend
-                                + ColoreCOVID, data = ristorante2_RF_full[1:1337,]) # faccio cosÏ per non avere problemi sui
+                                + ColoreCOVID, data = ristorante2_RF_full[1:1337,]) # faccio cos? per non avere problemi sui
 # livelli dei factor
 varImpPlot(MRF_future_best)
 print(MRF_future_best)
@@ -1159,7 +1202,7 @@ MTBATS_NEW <- tbats(tbats_data_new)
 
 # previsioni post aprile 2022
 vendite_forecast_tbats_new <- forecast(MTBATS_NEW, h=122)
-autoplot(vendite_forecast_tbats_new, tbats_data = 'black') # non riesco a capire perchË questo andamento
+autoplot(vendite_forecast_tbats_new, tbats_data = 'black') # non riesco a capire perch? questo andamento
 
 # RMSE
 sqrt(mean((vendite2_day- MTBATS_NEW$fitted.values)^2))  # 1144.543

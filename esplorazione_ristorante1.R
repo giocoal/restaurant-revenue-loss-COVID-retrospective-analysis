@@ -5,7 +5,7 @@ set.seed(100)
 # Setting librerie utili
 # Package names
 packages <- c("readxl",  "readr", "forecast", "dplyr", "magrittr", "ggplot2",
-              "forcats", "lubridate", "RQuantLib", "devtools", "patchwork", "KFAS",
+              "forecast", "lubridate", "RQuantLib", "devtools", "patchwork", "KFAS",
               "caret", "tseries", "urca", "TSstudio", "gridExtra", "randomForest",
               "prophet", "xts", "corrplot", "rstan", "hydroTSM") 
 
@@ -226,6 +226,10 @@ print(
     xlab("Anno") +
     ylab("Vendite")
 )
+
+# Media mobile, come va usata?
+ma(vendite1_day, win.len = 7) %>% 
+  autoplot()
 
 # Vendite settimanali medie
 # Per comodit? utilizzo il dataset completo perch? il 01-01-2018 ? un luned?.
@@ -575,8 +579,47 @@ print(
 )
 
 
+# Analisi andamento scontrino medio
 
+df_scontrino_medio <- copy_ristorante1[, c("data", "Prezzo_medio_per_scontrino")]
 
+# Divido in due parti i miei dati: il pre-covid, che arriva fino al 11-03-2020 compreso (ultimo giorno di 
+# apertura prima della quarantena), e il post-covid, che parte dal 07-05-2020 compreso (primo giorno di 
+# riapertura)
+
+df_scontrino_medio <- df_scontrino_medio %>%
+  mutate(Periodo = case_when(
+    (data <= "2020-03-11") ~ "Pre"
+    , TRUE ~ "Post"
+  )
+)
+
+# Elimino le righe del periodo di chisura, che non mi interessano
+
+df_scontrino_medio <- df_scontrino_medio %>% filter(df_scontrino_medio$data <= "2020-03-11" |
+                                                      df_scontrino_medio$data >= "2020-05-07")
+
+# Decido di eliminare gli outlier, per una stima più consistente della media
+
+Q1 <- quantile(df_scontrino_medio$Prezzo_medio_per_scontrino, .25)
+Q3 <- quantile(df_scontrino_medio$Prezzo_medio_per_scontrino, .75)
+IQR <- IQR(df_scontrino_medio$Prezzo_medio_per_scontrino)
+
+df_scontrino_medio_no_out <- subset(df_scontrino_medio, df_scontrino_medio$Prezzo_medio_per_scontrino > (Q1 - 1.5*IQR)
+                                    & df_scontrino_medio$Prezzo_medio_per_scontrino < (Q3 + 1.5*IQR))
+
+# Calcolo la media per periodo
+mean_scontrino <- df_scontrino_medio_no_out %>% group_by(Periodo) %>% 
+  summarise(mean_val=mean(Prezzo_medio_per_scontrino))
+
+p <- ggplot(df_scontrino_medio_no_out, aes(x = data, y = Prezzo_medio_per_scontrino,
+           col = Periodo)) + geom_line() + 
+  geom_hline(data = mean_scontrino, aes(yintercept = mean_val, col=Periodo), linetype = 'dashed')
+  # + stat_smooth(color = "#FC4E07", fill = "#FC4E07", method = "loess") aggiunge una sorta di trend
+print(
+  p + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, size = 8)) +
+    ggtitle("Ristorante 1: confronto scontrino medio pre/post COVID")
+)
 
 ### Random forest ----
 # Le vendite giornaliere pre-COVID (ristorante1_pre_covid$lordototale) vengono divise 

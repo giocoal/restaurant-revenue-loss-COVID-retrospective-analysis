@@ -38,10 +38,10 @@ ristorante3 <- read.csv("ristorante3.csv")
 sum(is.na(ristorante3$scontrini)) # 71 NA
 # which(is.na(ristorante3$scontrini))
 subset(ristorante3[,c(2,6)], is.na(ristorante3$scontrini))
-# I primi 7 valori mancanti sono causati, probabilmente, dall'inizio dell'attivit‡
-# datata 08-11-2019. DopodichË abbiamo NaN per COVID (da 133 a 188) e festivit‡
+# I primi 7 valori mancanti sono causati, probabilmente, dall'inizio dell'attivit?
+# datata 08-11-2019. Dopodich? abbiamo NaN per COVID (da 133 a 188) e festivit?
 
-### Metto a 0 i Na, per comodit‡
+### Metto a 0 i Na, per comodit?
 
 ristorante3$lordototale[is.na(ristorante3$lordototale)] <- 0
 ristorante3$scontrini[is.na(ristorante3$scontrini)] <- 0  
@@ -154,7 +154,7 @@ ggplot(ristorante3, aes(Season, scontrini)) + geom_boxplot() +
         panel.border = element_rect(colour="grey70"),
         panel.spacing=unit(0,"cm"))
 
-### Weekend/settimana (il venerdÏ Ë considerato giorno della settimana)
+### Weekend/settimana (il venerd? ? considerato giorno della settimana)
 ggplot(ristorante3, aes(Weekend, lordototale)) + geom_boxplot() +
   theme_bw() +
   ggtitle("Box-plot vendite weekend vs. giorno della settimana")  +
@@ -222,7 +222,7 @@ print(
 )
 
 # Vendite settimanali medie
-# Per comodit‡ parto dal 2019-11-04 essendo un lunedÏ (e i 3 giorni precedenti
+# Per comodit? parto dal 2019-11-04 essendo un luned? (e i 3 giorni precedenti
 # il ristorante era probabilmente chiuso)
 ristorante3 <- ristorante3[-c(1:3),]
 week_rist3 <- as.Date(cut(ristorante3$data, "week"))
@@ -270,7 +270,7 @@ print(
 )
 
 # Scontrini settimanali medi
-# Per comodit‡ parto dal 2019-11-04 essendo un lunedÏ (e i 3 giorni precedenti
+# Per comodit? parto dal 2019-11-04 essendo un luned? (e i 3 giorni precedenti
 # il ristorante era probabilmente chiuso)
 scontrini3_sett_avg <- aggregate(scontrini ~ week_rist3, data = ristorante3, mean)
 
@@ -285,7 +285,7 @@ print(
 )
 
 # Scontrini mensili medi
-# Uso direttamente il dataset completo, considerando anche i dati gi‡ aggregati
+# Uso direttamente il dataset completo, considerando anche i dati gi? aggregati
 # mensilmente
 month_rist3 <- as.Date(cut(ristorante3$data, "month"))
 
@@ -300,7 +300,7 @@ print(
     ylab("Scontrini")
 )
 
-### Stagionalit‡ considerando tutti gli anni
+### Stagionalit? considerando tutti gli anni
 
 print(
   ggseasonplot(vendite3_sett_avg, year.labels=TRUE, year.labels.left=TRUE) +
@@ -308,7 +308,7 @@ print(
     ggtitle("Seasonal plot Ristorante 3: vendite settimanali")
 )
 
-# Nel grafico precedente c'Ë un problema sull'anno 2019, che dovrebbe partire dalla
+# Nel grafico precedente c'? un problema sull'anno 2019, che dovrebbe partire dalla
 # settimana 44 ma per qualche motivo "interpola" a partire dalla settimana 1. 
 # Non ho trovato come risolvere questa cosa
 
@@ -345,9 +345,9 @@ print(
 
 
 ### Analisi autocorrelazione considerando tutti gli anni
-# Per una serie con trend l'autocorrelazione Ë alta a lag vicini e si abbassa
-# piano piano. Se c'Ë stagionalit‡, invece, l'autocorrelazione presenta delle
-# regolarit‡ nel suo andamento
+# Per una serie con trend l'autocorrelazione ? alta a lag vicini e si abbassa
+# piano piano. Se c'? stagionalit?, invece, l'autocorrelazione presenta delle
+# regolarit? nel suo andamento
 
 print(
   ggAcf(vendite3_day, lag=28) +
@@ -417,4 +417,47 @@ print(
   p + scale_y_continuous() + scale_x_discrete(labels=labels) + 
     theme(axis.text.x = element_text(angle = 90, vjust = 0.5, size = 8)) +
     ggtitle("Ristorante 3: confronto estati")
+)
+
+
+# Analisi andamento scontrino medio
+
+df_scontrino_medio <- ristorante3[, c("data", "Prezzo_medio_per_scontrino")]
+
+# Divido in due parti i miei dati: il pre-covid, che arriva fino al 11-03-2020 compreso (ultimo giorno di 
+# apertura prima della quarantena), e il post-covid, che parte dal 07-05-2020 compreso (primo giorno di 
+# riapertura)
+
+df_scontrino_medio <- df_scontrino_medio %>%
+  mutate(Periodo = case_when(
+    (data <= "2020-03-11") ~ "Pre"
+    , TRUE ~ "Post"
+  )
+  )
+
+# Elimino le righe del periodo di chisura, che non mi interessano
+
+df_scontrino_medio <- df_scontrino_medio %>% filter(df_scontrino_medio$data <= "2020-03-11" |
+                                                      df_scontrino_medio$data >= "2020-05-07")
+
+# Decido di eliminare gli outlier, per una stima pi√π consistente della media
+
+Q1 <- quantile(df_scontrino_medio$Prezzo_medio_per_scontrino, .25)
+Q3 <- quantile(df_scontrino_medio$Prezzo_medio_per_scontrino, .75)
+IQR <- IQR(df_scontrino_medio$Prezzo_medio_per_scontrino)
+
+df_scontrino_medio_no_out <- subset(df_scontrino_medio, df_scontrino_medio$Prezzo_medio_per_scontrino > (Q1 - 1.5*IQR)
+                                    & df_scontrino_medio$Prezzo_medio_per_scontrino < (Q3 + 1.5*IQR))
+
+# Calcolo la media per periodo
+mean_scontrino <- df_scontrino_medio_no_out %>% group_by(Periodo) %>% 
+  summarise(mean_val=mean(Prezzo_medio_per_scontrino))
+
+p <- ggplot(df_scontrino_medio_no_out, aes(x = data, y = Prezzo_medio_per_scontrino,
+                                           col = Periodo)) + geom_line() + 
+  geom_hline(data = mean_scontrino, aes(yintercept = mean_val, col=Periodo), linetype = 'dashed')
+# + stat_smooth(color = "#FC4E07", fill = "#FC4E07", method = "loess") aggiunge una sorta di trend
+print(
+  p + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, size = 8)) +
+    ggtitle("Ristorante 3: confronto scontrino medio pre/post COVID")
 )
