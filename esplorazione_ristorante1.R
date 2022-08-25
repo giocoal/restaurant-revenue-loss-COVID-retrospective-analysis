@@ -621,91 +621,128 @@ print(
     ggtitle("Ristorante 1: confronto scontrino medio pre/post COVID")
 )
 
-### Random forest ----
-# Le vendite giornaliere pre-COVID (ristorante1_pre_covid$lordototale) vengono divise 
-# in train e test per cercare di modellare i dati a disposizione e cercare di 
-# valutarne la qualit? del modello ottenuto.
-# Il seguente modello viene utilizzato per fare previsioni su valori futuri, in 
-# particolar modo per prevedere come le vendite sarebbero andate durante il periodo
-# COVID, durante il quale per alcune settimane le vendite effettive invece sono 
-# state pari a zero
 
-# Uso solo alcune variabili:
 
-r1_pre_covid_rf <- copy_ristorante1_pre_covid[, c('lordototale', 'data', 'Giorno', 
-                                                  'Month', 'Season', 'Weekend',
-                                                  'Festivo', 'Pioggia')]
+
+
+
+
+### RANDOM FOREST
+
+### PERIODO COVID
+
+randomforest_r1_precovid <- copy_ristorante1_pre_covid[, c("data", "scontrini", "lordototale",
+                                                           "Prezzo_medio_per_scontrino", "Giorno",
+                                                           "Month", "Year", "Season", "Weekend",
+                                                           "Festivo", "Precipitazioni.mm.", "Pioggia",
+                                                           "ColoreCOVID", "Dose1Cum", "Dose2Cum",
+                                                           "DoseUnicaCum", "Booster1Cum", "Booster3DosiCum",
+                                                           "Booster2Cum", "BENZINA.LITRO", "GASOLIO_AUTO.LITRO",
+                                                           "GPL.LITRO", "GASOLIO_RISCALDAMENTO.LITRO",
+                                                           "O.C._FLUIDO_BTZ.LITRO", "O.C._DENSO_BTZ.LITRO",
+                                                           "Durum_Wheat", "Feed_Barley", "Maize",
+                                                           "Milling_Wheat")]
+
+randomforest_r1_precovid[is.na(randomforest_r1_precovid)] <- 0
 
 # divisione in train e test
-index_rf <- sample(1:nrow(r1_pre_covid_rf),
-                   size = 0.7*nrow(r1_pre_covid_rf))
-train_rf <- r1_pre_covid_rf[index_rf,]
-test_rf <- r1_pre_covid_rf[-index_rf,] 
+index_rf <- sample(1:nrow(randomforest_r1_precovid),
+                   size = 0.7*nrow(randomforest_r1_precovid))
+train_rf <- randomforest_r1_precovid[index_rf,]
+test_rf <- randomforest_r1_precovid[-index_rf,] 
 
 # implementazione modelli
-MRF <- randomForest(lordototale ~ Giorno + Month + Season + Weekend + Festivo +
-                      Pioggia, data = train_rf)
+MRF <- randomForest(lordototale ~ Giorno + Month + Year + Season + Weekend +
+                      Festivo + Precipitazioni.mm. + Pioggia + ColoreCOVID +
+                      Dose1Cum + Dose2Cum + DoseUnicaCum + Booster1Cum + Booster3DosiCum +
+                      Booster2Cum + BENZINA.LITRO + GASOLIO_AUTO.LITRO + GPL.LITRO +
+                      GASOLIO_RISCALDAMENTO.LITRO + O.C._FLUIDO_BTZ.LITRO + O.C._DENSO_BTZ.LITRO +
+                      Durum_Wheat + Feed_Barley + Maize + Milling_Wheat, data = train_rf)
 varImpPlot(MRF)
 print(MRF)
-# % Var explained: 83.65
+# % Var explained: 84.06
 
-### SELEZIONARE SOLO VARIABILI PIU' RILEVANTI?
+### DALL' IMPORTANCE PLOT DELLE VARIABILI POSSIAMO VEDERE CHE TUTTE LE VARIABILI LEGATI AI VACCINI
+### NON SONO RILEVANTI, COMINCIO AD ELIMINARE QUELLE
+
+MRF_V2 <- randomForest(lordototale ~ Giorno + Month + Year + Season + Weekend +
+                         Festivo + Precipitazioni.mm. + Pioggia + ColoreCOVID +
+                         BENZINA.LITRO + GASOLIO_AUTO.LITRO + GPL.LITRO +
+                         GASOLIO_RISCALDAMENTO.LITRO + O.C._FLUIDO_BTZ.LITRO + O.C._DENSO_BTZ.LITRO +
+                         Durum_Wheat + Feed_Barley + Maize + Milling_Wheat, data = train_rf)
+varImpPlot(MRF_V2)
+print(MRF_V2)
+# % Var explained: 83.94
+
+### CAMBIA DI POCO, QUINDI A QUESTO PUNTO MI LIMITO ALLE 7 (numero casuale) VARIABILI PIU' IMPORTANTI
+
+MRF_V3 <- randomForest(lordototale ~ Giorno + Month + Weekend + Festivo + GASOLIO_AUTO.LITRO 
+                       + Durum_Wheat + Maize, data = train_rf)
+varImpPlot(MRF_V3)
+print(MRF_V3)
+# % Var explained: 84.21
+
+### TOGLIENDO ALTRE VARIABILI, PARTENDO DALLA MENO IMPORTANTE, LA VARIANZA SPIEGATA SCENDE PARECCHIO
 
 # si valutano le performance del modello sul train e test set
-predictions_rf <- predict(MRF, newdata = train_rf)
+predictions_rf <- predict(MRF_V3, newdata = train_rf)
 mape(train_rf$lordototale, predictions_rf)
-# MAPE 13.63
+# MAPE 9.03 (DATI DI TRAIN)
 
-predictions_rf <- predict(MRF, newdata = test_rf)
+predictions_rf <- predict(MRF_V3, newdata = test_rf)
 mape(test_rf$lordototale, predictions_rf)
-# MAPE 16.63
+# MAPE 11.30 (DATI DI TEST)
 
 accuracy(predictions_rf, test_rf$lordototale)
-# RMSE 4037.16
-# MAPE 16.63
+# RMSE 2833.62
+# MAPE 11.30
 
-# Previsioni su valori nuovi (sul periodo covid dove nei dati reali si hanno 0)
+# Creato il modello, vado a fare le previsioni su valori nuovi, ossia sul periodo COVID
 
-copy_ristorante1_rf <- copy_ristorante1[, c('lordototale', 'data', 'Giorno', 'Month', 
-                                        'Season', 'Weekend','Festivo', 'Pioggia')]
+r1_rf_covid <- copy_ristorante1[, c('lordototale', 'data', 'Giorno', 'Month', 'Weekend',
+                                    'Festivo', 'GASOLIO_AUTO.LITRO', 'Durum_Wheat', 'Maize')]
 
 # selezione periodo covid (su cui verranno fatte le previsioni)
 reference_date_rf <- as.Date("2020-01-06", format = "%Y-%m-%d")
-ristorante1_periodo_covid <- copy_ristorante1_rf %>%
-  filter(copy_ristorante1_rf$data >= reference_date_rf)
+r1_rf_covid <- r1_rf_covid %>%
+  filter(r1_rf_covid$data > reference_date_rf)
 
-# si seleziona la lunghezza del periodo da prevedere
-# viene selezionato un periodo che include i giorni in cui si registrano 0 
-# vendite/scontrini
-ristorante1_periodo_covid <- ristorante1_periodo_covid[1:133,]
+# Si seleziona la lunghezza del periodo da prevedere
+# Prendo in considerazione tutto il 2020
+r1_rf_covid <- r1_rf_covid[1:360,]
+# C'è una settimana di luglio 2020 dove manca il valore della variabile "Durum Wheat",
+# probabilmente perchè in quel periodo c'è la chiusura dell'anno fiscale (nello stesso
+# periodo mancano dati anche negli altri anni). Ho deciso di considerare per quella settimana
+# il prezzo delle settimane precedenti, che sembra stabile
+r1_rf_covid$Durum_Wheat[is.na(r1_rf_covid$Durum_Wheat)] <- 276.5
 
 # si utilizza il modello appena creato per fare previsioni
-vendite_forecast_rf <- predict(MRF, ristorante1_periodo_covid)
-vendite_forecast_rf <- as.data.frame(vendite_forecast_rf)
+previsione_covid_rf <- predict(MRF_V3, r1_rf_covid)
+previsione_covid_rf <- as.data.frame(previsione_covid_rf)
 
-# si uniscono le due serie storiche
+# Unisco le due serie storiche
 
-# serie storica previsioni durante periodo covid 
-interval_covid <- seq(as.Date("2020-01-06"), as.Date("2020-05-17"), by = "day")
+# Serie storica previsioni periodo covid 
+interval_covid <- seq(as.Date("2020-01-07"), as.Date("2020-12-31"), by = "day")
 interval_covid_df <- data.frame(date = interval_covid, 
-                                val=vendite_forecast_rf)
+                                val=previsione_covid_rf)
 interval_covid_df$date <- as.Date(interval_covid_df$date)  
+
 interval_covid_ts <- xts(interval_covid_df$val, interval_covid_df$date)
 
-plot(interval_covid_df$date, interval_covid_df$vendite_forecast_rf, xlab = "data", 
+plot(interval_covid_df$date, interval_covid_df$previsione_covid_rf, xlab = "data", 
      ylab = "vendite", type="l", main = "Ristorante 1")
 
-# serie storica dati reali fino a prima covid (r1_pre_covid_rf$lordototale)
-r1_pre_covid_rf <- head(r1_pre_covid_rf, -1) # Andava tolta l'ultima riga
+# Serie storica dati reali fino al pre covid (r1_pre_covid_rf$lordototale)
 
-interval_pre_covid <- seq(as.Date("2018-09-01"), as.Date("2020-01-05"), by = "day")
+interval_pre_covid <- seq(as.Date("2018-09-01"), as.Date("2020-01-06"), by = "day")
 interval_pre_covid_df <- data.frame(date = interval_pre_covid, 
-                                    val=r1_pre_covid_rf$lordototale)
+                                    val=randomforest_r1_precovid$lordototale)
 
 interval_pre_covid_df$date<-as.Date(interval_pre_covid_df$date)  
 interval_covid_ts_pre <- xts(interval_pre_covid_df$val, interval_pre_covid_df$date)
 
-# si uniscono le due serie storiche
+# Uniformo i nomi e unisco
 names(interval_covid_df)[1] <- "data"
 names(interval_covid_df)[2] <- "vendite"
 
@@ -716,25 +753,46 @@ interval_complete <- rbind(interval_covid_df, interval_pre_covid_df)
 interval_complete <- interval_complete[order(interval_complete$data), ]
 row.names(interval_complete) <- NULL
 
+# Mostro le due serie storiche
 par(mfrow=c(2,1))
 
-# serie storica con previsioni
+# Serie storica con previsioni
 plot(interval_complete$data, interval_complete$vendite, xlab = "data", ylab = "vendite", 
      type="l", main = "Ristorante 1 previsioni")
 
-# serie storica originale
+# Serie storica originale
 rownames(copy_ristorante1) <- NULL # Ho bisogno di resettare l'indice delle righe
-ristorante1_complete <- copy_ristorante1[1:625,]  # fino al 17 maggio 2020
-ristorante1_complete$lordototale[is.na(ristorante1_complete$vendite1)] <- 0
+ristorante1_complete <- copy_ristorante1[1:853,]  # fino al 31 maggio 2020
 plot(ristorante1_complete$data, ristorante1_complete$lordototale, xlab = "data", ylab = "vendite", 
      type="l", main = "Ristorante 1 dati reali")
 
-# sovrappongo i due grafici
+# Sovrapposizione serie storiche
 par(mfrow=c(1,1))
 
 rf_complete <- cbind(interval_complete, ristorante1_complete$lordototale)
-plot(rf_complete$data, rf_complete$vendite, type="l", col="blue", xlab="data", ylab="vendite", lty=1)
-lines(rf_complete$data, rf_complete$`ristorante1_complete$lordototale`, col="red",lty=2)
+names(rf_complete)[1] <- "data"
+names(rf_complete)[2] <- "previsione"
+names(rf_complete)[3] <- "datoreale"
+
+plot(rf_complete$data, rf_complete$previsione, type="l", col="blue", xlab="data", ylab="vendite", lty=1)
+lines(rf_complete$data, rf_complete$datoreale, col="red",lty=2)
+
+# Stima perdite
+rf_complete$perdite <- rf_complete$previsione - rf_complete$datoreale
+plot(rf_complete$data, rf_complete$perdite, type="l", col="black", xlab="data", ylab="vendite", lty=1)
+
+data_inizio <- as.Date("2020-01-01", format = "%Y-%m-%d")
+stima_trend_rf <- rf_complete %>%
+  filter(rf_complete$data > data_inizio)
+
+perdite_stimate <- msts(stima_trend_rf$perdite, ts.frequency = 365, start = decimal_date(as.Date("2020-01-01")), seasonal.periods = c(7,365))
+perdite_stimate_dec <- mstl(perdite_stimate, s.window = "periodic")
+print(autoplot(perdite_stimate_dec) + ggtitle("Ristorante 1: perdite stimate"))
+
+
+
+
+
 
 
 
@@ -1001,24 +1059,38 @@ autoplot(forecast_2022)
 
 
 
-### Random forest ----
-# Il modello viene addestrato su tutti i dati (settimanali) a disposizione (vendite1_sett_avg) 
-# per poi utilizzarlo per effettuare previsioni su date per cui non si hanno a 
-# disposizione i dati reali di vendite e scontrini, dunque oltre aprile 2022.
+### RANDOM FOREST
 
-copy_ristorante1$Precipitazioni.mm.[is.na(copy_ristorante1$Precipitazioni.mm.)] <- 0
+copy_ristorante1[is.na(copy_ristorante1)] <- 0
 
-# implementazione modelli
-MRF_future <- randomForest(lordototale ~ Giorno + Month + Year + Season + Weekend
-                               + Festivo + Pioggia + Precipitazioni.mm. + ColoreCOVID,
-                               data = copy_ristorante1)
+# Implementazione modello
+MRF_future <- randomForest(lordototale ~ Giorno + Month + Year + Season + Weekend +
+                             Festivo + Precipitazioni.mm. + Pioggia + ColoreCOVID +
+                             Dose1Cum + Dose2Cum + DoseUnicaCum + Booster1Cum + Booster3DosiCum +
+                             Booster2Cum + BENZINA.LITRO + GASOLIO_AUTO.LITRO + GPL.LITRO +
+                             GASOLIO_RISCALDAMENTO.LITRO + O.C._FLUIDO_BTZ.LITRO + O.C._DENSO_BTZ.LITRO +
+                             Durum_Wheat + Feed_Barley + Maize + Milling_Wheat, data = copy_ristorante1)
 varImpPlot(MRF_future)
 print(MRF_future)
-# % Var explained: 81.03
+# % Var explained: 87.01
 
+### TOLGO LE ULTIME 10 VARIABILI
 
-# setto il periodo su cui fare previsioni, considerando i regressori selezionati
-future_interval = seq(as.Date("2022-05-01"), as.Date("2022-09-30"), by="days")
+MRF_future_V2 <- randomForest(lordototale ~ Giorno + Month + Year + Weekend + Festivo + 
+                                ColoreCOVID + BENZINA.LITRO + GASOLIO_AUTO.LITRO + GPL.LITRO +
+                                GASOLIO_RISCALDAMENTO.LITRO + O.C._FLUIDO_BTZ.LITRO + 
+                                O.C._DENSO_BTZ.LITRO + Durum_Wheat + Maize, 
+                              data = copy_ristorante1)
+varImpPlot(MRF_future_V2)
+print(MRF_future_V2)
+# % Var explained: 86.6
+
+# Decido di non eliminare ulteriori variabili, poichè l'importanza delle stesse è piuttosto alta
+
+# Setto il periodo su cui fare previsioni, considerando i regressori selezionati
+# Avendo mantenuto anche variabili legate a carburanti e cereali posso spingermi 
+# solo fino a una data per cui sono noti i relativi valori
+future_interval = seq(as.Date("2022-05-01"), as.Date("2022-08-31"), by="days")
 ristorante1_future <- data.frame(future_interval)
 colnames(ristorante1_future) <- "data"
 
@@ -1029,16 +1101,16 @@ ristorante1_future$Year <- year(ristorante1_future$data)
 ristorante1_future$Year <- factor(ristorante1_future$Year, levels = c("2018", "2019", "2020", "2021", "2022"))
 
 # colonna Giorno, Weekend
+Sys.setlocale("LC_ALL","English") # Per avere i nomi in inglese
 ristorante1_future <- ristorante1_future %>%
   mutate(weekday = wday(data, label = TRUE, abbr = FALSE,
                         week_start = getOption("lubridate.week.start", 1),
                         locale = Sys.getlocale("LC_TIME"))) %>%
   mutate(tipo_giorno = case_when(
     (weekday %in% c("Saturday", "Sunday")) ~ "weekend"
-    , (weekday < 7) ~ "weekday"
-    , TRUE ~ "other"
+    , TRUE ~ "weekday"
   )
-)
+  )
 ristorante1_future$weekday <- as.factor(ristorante1_future$weekday)
 ristorante1_future["tipo_giorno"][ristorante1_future["tipo_giorno"] == "weekend"] <- "True"
 ristorante1_future["tipo_giorno"][ristorante1_future["tipo_giorno"] == "weekday"] <- "False"
@@ -1048,10 +1120,43 @@ ristorante1_future$Weekend <- as.factor(ristorante1_future$Weekend)
 ristorante1_future$Giorno <- factor(ristorante1_future$Giorno, levels = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday",
                                                                           "Saturday", "Sunday"))
 
+# colonna Festivo
+ristorante1_future <- ristorante1_future %>%
+  mutate(Festivo = case_when(
+    (Giorno %in% c("Sunday")) ~ "True"
+    , TRUE ~ "False"
+  )
+  )
+ristorante1_future$Festivo[ristorante1_future$data == "2022-06-02"] <- "True"
+ristorante1_future$Festivo[ristorante1_future$data == "2022-07-04"] <- "True" # Patrono Piacenza
+ristorante1_future$Festivo[ristorante1_future$data == "2022-08-15"] <- "True"
+ristorante1_future$Festivo <- as.factor(ristorante1_future$Festivo)
+
 # colonna ColoreCOVID
 ristorante1_future$ColoreCOVID <- "bianco"
 ristorante1_future$ColoreCOVID <- factor(ristorante1_future$ColoreCOVID, levels = c("", "arancione", "bianco", "giallo", "rosso"))
 
+# colonne carburanti
+carburanti <- read.csv("Dati/Dati per RANDOM FOREST/carburanti_agosto_22.csv")
+# tengo soltanto le colonne necessarie
+carburanti <- carburanti[, c("DATA_RILEVAZIONE", "BENZINA.LITRO", "GASOLIO_AUTO.LITRO", "GPL.LITRO", 
+                             "GASOLIO_RISCALDAMENTO.LITRO", "O.C._FLUIDO_BTZ.LITRO",
+                             "O.C._DENSO_BTZ.LITRO")]
+carburanti$DATA_RILEVAZIONE <- parse_date(carburanti$DATA_RILEVAZIONE, "%Y-%m-%d", locale = locale("it"))
+
+ristorante1_future <- merge(ristorante1_future, carburanti, by.x = "data", by.y = "DATA_RILEVAZIONE",
+                            all.x = TRUE)
+
+# colonne cereali
+cereali <- read.csv("Dati/Dati per RANDOM FOREST/cereali_rf.csv")
+# tengo soltanto le colonne necessarie
+cereali <- cereali[, c("Reference.period", "Durum_Wheat", "Maize")]
+# come fatto sopra, quando ho dei na per Durum_Wheat metto il dato della settimana precedente
+cereali$Durum_Wheat[is.na(cereali$Durum_Wheat)] <- 542.5
+cereali$Reference.period <- parse_date(cereali$Reference.period, "%Y-%m-%d", locale = locale("it"))
+
+ristorante1_future <- merge(ristorante1_future, cereali, by.x = "data", by.y = "Reference.period",
+                            all.x = TRUE)
 
 # colonna lordototale
 ristorante1_future$lordototale <- 0
@@ -1063,7 +1168,17 @@ ristorante1_future <- data.frame(ristorante1_future$data,
                                  ristorante1_future$Month,
                                  ristorante1_future$Year,
                                  ristorante1_future$Weekend,
-                                 ristorante1_future$ColoreCOVID)
+                                 ristorante1_future$Festivo,
+                                 ristorante1_future$ColoreCOVID,
+                                 ristorante1_future$BENZINA.LITRO,
+                                 ristorante1_future$GASOLIO_AUTO.LITRO,
+                                 ristorante1_future$GPL.LITRO,
+                                 ristorante1_future$GASOLIO_RISCALDAMENTO.LITRO,
+                                 ristorante1_future$O.C._FLUIDO_BTZ.LITRO,
+                                 ristorante1_future$O.C._DENSO_BTZ.LITRO,
+                                 ristorante1_future$Durum_Wheat,
+                                 ristorante1_future$Maize
+)
 
 names(ristorante1_future)<- c("data", 
                               "lordototale",
@@ -1071,30 +1186,36 @@ names(ristorante1_future)<- c("data",
                               "Month",
                               "Year",
                               "Weekend",
-                              "ColoreCOVID")
+                              "Festivo",
+                              "ColoreCOVID",
+                              "BENZINA.LITRO", 
+                              "GASOLIO_AUTO.LITRO", 
+                              "GPL.LITRO", 
+                              "GASOLIO_RISCALDAMENTO.LITRO", 
+                              "O.C._FLUIDO_BTZ.LITRO",
+                              "O.C._DENSO_BTZ.LITRO",
+                              "Durum_Wheat",
+                              "Maize"
+)
 
 ristorante1_RF_full <-rbind(copy_ristorante1[,c("data", "lordototale", "Giorno",
-                                                   "Month", "Year", "Weekend", 
-                                                "ColoreCOVID")],
-                            ristorante1_future)
+                                                "Month", "Year", "Weekend", "Festivo",
+                                                "ColoreCOVID", "BENZINA.LITRO", 
+                                                "GASOLIO_AUTO.LITRO", "GPL.LITRO", 
+                                                "GASOLIO_RISCALDAMENTO.LITRO", 
+                                                "O.C._FLUIDO_BTZ.LITRO",
+                                                "O.C._DENSO_BTZ.LITRO",
+                                                "Durum_Wheat", "Maize")], ristorante1_future)
 
-# si selezionano le variabili più rilevanti
-MRF_future_best <- randomForest(lordototale ~ Giorno + Month + Year + Weekend
-                                + ColoreCOVID, data = ristorante1_RF_full[1:1337,]) # faccio così per non avere problemi sui
-                                                                                    # livelli dei factor
-varImpPlot(MRF_future_best)
-print(MRF_future_best)
-# % Var explained: 79.73
-
-# si utilizza il modello appena creato per fare previsioni sul futuro
-vendite_forecast_rf_new <- predict(MRF_future_best, ristorante1_RF_full[1339:1491,])
-vendite_forecast_rf_new <- as.data.frame(vendite_forecast_rf_new)
+# si utilizza il modello precedente per fare previsioni sul futuro
+vendite_forecast_rf <- predict(MRF_future_V2, ristorante1_RF_full[1339:1461,])
+vendite_forecast_rf <- as.data.frame(vendite_forecast_rf)
 
 # si uniscono le tue serie storiche
 
 # serie storica previsioni
 future_interval_df <- data.frame(date = future_interval, 
-                                      val=vendite_forecast_rf_new)
+                                 val=vendite_forecast_rf)
 future_interval_df$date<-as.Date(future_interval_df$date)  
 future_interval_ts <- xts(future_interval_df$val, future_interval_df$date)
 
@@ -1102,15 +1223,14 @@ plot(future_interval_df$date, future_interval_df$vendite_forecast, xlab = "data"
      ylab = "vendite", type="l", main = "Ristorante 1")
 
 # serie storica dati reali fino al 1 maggio 2022
-reference_date_pre <- as.Date("2022-04-30", format = "%Y-%m-%d")
-vendite_pre_aprile <- copy_ristorante1 %>%
-  filter(data <= reference_date_pre) %>%
+reference_date_attuale <- as.Date("2022-04-30", format = "%Y-%m-%d")
+vendite_reali <- ristorante1_RF_full %>%
+  filter(data <= reference_date_attuale) %>%
   select(data, lordototale)
 
-interval_pre <- seq(as.Date("2018-09-01"), as.Date("2022-04-30"), by = "day")
-interval_pre_df <- data.frame(date = interval_pre, 
-                                     val=vendite_pre_aprile$lordototale)
-
+interval_reale <- seq(as.Date("2018-09-01"), as.Date("2022-04-30"), by = "day")
+interval_pre_df <- data.frame(date = interval_reale, 
+                              val=vendite_reali$lordototale)
 interval_pre_df$date<-as.Date(interval_pre_df$date)  
 interval_pre_ts <- xts(interval_pre_df$val, interval_pre_df$date)
 
@@ -1121,16 +1241,18 @@ names(future_interval_df)[2] <- "vendite"
 names(interval_pre_df)[1] <- "data"
 names(interval_pre_df)[2] <- "vendite"
 
-interval_complete_new <- rbind(future_interval_df, interval_pre_df)
-interval_complete_new <- interval_complete_new[order(interval_complete_new$data), ]
-row.names(interval_complete_new) <- NULL
+forecast_completo <- rbind(future_interval_df, interval_pre_df)
+forecast_completo <- forecast_completo[order(forecast_completo$data), ]
+row.names(forecast_completo) <- NULL
 
 # serie storica con previsioni
-plot(interval_complete_new$data, interval_complete_new$vendite, xlab = "data", 
+plot(forecast_completo$data, forecast_completo$vendite, xlab = "data", 
      ylab = "vendite", type="l", main = "Ristorante 1 previsioni")
 
 # verifica performance modello
-RMSE.rf <- sqrt(mean((MRF_future_best$predicted - copy_ristorante1$lordototale)^2))  # 1537.093
+RMSE.rf <- sqrt(mean((MRF_future_V2$predicted - copy_ristorante1$lordototale)^2))
+
+
 
 
 
