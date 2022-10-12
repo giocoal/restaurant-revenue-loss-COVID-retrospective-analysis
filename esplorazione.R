@@ -21,7 +21,7 @@ invisible(lapply(packages, library, character.only = TRUE))
 
 # Setting working directory
 # working_dir = percorso cartella dati
-working_dir = "~/GitHub/Data-Science-Lab"
+working_dir = "~/GitHub/Data-Science-Lab/Dati ristoranti"
 setwd(working_dir)
 
 # Funzione utile 
