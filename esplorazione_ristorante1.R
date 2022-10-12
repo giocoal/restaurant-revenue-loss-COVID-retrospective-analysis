@@ -616,6 +616,9 @@ df_scontrino_medio_no_out <- subset(df_scontrino_medio, df_scontrino_medio$Prezz
 mean_scontrino <- df_scontrino_medio_no_out %>% group_by(Periodo) %>% 
   summarise(mean_val=mean(Prezzo_medio_per_scontrino))
 
+var_scontrino <- df_scontrino_medio_no_out %>% group_by(Periodo) %>% 
+  summarise(varianza=var(Prezzo_medio_per_scontrino))
+
 p <- ggplot(df_scontrino_medio_no_out, aes(x = data, y = Prezzo_medio_per_scontrino,
            col = Periodo)) + geom_line() + 
   geom_hline(data = mean_scontrino, aes(yintercept = mean_val, col=Periodo), linetype = 'dashed')
@@ -625,9 +628,13 @@ print(
     ggtitle("Ristorante 1: confronto scontrino medio pre/post COVID")
 )
 
+# Valuto la differenza fra il valore medio del prezzo per scontrino fra post e pre
 
+mean_scontrino$mean_val[1] - mean_scontrino$mean_val[2]
 
+# Varianza pre/post
 
+var_scontrino
 
 
 
