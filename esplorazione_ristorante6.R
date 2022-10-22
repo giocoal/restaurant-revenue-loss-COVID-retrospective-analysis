@@ -21,7 +21,7 @@ invisible(lapply(packages, library, character.only = TRUE))
 
 # Setting working directory
 # working_dir = percorso cartella dati
-working_dir = "~/GitHub/Data-Science-Lab"
+working_dir = "~/GitHub/Data-Science-Lab/Dati ristoranti"
 setwd(working_dir)
 
 # Funzione utile 
@@ -700,8 +700,8 @@ r6_rf_covid <- r6_rf_covid %>%
 # Si seleziona la lunghezza del periodo da prevedere
 # Prendo in considerazione tutto il 2020
 r6_rf_covid <- r6_rf_covid[1:360,]
-# C'è una settimana di luglio 2020 dove manca il valore della variabile "Durum Wheat",
-# probabilmente perchè in quel periodo c'è la chiusura dell'anno fiscale (nello stesso
+# C'? una settimana di luglio 2020 dove manca il valore della variabile "Durum Wheat",
+# probabilmente perch? in quel periodo c'? la chiusura dell'anno fiscale (nello stesso
 # periodo mancano dati anche negli altri anni). Ho deciso di considerare per quella settimana
 # il prezzo delle settimane precedenti, che sembra stabile
 r6_rf_covid$Durum_Wheat[is.na(r6_rf_covid$Durum_Wheat)] <- 276.5
@@ -1070,7 +1070,7 @@ varImpPlot(MRF_future_V2)
 print(MRF_future_V2)
 # % Var explained: 83.67
 
-# Decido di non eliminare ulteriori variabili, poichè l'importanza delle stesse è piuttosto alta
+# Decido di non eliminare ulteriori variabili, poich? l'importanza delle stesse ? piuttosto alta
 
 # Setto il periodo su cui fare previsioni, considerando i regressori selezionati
 # Avendo mantenuto anche variabili legate a carburanti e cereali posso spingermi 

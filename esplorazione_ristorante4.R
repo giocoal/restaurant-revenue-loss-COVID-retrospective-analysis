@@ -21,7 +21,7 @@ invisible(lapply(packages, library, character.only = TRUE))
 
 # Setting working directory
 # working_dir = percorso cartella dati
-working_dir = "~/GitHub/Data-Science-Lab"
+working_dir = "~/GitHub/Data-Science-Lab/Dati ristoranti"
 setwd(working_dir)
 
 # Funzione utile 
@@ -1067,7 +1067,7 @@ varImpPlot(MRF_future_V2)
 print(MRF_future_V2)
 # % Var explained: 76.38
 
-# Decido di non eliminare ulteriori variabili, poichè l'importanza delle stesse è piuttosto alta
+# Decido di non eliminare ulteriori variabili, poich? l'importanza delle stesse ? piuttosto alta
 
 # Setto il periodo su cui fare previsioni, considerando i regressori selezionati
 # Avendo mantenuto anche variabili legate a carburanti e cereali posso spingermi 

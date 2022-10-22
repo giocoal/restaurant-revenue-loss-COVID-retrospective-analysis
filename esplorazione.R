@@ -7,7 +7,7 @@ set.seed(100)
 packages <- c("readxl",  "readr", "forecast", "dplyr", "magrittr", "ggplot2",
               "forcats", "lubridate", "RQuantLib", "devtools", "patchwork", "KFAS",
               "caret", "tseries", "urca", "TSstudio", "gridExtra", "randomForest",
-              "prophet", "xts", "corrplot", "rstan") 
+              "prophet", "xts", "corrplot", "rstan", 'reshape2') 
 
 # Install packages if not yet installed
 installed_packages <- packages %in% rownames(installed.packages())
@@ -481,3 +481,67 @@ ggplot(copy_ristorazione_completo, aes(Pioggia, scontrini)) + geom_boxplot() +
         panel.grid.minor.x = element_blank(),
         panel.border = element_rect(colour="grey70"),
         panel.spacing=unit(0,"cm"))
+
+
+# Serie storica per ristorante
+
+weeks <- as.Date(cut(ristorante1$data, "week"))
+
+ristorante3 <- ristorante3[-c(1:3),]
+weeks3 <- as.Date(cut(ristorante3$data, "week"))
+
+r1 <- ristorante1[, c('data', 'lordototale')]
+names(r1)[names(r1) == 'lordototale'] <- 'R1'
+r1 <- aggregate(R1 ~ weeks, data = r1, mean)
+
+r2 <- ristorante2[, c('data', 'lordototale')]
+names(r2)[names(r2) == 'lordototale'] <- 'R2'
+r2 <- aggregate(R2 ~ weeks, data = r2, mean)
+
+r3 <- ristorante3[, c('data', 'lordototale')]
+names(r3)[names(r3) == 'lordototale'] <- 'R3'
+r3 <- aggregate(R3 ~ weeks3, data = r3, mean)
+names(r3)[names(r3) == 'weeks3'] <- 'weeks'
+
+r4 <- ristorante4[, c('data', 'lordototale')]
+names(r4)[names(r4) == 'lordototale'] <- 'R4'
+r4 <- aggregate(R4 ~ weeks, data = r4, mean)
+
+r5 <- ristorante5[, c('data', 'lordototale')]
+names(r5)[names(r5) == 'lordototale'] <- 'R5'
+r5 <- aggregate(R5 ~ weeks, data = r5, mean)
+
+r6 <- ristorante6[, c('data', 'lordototale')]
+names(r6)[names(r6) == 'lordototale'] <- 'R6'
+r6 <- aggregate(R6 ~ weeks, data = r6, mean)
+
+r1 <- r1[-c(1:35),]
+r2 <- r2[-c(1:35),]
+r4 <- r4[-c(1:35),]
+r5 <- r5[-c(1:35),]
+r6 <- r6[-c(1:35),]
+
+ristoranti_ts <- merge(r1, r2, by = 'weeks', all.x = TRUE)
+ristoranti_ts <- merge(ristoranti_ts, r3, by = 'weeks', all.x = TRUE)
+ristoranti_ts <- merge(ristoranti_ts, r4, by = 'weeks', all.x = TRUE)
+ristoranti_ts <- merge(ristoranti_ts, r5, by = 'weeks', all.x = TRUE)
+ristoranti_ts <- merge(ristoranti_ts, r6, by = 'weeks', all.x = TRUE)
+
+ristoranti_ts <- melt(ristoranti_ts, id.vars = "weeks")
+ristoranti_ts <- ristoranti_ts[ristoranti_ts$weeks != '2022-04-25', ] 
+
+p <- ggplot(ristoranti_ts,                           
+       aes(x = weeks,
+           y = value,
+           col = variable)) + geom_line()
+p + labs(x = "data", y='lordototale')
+
+# Serie storica per ristorante (PRE-COVID)
+
+ristoranti_ts_covid <- ristoranti_ts[which(ristoranti_ts$weeks>'2020-02-22'),]
+
+p <- ggplot(ristoranti_ts_covid,                           
+       aes(x = weeks,
+           y = value,
+           col = variable)) + geom_line()
+p + labs(x = "data", y='lordototale')

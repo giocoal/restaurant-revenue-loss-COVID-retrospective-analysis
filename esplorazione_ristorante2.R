@@ -5,9 +5,9 @@ set.seed(100)
 # Setting librerie utili
 # Package names
 packages <- c("readxl",  "readr", "forecast", "dplyr", "magrittr", "ggplot2",
-              "forcats", "lubridate", "RQuantLib", "devtools", "patchwork", "KFAS",
+              "forecast", "lubridate", "RQuantLib", "devtools", "patchwork", "KFAS",
               "caret", "tseries", "urca", "TSstudio", "gridExtra", "randomForest",
-              "prophet", "xts", "corrplot", "rstan") 
+              "prophet", "xts", "corrplot", "rstan", "hydroTSM") 
 
 # Install packages if not yet installed
 installed_packages <- packages %in% rownames(installed.packages())
@@ -21,7 +21,7 @@ invisible(lapply(packages, library, character.only = TRUE))
 
 # Setting working directory
 # working_dir = percorso cartella dati
-working_dir = "~/GitHub/Data-Science-Lab"
+working_dir = "~/GitHub/Data-Science-Lab/Dati ristoranti"
 setwd(working_dir)
 
 # Funzione utile 
@@ -361,9 +361,9 @@ print(
     ylab("Scontrini")
 )
 
-### Vendite giornaliere/settimanali/mensili periodo pre-COVID
+### Scontrini giornalieri/settimanali/mensili periodo pre-COVID
 
-# Vendite giornaliere pre-COVID
+# Scontrini giornalieri pre-COVID
 scontrini_pre_covid_2_day <- ts(copy_ristorante2_pre_covid$scontrini, start = decimal_date(as.Date("2018-09-01")), frequency=365)
 
 print(
@@ -699,8 +699,8 @@ r2_rf_covid <- r2_rf_covid %>%
 # Si seleziona la lunghezza del periodo da prevedere
 # Prendo in considerazione tutto il 2020
 r2_rf_covid <- r2_rf_covid[1:360,]
-# C'è una settimana di luglio 2020 dove manca il valore della variabile "Durum Wheat",
-# probabilmente perchè in quel periodo c'è la chiusura dell'anno fiscale (nello stesso
+# C'? una settimana di luglio 2020 dove manca il valore della variabile "Durum Wheat",
+# probabilmente perch? in quel periodo c'? la chiusura dell'anno fiscale (nello stesso
 # periodo mancano dati anche negli altri anni). Ho deciso di considerare per quella settimana
 # il prezzo delle settimane precedenti, che sembra stabile
 r2_rf_covid$Durum_Wheat[is.na(r2_rf_covid$Durum_Wheat)] <- 276.5
@@ -1069,7 +1069,7 @@ varImpPlot(MRF_future_V2)
 print(MRF_future_V2)
 # % Var explained: 85.04
 
-# Decido di non eliminare ulteriori variabili, poichè l'importanza delle stesse è piuttosto alta
+# Decido di non eliminare ulteriori variabili, poich? l'importanza delle stesse ? piuttosto alta
 
 # Setto il periodo su cui fare previsioni, considerando i regressori selezionati
 # Avendo mantenuto anche variabili legate a carburanti e cereali posso spingermi 
