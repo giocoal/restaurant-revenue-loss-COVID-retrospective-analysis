@@ -73,3 +73,10 @@ data_covid <- as.Date("2020-02-23", format = "%Y-%m-%d")
 copy_ristorante1_pre_covid <- copy_ristorante1 %>% filter(copy_ristorante1$data <= data_covid)
 
 write.csv(copy_ristorante1_pre_covid, "pre-covid_R1.csv")
+
+# Dataset covid per previsioni (tutto il resto del 2020)
+ref_date <- as.Date("2020-12-31", format = "%Y-%m-%d")
+
+r1_covidperiod <- copy_ristorante1 %>% filter(copy_ristorante1$data > data_covid, copy_ristorante1$data <= ref_date)
+
+write.csv(r1_covidperiod, "periodo-covid_r1.csv")
