@@ -66,5 +66,30 @@ kfs1 <- KFS(fit1$model,
 plot(vendite_precovid)
 lines(kfs1$alphahat[, 1], col = "red", lwd=2)
 
-pre1 <- predict(fit1$model, n.ahead = 100)
-lines(pre1, col="green")
+ar_eps1 <- rstandard(kfs1, "pearson")
+plot(ar_eps1)
+abline(h = -qnorm(c(0.005, 0.005)), lty = 3, lwd = 3)
+abline(h = qnorm(c(0.005, 0.005)), lty = 3, lwd = 3)
+
+which.min(ar_eps2)
+
+pulse <- vendite_precovid
+pulse[] <- 0
+pulse[231] <- 1
+
+mod2 <- SSModel(
+  vendite_precovid ~ pulse + SSMtrend(degree = 2, Q = list(NA, NA))+
+    SSMseasonal(period = 7, sea.type = c("trigonometric")),
+  H = NA
+)
+
+fit2 <- fitSSM(mod2, pars)
+
+kfs2 <- KFS(fit2$model,
+            filtering = c("state", "signal"),
+            smoothing = c("state", "disturbance", "signal"))
+
+ar_eps2 <- rstandard(kfs2, "pearson")
+plot(ar_eps2)
+abline(h = qnorm(c(0.005, 0.005)), lty = 3, lwd = 3)
+which.min(ar_eps2)
