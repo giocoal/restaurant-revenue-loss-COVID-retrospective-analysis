@@ -31,11 +31,11 @@ output:
     - css/title-slide.css
     - css/slide-background.css
     includes:
-      before_body: html/Ristorante1.html
+      before_body: html/TimeSeriesAnalysis.html
     toc: yes
     transition: default
     widescreen: yes
-course: Decision Models
+course: Progetto Data Science Lab
 ---
 
 ```{r setup, include=FALSE}
@@ -67,10 +67,8 @@ set.seed(100)
 
 # Setting librerie utili
 # Package names
-packages <- c("readxl",  "readr", "forecast", "dplyr", "magrittr", "ggplot2",
-              "forcats", "lubridate", "RQuantLib", "devtools", "patchwork", "KFAS",
-              "caret", "tseries", "urca", "TSstudio", "gridExtra", "randomForest",
-              "prophet", "xts", "corrplot", "rstan", "hydroTSM") 
+packages <- c("readxl",  "readr", "forecast", "dplyr", "ggplot2",
+              "lubridate", "KFAS", "tseries", "xts") 
 
 # Install packages if not yet installed
 installed_packages <- packages %in% rownames(installed.packages())
@@ -99,73 +97,120 @@ mape <- function(actual,pred){
 ```{r}
 # ristorante1 <- read.csv("ristorante1.csv")
 ristorante1 <- read.csv(file.choose())
+ristorante1$data  <- parse_date(ristorante1$data, "%Y-%m-%d", locale = locale("it"))
+head(ristorante1)
 ```
 
 ## Data preparation
 
-Somma dei valori NaN. Risultano essere 300 in quanto fino al 01/09/2018 il dato disponibile del fatturato è mensile, mentre dopo tale data il dato del fatturato è giornaliero
+Somma dei valori NaN. Risultano essere 300 in quanto fino al 01/09/2018 il dato disponibile del fatturato è mensile, mentre dopo tale data il dato del fatturato è giornaliero. Inoltre, alcuni valori sono NaN in corrispondenza di alcune festività (i.e. 25/12).
 
 ```{r}
 sum(is.na(ristorante1$scontrini))
 
 ```
 
-Definiamo il formato della data e consideriamo solo i dati giornalieri relativi al fatturato, impostando a 0 i valori nulli.
-
 ```{r}
-ristorante1$data  <- parse_date(ristorante1$data, "%Y-%m-%d", locale = locale("it"))
-ristorante1$lordototale[is.na(ristorante1$lordototale)] <- 0 
-ristorante1_tsFatturato <- ristorante1[-c(1:243), c(6,8)]
-ristorante1_tsFatturato
+# Consideriamo solo i dati giornalieri e le colonne Data e lordototale
+ts <- ristorante1[-c(1:243), c(6,8)]
+# ts$data <- parse_date(ts$data, "%Y-%m-%d", locale = locale("it"))
+str(ts)
 ```
 
 ```{r}
-str(ristorante1_tsFatturato)
+# Impostiamo a zero i valori NaN durante il periodo Covid (primo LockDown)
+# Data di riferimento: 12-03-2020 --> 06/05/2020
+ts$lordototale[ts$data >= '2020-03-12' & ts$data <= '2020-05-06'] <- 0
+plot(ts$lordototale, type='l')
 ```
 
 ```{r}
-# Trasformo il dataframe in oggetto xts
-ristorante1_xts <- as.xts(ristorante1_tsFatturato[,-1], order.by = ristorante1_tsFatturato[,1])
-head(ristorante1_xts)
+# Trasformo ts in oggetto xts
+xts1 <- as.xts(ts[,-1], order.by = ts[,1])
+head(xts1)
 ```
 
 ```{r}
-# inds <- seq(as.Date("2018-09-01"), as.Date("2022-04-30"), by="day")
-# ristorante1_ts <- ts(ristorante1_tsFatturato[,2], frequency = 365, start = c(2018, as.numeric(format(inds[1], "%j"))))
+print(ts[is.na(ts$lordototale)==TRUE,])
+# Presenti ancora alcui valori nulli. In particolare, si nota come tali valori mancanti siano in prossimità di alcunne feste nazionali, dove probabilmente il punto vendita era chiuso
 ```
 
 ```{r}
-plot(ristorante1_xts)
-```
-
-Stima delle componenti della serie storica: trend, stagionalità e serie storica dei residui
-
-```{r}
-mstl(ristorante1_xts, s.window = c(7, 365.25)) %>% autoplot() # Non mi stima la stagionalità, problema delle serie storiche giornalierie, che presentano solitamente stagionalità multiple!
+require(imputeTS)
+ggplot_na_distribution(xts1) # Distribuzione dei valori nulli
+statsNA(xts1)
 ```
 
 ```{r}
-ristorante1_ts <- xts_to_ts(ristorante1_xts, frequency = 365, start = as.Date("2018-09-01"))
-mstl(ristorante1_ts[,1], s.window = "periodic") %>% autoplot() # Stagionalità stimata, stima del trend oscena!
+require(imputeTS)
+# Imputazione dei valori nulli. Utilizzo della libreria "impute TS" con metodo "StructTS" che fa uso della massima verosimiglianza
+xts1_noNA <- na_kalman(xts1, model = "StructTS", smooth = TRUE) # Utilizzo del filtro di kalman
+ggplot_na_imputations(xts1, xts1_noNA)
+```
+```{r}
+# Salvo l'oggetto xts1_noNA
+write.zoo(xts1_noNA, file="ristorante1_xts.csv", sep=",")
 ```
 
-## Time series analysis
+# Domanda di ricerca1: analisi predittiva mediante modelli della classe ARIMA della serie storica pre-Covid ai fini di stimare le possibili perdite durante il primo periodo Covid
 
-In questa sezion33e l'obiettivo è quello di considerare la serie storica fino all'inizio della pandemia e stimare un opportuno modello Arima. Per fare ciò si divide tale porzione di serie storica in training and test set, per valutare la bontà del modello stimato. Una volta indivuato il modello corretto si vuole effetturare una previsione per il "primo" periodo covid, così da poter dare una idea delle possibile perdite subite dal locale. L'idea alla base è quella di effetturare una previsione proveniente da una serie storica dove si assume che il ristorante operava in "condizioni normali", ovvero in condizioni di assenza della pandemia, per poter dare una idea di quanto il ristorante avrebbe potuto incassare qualora in covid non ci fosse stato. Si noti che tale previsione può solo dare una idea dell'ordine di grandezza della possibile perdita in quanto la previsione è effettuata considerando solo i dati storici e non considerando evenutali regressori che potrebbero influenzare gli incassi "attesi" (ad esempio: costo delle materie prime, eventuali altre aperture di ristoranti nella stessa zona ecc..)
 
-### Domanda 1: Seguendo l'andamento pre-Covid, si vuole stimare quale possa essere stata la perdita, in termini di fatturato, nel periodo covid
-
-A tal fine, viene stimato un opportuno modello ARIMA sui soli dati pre-Covid e viene prodotta successivamente una previsione per il periodo Covid. Infine, si calcola la differenza tra i valori osservati durante il periodo Covid con quelli ottenuti dalla stima del modello ARIMA. Così facendo possiamo dare una idea delle possibili perdite subite in tal periodo.
-
-Subset serie storica pre-Covid: Si considera come data ufficiosa il 23 di Febbraio, giorno dell'entrata in vigore delle prime restrizioni (chiusura Università).
 
 ```{r}
 # Estraggo il subset di interesse
-ristorante1_xts_subset <- window(ristorante1_xts, start = "2018-09-01", end="2020-02-23")
-plot(ristorante1_xts_subset)
-summary(ristorante1_xts_subset)
-hist(ristorante1_xts_subset)
+# Data di riferimento: 23/02/2020 --> inizio delle restrizioni (23 e non 21, data ufficiale chiusura Università, così da avere la settimana completa)
+xts1_subset <- window(xts1_noNA, start = "2018-09-03", end="2020-02-23")
+autoplot(xts1_subset)
 ```
+```{r}
+plot(xts1_subset[1:70]) # Prime 10 settimane
+```
+```{r}
+# Numero di settimane
+noWe <- round(539/7)
+
+# Valutiamo se c'è una qualche forma di dipendenza tra media e varianza
+med <- tapply(xts1_subset, rep(1:noWe, each = 7)[1:539],
+              mean)
+stdev <- tapply(xts1_subset, rep(1:noWe, each = 7)[1:539],
+              sd)
+plot(med, stdev)
+```
+```{r}
+plot(log(xts1_subset[1:70]))
+```
+```{r}
+Acf(xts1_noNA, 140)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ```{r}
 mstl(ristorante1_xts_subset, speriod = c(7,365.25)) %>% autoplot() # Non mi stima la stagionalità
@@ -243,6 +288,7 @@ train <- head(ristorante1_xts_subset, round(length(ristorante1_xts_subset) * 0.8
 h <- length(ristorante1_xts_subset) - length(train)
 test <- tail(ristorante1_xts_subset, h)
 ```
+
 ```{r}
 # Divisione training and test della serie storica differnziata di ordine 7
 train_diff <- head(ristorante1_xts_subset_diff, round(length(ristorante1_xts_subset_diff) * 0.8))
@@ -267,7 +313,6 @@ Valutiamo se i residui presentano autocorrelazione seriale.
 ```{r}
 Box.test(residuals(mod1),lag=28,type="Ljung-Box")
 ```
-
 
 Previsione e confronto con il test set
 
@@ -302,29 +347,32 @@ mean(diff_fitt_test)
 plot(diff_fitt_test)
 ```
 
-
 ```{r}
 # Serie storica differenziata di ordine 7
 mod2 <- Arima(train_diff, c(7,0,7), c(0,0,0))
 ```
+
 ```{r}
 Acf(mod2$residuals)
 Pacf(mod2$residuals)
 summary(mod2)
 ```
+
 ### Aggregazione: serie storica settimanale
 
 ```{r}
 head(ristorante1_xts) # I dati partono da sabato
-tail(ristorante1_xts) #  I dati finiscono di sabato (ultimoe e penultimo valori 0.0)
+tail(ristorante1_xts) #  I dati finiscono di sabato (ultimo e penultimo valori 0.0)
 ```
+
 ```{r}
-# Droppo le prime due righe così da avere la serie storica che parte da lunedì e finisce di domenica
+# Droppo le prime due righe e le ultime 4 così da avere la serie storica che parte da lunedì e finisce di domenica
 ristorante1_xts <- ristorante1_xts[-c(1,2)]
 ristorante1_xts <- ristorante1_xts[-c(1329,1330,1331,1332,1333,1334)]
 head(ristorante1_xts)
 tail(ristorante1_xts)
 ```
+
 ```{r}
 ristorante1_weekly <- apply.weekly(ristorante1_xts[-c(1,2)], mean)
 ```
@@ -337,7 +385,54 @@ tail(ristorante1_weekly)
 ```{r}
 plot(ristorante1_weekly)
 ```
+
 ```{r}
-plot(apply.monthly(ristorante1_xts_subset, mean))
+# Estraggo il subset di interesse
+ristorante1_weekly_subset <-window(ristorante1_weekly, start = "2018-09-01", end="2020-02-23")
+tail(ristorante1_weekly_subset)
 ```
- 
+
+```{r}
+autoplot(ristorante1_weekly_subset)
+```
+
+```{r}
+seasadj(mstl(ristorante1_weekly_subset, s.window = 52)) %>% autoplot()
+```
+
+```{r}
+ndiffs(ristorante1_weekly_subset)
+nsdiffs(ristorante1_weekly_subset)
+```
+
+```{r}
+mstl(ristorante1_weekly_subset, s.window = "periodic") %>% autoplot() 
+```
+
+```{r}
+diff(seasadj(mstl(ristorante1_weekly_subset, s.window = 52))) %>% autoplot()
+```
+
+```{r}
+adf.test(diff(seasadj(mstl(ristorante1_weekly_subset, s.window = 52))), alternative = "stationary") 
+```
+
+```{r}
+Acf(ristorante1_weekly_subset)
+Pacf(ristorante1_weekly_subset)
+```
+
+```{r}
+mod3 <- auto.arima(ristorante1_weekly_subset)
+```
+
+```{r}
+Acf(mod3$residuals)
+Pacf(mod3$residuals)
+summary(mod3)
+```
+
+```{r}
+plot(forecast(mod3,30))
+```
+
