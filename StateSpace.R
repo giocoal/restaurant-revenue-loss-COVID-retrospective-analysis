@@ -44,52 +44,88 @@ copy_ristorante1 <- copy_ristorante1[-c(1334:1336),]
 vendite <- ts(copy_ristorante1$lordototale, start = decimal_date(as.Date("2018-09-01")), frequency=365)
 vendite_precovid <- ts(precovid1$lordototale, start = decimal_date(as.Date("2018-09-01")), frequency=365)
 
-# Forma state space vendite totali
-varv <- var(vendite_precovid)
+# PROVA FORMA STATE SPACE VENDITE PRE-COVID
 
-pars <- log(c(logVarEta  = varv/50,
-              logVarZeta = 10,
-              logVarEps  = varv/10))
-
-mod1 <- SSModel(
-  vendite_precovid ~ SSMtrend(degree = 2, Q = list(NA, NA))+
-            SSMseasonal(period = 7, sea.type = c("trigonometric")),
-  H = NA
-)
-
-fit1 <- fitSSM(mod1, pars)
-
-kfs1 <- KFS(fit1$model,
-            filtering = c("state", "signal"),
-            smoothing = c("state", "disturbance", "signal"))
+y <- vendite_precovid
+y[501:539] <- NA
 
 plot(vendite_precovid)
-lines(kfs1$alphahat[, 1], col = "red", lwd=2)
 
-ar_eps1 <- rstandard(kfs1, "pearson")
-plot(ar_eps1)
-abline(h = -qnorm(c(0.005, 0.005)), lty = 3, lwd = 3)
-abline(h = qnorm(c(0.005, 0.005)), lty = 3, lwd = 3)
+# Modello con trend e stagionalità a dummy stocastiche
 
-which.min(ar_eps2)
+mod1 <- SSModel(y ~ SSMtrend(2, list(NA,NA)) +
+                    SSMseasonal(7, NA, "dummy"),
+                H = NA)
 
-pulse <- vendite_precovid
-pulse[] <- 0
-pulse[231] <- 1
+varv <- var(vendite_precovid, na.rm = TRUE)
 
-mod2 <- SSModel(
-  vendite_precovid ~ pulse + SSMtrend(degree = 2, Q = list(NA, NA))+
-    SSMseasonal(period = 7, sea.type = c("trigonometric")),
-  H = NA
-)
+pars <- log(c(
+  logVarEta = varv/100, # Varianza del trend
+  logVarZeta = 0.00001, # Varianza dello slope
+  logVarOmega = varv/100, # Varianza della stagionalità
+  logVarEps = varv/10 # Varianza del White Noise
+))
 
-fit2 <- fitSSM(mod2, pars)
+fit1 <- fitSSM(mod1, pars)
+fit1$optim.out
 
-kfs2 <- KFS(fit2$model,
-            filtering = c("state", "signal"),
-            smoothing = c("state", "disturbance", "signal"))
+kfs1 <- KFS(fit1$model, filtering = c("state", "signal"),
+            smoothing = c("state", "signal", "disturbance"))
 
-ar_eps2 <- rstandard(kfs2, "pearson")
-plot(ar_eps2)
-abline(h = qnorm(c(0.005, 0.005)), lty = 3, lwd = 3)
-which.min(ar_eps2)
+smooth_level <- kfs1$alphahat[, "level"]
+smooth_level_stand_err <- sqrt(kfs1$V[1, 1, ]) 
+plot(smooth_level_stand_err) 
+
+plot(vendite_precovid)
+lines(smooth_level, col = "red", lwd = 3)
+lines(smooth_level+2*smooth_level_stand_err, col = "red", lty = 2, lwd = 2)
+lines(smooth_level-2*smooth_level_stand_err, col = "red", lty = 2, lwd = 3)
+
+plot(kfs1$alphahat[, "sea_dummy1"])
+
+# Stima 1-step ahead
+
+plot(vendite_precovid[500:539], type = "l")
+lines(kfs1$m[500:539], col = "red")
+
+pre1 <- predict(kfs1$model, n.ahead = 50)
+
+plot(vendite_precovid, xlim = c(2018.666, 2020.277))
+lines(pre1, col = "red", lwd = 2)
+
+# --------------------------------------------------------------------------------------------------------------------
+
+mod2 <- SSModel(y ~ SSMtrend(2, list(NA,NA)) +
+                  SSMseasonal(7, NA, "trigonometric"),
+                H = NA)
+
+updt2 <- function(pars, model) { 
+  m <- nrow(model$Q)            
+  model$Q[1, 1, 1] <- exp(pars[1])
+  model$Q[2, 2, 1] <- exp(pars[2])
+  diag(model$Q[3:m, 3:m, 1]) <- exp(pars[3])
+  model$H[1, 1, 1] <- exp(pars[4])
+  model
+}
+
+fit2 <- fitSSM(mod2, fit1$optim.out$par, updt2)
+fit2$optim.out
+
+kfs2 <- KFS(fit2$model, filtering = c("state", "signal"),
+            smoothing = c("state", "signal", "disturbance"))
+
+plot(vendite_precovid)
+lines(kfs1$alphahat[, "level"], col = "red", lwd = 2)
+lines(kfs2$alphahat[, "level"], col = "green", lwd = 2)
+
+pre2 <- predict(kfs2$model, n.ahead = 50)
+
+plot(vendite_precovid, xlim = c(2018.666, 2020.277))
+lines(pre1, col = "blue", lwd = 2)
+lines(pre2, col = "red", lwd = 2)
+
+mae1 <- mean(abs(vendite_precovid[500:539]-kfs1$m[500:539]))
+mae2 <- mean(abs(vendite_precovid[500:539]-kfs2$m[500:539]))
+
+mse1 <- mean((vendite_precovid[500:539]-kfs1$m[500:539])^2)
+mse2 <- mean((vendite_precovid[500:539]-kfs2$m[500:539])^2)
