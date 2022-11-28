@@ -4,6 +4,7 @@
 
 # Session Data files
 .RData
+.ipynb_checkpoints
 
 # User-specific files
 .Ruserdata
