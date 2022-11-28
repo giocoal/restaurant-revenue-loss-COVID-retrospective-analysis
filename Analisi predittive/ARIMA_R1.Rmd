@@ -58,10 +58,7 @@ knit_hooks$set(source = function(x, options){
 })
 ```
 
-
-
-
-## Setting
+## Setting & Function
 
 ```{r}
 set.seed(100)
@@ -69,7 +66,7 @@ set.seed(100)
 # Setting librerie utili
 # Package names
 packages <- c("readxl",  "readr", "forecast", "dplyr", "ggplot2",
-              "lubridate", "KFAS", "tseries", "xts") 
+              "lubridate", "KFAS", "tseries", "xts", "fastDummies") 
 
 # Install packages if not yet installed
 installed_packages <- packages %in% rownames(installed.packages())
@@ -90,6 +87,26 @@ mape <- function(actual,pred){
   mape <- mean(abs((actual - pred)/actual))*100
   return (mape)
 }
+
+#MSE
+rmse <- function(actual, pred){
+  rmse <- sqrt(mean((actual - pred)^2))
+  return (rmse)
+}
+
+# Significatività dei parametri
+pars_test <- function(coef, var_coef){
+  test <- (1-pnorm(abs(coef)/sqrt(diag(var_coef))))*2
+  return(test)
+}
+
+# Grafico errore percentuale 
+err_plot <- function(actual, pred){
+  require(xts)
+  err_perc <- ((actual - xts(pred, order.by = index(actual)))/(xts(actual, order.by = index(actual))))*100
+  return(plot(err_perc, ylab="% errore", main="Errore percentuale di previsione"))
+
+}
 ```
 
 # Load data
@@ -107,14 +124,17 @@ head(r1)
 vendite_r1 <- r1[, c(7,9)]
 head(vendite_r1)
 ```
+
 ```{r}
 str(vendite_r1)
 ```
+
 ```{r}
 # Trasformo ts in oggetto xts
 vendite_r1 <- as.xts(vendite_r1[,-1], order.by = vendite_r1[,1])
 head(vendite_r1)
 ```
+
 ```{r}
 plot(vendite_r1)
 ```
@@ -131,7 +151,6 @@ feriali <- feriali[feriali$Festivo == "False",]
 tapply(feriali$lordototale, feriali$Giorno, mean)
 ```
 
-
 ```{r}
 # Media dei giorni "weekend"
 weekend <- r1[r1$Weekend == 'True',c("data", "lordototale", "Giorno", "Festivo")]
@@ -139,14 +158,11 @@ weekend <- r1[r1$Weekend == 'True',c("data", "lordototale", "Giorno", "Festivo")
 tapply(weekend$lordototale, weekend$Giorno, mean)
 ```
 
-
 ```{r}
 # Confronto media giorni lun-gio in base a se è festivo o meno
 festivo_noweekend <- r1[r1$Weekend == 'False',c("data", "lordototale", "Giorno", "Festivo")]
 tapply(festivo_noweekend$lordototale, festivo_noweekend$Festivo, mean)
 ```
-
-
 
 ```{r}
 # Costruzione dummy per modellare stagionalità a 7 giorni
@@ -171,14 +187,12 @@ dum_week <- dummy_cols(dum_week, select_columns = c("Weekend", "Festivo"),
 dum_week
 ```
 
-
 ```{r}
-# Dataframe con tutte le variabili dummy
+# xts object con tutte le variabili dummy
 dum <- cbind(dum_day, dum_week)
 dum <- xts(dum[, -1], dum$data)
 head(dum)
 ```
-
 
 ```{r}
 df <- cbind(vendite_r1, dum)
@@ -186,16 +200,17 @@ df <- subset(df, select = -c(data))
 head(df)
 ```
 
-Schema: TRAINING - VALIDATION - TEST
-  - TRAINING - TEST: 80% - 20%
-  - TRAINING - VALIDATION: 90% - 10 
+Schema: 
+- TRAINING, VALIDATION, TEST 
+- TRAINING, TEST: 80% 20% 
+- TRAINING, VALIDATION: 90% 10%
+
 ```{r}
 # Divisione training-test set
 train_date <- nrow(df) *0.8
 train_temp <- df[1:train_date,]
 test <- df[-c(1:train_date),] # Usare alla fine
 ```
-
 
 ```{r}
 # Training - validation set 
@@ -210,11 +225,13 @@ validation <- train_temp[-c(1:train_date_rid),]
 # Intera serie storica
 autoplot(train[,1])
 ```
+
 La serie storica sembra non avere una tendenza di medio/lungo periodo a crescere o scendere (trend). Valutiamo l'andamento della funzione di autocorrelazione (totale e parziale)
 
 ```{r}
 tsdisplay(train[,1])
 ```
+
 ACF risulta avere ritardi significativi che decadono a zero molto lentamente, sintomo di una non stazionarietà della serie storica. Notiamo come i ritardi maggiormente significativi sono quelli ai ritardi stagionali multipli di 7.
 
 ### Ljung-Box test
@@ -226,9 +243,10 @@ lag.length = 25
 Box.test(train[,1], lag=lag.length, type="Ljung-Box")
 
 ```
-Il test di Ljung-Box conferma l'ipotesi di non stazionarietà. 
 
-La non stazionarietà potrebbe però essere dovuta alla presenza di stagionalità nella serie storica: 
+Il test di Ljung-Box conferma l'ipotesi di non stazionarietà.
+
+La non stazionarietà potrebbe però essere dovuta alla presenza di stagionalità nella serie storica:
 
 ```{r}
 # Augmented Dickey–Fuller (ADF) t-statistic test for unit root
@@ -237,6 +255,7 @@ require(tseries)
 
 adf.test(train[,1])
 ```
+
 Come effettivamente viene suggerito dal test di Dickey Fuller (valuta la presenza di radici unitarie)
 
 ### Differenza stagionale
@@ -245,20 +264,23 @@ Come effettivamente viene suggerito dal test di Dickey Fuller (valuta la presenz
 diff7 <- diff(train[,1], 7)
 tsdisplay(diff7)
 ```
+
 ```{r}
 lag.length = 25
 Box.test(diff7, lag=lag.length, type="Ljung-Box")
 ```
+
 Il test indica che è ancora presente correlazione seriale. Notiamo però come la ACF, nei primi 25 ritardi, abbia solamente il settimo ritardo significativi, mentre ora la PACF tende a zero molto più lentamente rispetto a prima (con ritardi particolarmente significativi ai ritardi stagionali multipli di 7)
 
 ## Identificazione del modello
 
 ### Modello1
-- Componente AR stagionale: ACF presenta correlazione significativa al ritardo 7
-- Componente MA stagionale: PACF presenta correlazioni particolarmente significative ai riatdi multipli di 7
-- Componente MA non stagionale di ordine 2
-- Dummy come regressori esterni
-- Costante non inclusa
+
+-   Componente AR stagionale: ACF presenta correlazione significativa al ritardo 7
+-   Componente MA stagionale: PACF presenta correlazioni particolarmente significative ai riatdi multipli di 7
+-   Componente MA non stagionale di ordine 2
+-   Dummy come regressori esterni
+-   Costante non inclusa
 
 ```{r}
 mod1 <- Arima(y = train$vendite_r1,
@@ -280,14 +302,24 @@ tsdisplay(mod1$residuals)
 ```
 
 ```{r}
-params_test <- (1-pnorm(abs(mod1$coef)/sqrt(diag(mod1$var.coef))))*2
-params_test
+pars_test(mod1$coef, mod1$var.coef)
 ```
-
 
 ```{r}
 checkresiduals(mod1)
 ```
+
+```{r}
+lag.length = 25
+Box.test(mod1$residuals, lag=lag.length, type="Ljung-Box")
+```
+```{r}
+plot(train[,1], 
+     col = "blue", lwd=0.5, 
+     main = "Fitted Values")
+lines(xts(mod1$fitted, order.by = index(train)), col="red", lwd=2.5)
+```
+
 
 #### Previsioni
 
@@ -301,38 +333,36 @@ pred_mod1 <- forecast(mod1, h = 44,
 ```{r}
 autoplot(pred_mod1)
 ```
+
 ```{r}
 plot(validation[,1], 
      col = "blue", lwd=0.5, 
-     ylim = c(min(pred_mod1$lower), max(pred_mod1$upper)), main = "Fitted Value")
+     ylim = c(min(pred_mod1$lower), max(pred_mod1$upper)), main = "Predictions")
 lines(xts(pred_mod1$mean, order.by = index(validation)), col="red", lwd=3)
 
 ```
 
-```{r}
-plot(xts(pred_mod1$mean, order.by = index(validation)), 
-     col = "red", lwd=2, 
-     ylim = c(min(pred_mod1$lower), max(pred_mod1$upper)), main = "Valori predetti")
-lines(xts(pred_mod1$upper, order.by = index(validation)),col='orange')
-lines(xts(pred_mod1$lower, order.by = index(validation)),col='orange')
-```
 
 ```{r}
 mape(validation[,1], xts(pred_mod1$mean, order.by = index(validation)))
 ```
+
 ```{r}
-diff <- validation[,1] - xts(pred_mod1$mean, order.by = index(validation))
-plot(diff, ylab="Error", main = "Differenza tra valori predetti e valori reali")
+rmse(validation[,1], xts(pred_mod1$mean, order.by = index(validation)))
 ```
 
+```{r}
+err_plot(validation[,1], xts(pred_mod1$mean, order.by = index(validation)))
+```
 
 ### Modello2
-- Componente AR stagionale: ACF presenta correlazione significativa al ritardo 7
-- Componente MA stagionale: PACF presenta correlazioni particolarmente significative ai riatdi multipli di 7
-- Componente MA non stagionale di ordine 2
-- Componente AR non stagionle di ordine 5
-- Dummy come regressori esterni
-- Costante non inclusa
+
+-   Componente AR stagionale: ACF presenta correlazione significativa al ritardo 7
+-   Componente MA stagionale: PACF presenta correlazioni particolarmente significative ai riatdi multipli di 7
+-   Componente MA non stagionale di ordine 2
+-   Componente AR non stagionle di ordine 5
+-   Dummy come regressori esterni
+-   Costante non inclusa
 
 ```{r}
 mod2 <- Arima(y = train$vendite_r1,
@@ -351,10 +381,8 @@ summary(mod2)
 tsdisplay(mod2$residuals) 
 ```
 
-
 ```{r}
-params_test <- (1-pnorm(abs(mod2$coef)/sqrt(diag(mod2$var.coef))))*2
-params_test
+pars_test(mod2$coef, mod2$var.coef)
 ```
 
 ```{r}
@@ -362,9 +390,14 @@ lag.length = 25
 Box.test(mod2$residuals, lag=lag.length, type="Ljung-Box")
 ```
 
-
 ```{r}
 checkresiduals(mod2)
+```
+```{r}
+plot(train[,1], 
+     col = "blue", lwd=0.5, 
+     main = "Fitted Values")
+lines(xts(mod2$fitted, order.by = index(train)), col="red", lwd=2.5)
 ```
 
 #### Previsioni
@@ -379,6 +412,7 @@ pred_mod2 <- forecast(mod2, h = 44,
 ```{r}
 autoplot(pred_mod2)
 ```
+
 ```{r}
 plot(validation[,1], 
      col = "blue", lwd=0.5, 
@@ -387,33 +421,27 @@ lines(xts(pred_mod2$mean, order.by = index(validation)), col="red", lwd=3)
 
 ```
 
-```{r}
-plot(xts(pred_mod2$mean, order.by = index(validation)), 
-     col = "red", lwd=2, 
-     ylim = c(min(pred_mod2$lower), max(pred_mod2$upper)), main = "Valori predetti")
-lines(xts(pred_mod2$upper, order.by = index(validation)),col='orange')
-lines(xts(pred_mod2$lower, order.by = index(validation)),col='orange')
-```
 
 ```{r}
 mape(validation[,1], xts(pred_mod2$mean, order.by = index(validation)))
 ```
+
 ```{r}
-diff <- validation[,1] - xts(pred_mod2$mean, order.by = index(validation))
-plot(diff, ylab="Error", main = "Differenza tra valori predetti e valori reali")
+rmse(validation[,1], xts(pred_mod2$mean, order.by = index(validation)))
 ```
 
-
-
+```{r}
+err_plot(validation[,1], xts(pred_mod2$mean, order.by = index(validation)))
+```
 
 ### Modello3
-- Componente AR stagionale: ACF presenta correlazione significativa al ritardo 7
-- Componente MA stagionale: PACF presenta correlazioni particolarmente significative ai riatdi multipli di 7
-- Componente MA non stagionale di ordine 2
-- Componente AR non stagionale di ordine 3
-- Dummy come regressori esterni
-- Costante non inclusa
 
+-   Componente AR stagionale: ACF presenta correlazione significativa al ritardo 7
+-   Componente MA stagionale: PACF presenta correlazioni particolarmente significative ai riatdi multipli di 7
+-   Componente MA non stagionale di ordine 2
+-   Componente AR non stagionale di ordine 3
+-   Dummy come regressori esterni
+-   Costante non inclusa
 
 ```{r}
 mod3 <- Arima(y = train$vendite_r1,
@@ -432,10 +460,8 @@ summary(mod3)
 tsdisplay(mod3$residuals) 
 ```
 
-
 ```{r}
-params_test <- (1-pnorm(abs(mod3$coef)/sqrt(diag(mod3$var.coef))))*2
-params_test
+pars_test(mod3$coef, mod3$var.coef)
 ```
 
 ```{r}
@@ -443,11 +469,15 @@ lag.length = 25
 Box.test(mod3$residuals, lag=lag.length, type="Ljung-Box")
 ```
 
-
 ```{r}
 checkresiduals(mod3)
 ```
-
+```{r}
+plot(train[,1], 
+     col = "blue", lwd=0.5, 
+     main = "Fitted Values")
+lines(xts(mod3$fitted, order.by = index(train)), col="red", lwd=2.5)
+```
 
 ### Previsione
 
@@ -461,6 +491,7 @@ pred_mod3 <- forecast(mod3, h = 44,
 ```{r}
 autoplot(pred_mod3)
 ```
+
 ```{r}
 plot(validation[,1], 
      col = "blue", lwd=0.5, 
@@ -470,21 +501,199 @@ lines(xts(pred_mod3$mean, order.by = index(validation)), col="red", lwd=3)
 ```
 
 ```{r}
-plot(xts(pred_mod3$mean, order.by = index(validation)), 
-     col = "red", lwd=2, 
-     ylim = c(min(pred_mod3$lower), max(pred_mod3$upper)), main = "Valori predetti")
-lines(xts(pred_mod3$upper, order.by = index(validation)),col='orange')
-lines(xts(pred_mod3$lower, order.by = index(validation)),col='orange')
-```
-
-```{r}
 mape(validation[,1], xts(pred_mod3$mean, order.by = index(validation)))
 ```
+
 ```{r}
-diff <- validation[,1] - xts(pred_mod3$mean, order.by = index(validation))
-plot(diff, ylab="Error", main = "Differenza tra valori predetti e valori reali")
+rmse(validation[,1], xts(pred_mod3$mean, order.by = index(validation)))
+```
+
+```{r}
+err_plot(validation[,1], xts(pred_mod3$mean, order.by = index(validation)))
+```
+
+### Modello 4 SARIMAX
+
+-   Componente AR stagionale: ACF presenta correlazione significativa al ritardo 7
+-   Componente MA stagionale: PACF presenta correlazioni particolarmente significative ai riatdi multipli di 7
+-   Componente MA non stagionale di ordine 2
+-   Componente AR non stagionale di ordine 3
+-   Dummy come regressori esterni
+-   Vari regressori (dei regressori disponibili sono stati incluse, dopo varie prove, solamente quelli significativi)
+-   Costante non inclusa
+
+```{r}
+# xts object regressori
+
+# Imposto a zero i giorni dove m.m. Pioggia  == 0 (Prima NaN)
+r1$Precipitazioni.mm.[is.na(r1$Precipitazioni.mm.)] <- 0
+
+# in data 23/11/2018 valore Precipitazione anomalo (-999.01) impostato a zero
+r1$Precipitazioni.mm.[r1$data == "2018-11-23"] <- 0
+
+# Manca modalità "False" per la variabile pioggia, aggiungo
+r1$Pioggia[r1$Pioggia==''] <- "False"
+
+df_reg <- df
+df_reg$Precipitazioni <- r1$Precipitazioni.mm.
+df_reg$Benzina <- r1$BENZINA.LITRO
+df_reg$Benzina <- r1$GASOLIO_AUTO.LITRO
+df_reg$Gpl <- r1$GPL.LITRO
+df_reg$Riscaldamento <- r1$GASOLIO_RISCALDAMENTO.LITRO
+```
+
+```{r}
+# Costruzione delle dummy, dove necessario
+require(fastDummies)
+dum_pioggia <- r1[, c("data", "Pioggia")]
+dum_pioggia[,"Pioggia"] <- as.factor(dum_pioggia$Pioggia)
+dum_pioggia <- dummy_cols(dum_pioggia, select_columns = c("Pioggia"), 
+                      remove_first_dummy = TRUE, 
+                      remove_selected_columns = TRUE)
+dum_pioggia
+```
+
+```{r}
+df_reg$Pioggia_True <- dum_pioggia$Pioggia_True
+```
+
+Rifaccio la divisione trainin/validation/test set con il df_reg appena creato
+
+```{r}
+# Divisione training-test set
+train_date <- nrow(df_reg) *0.8
+train_temp <- df_reg[1:train_date,]
+test_reg <- df_reg[-c(1:train_date),] # Usare alla fine
+```
+
+```{r}
+# Training - validation set 
+train_date_rid <- nrow(train_temp)*0.9
+train_reg <- train_temp[1:train_date_rid,]
+validation_reg <- train_temp[-c(1:train_date_rid),]
+```
+
+```{r}
+mod4 <- Arima(y = train_reg$vendite_r1,
+              order = c(3, 0, 2),
+              list(order = c(1, 0, 1), period = 7),
+              xreg = train_reg[, -c(1,11,12,14)], # Rimosse le variabili non significative
+              include.constant = FALSE,
+              )
+```
+
+```{r}
+summary(mod4)
+```
+
+```{r}
+tsdisplay(mod4$residuals) 
+```
+
+```{r}
+pars_test(mod4$coef, mod4$var.coef)
+```
+
+```{r}
+lag.length = 25
+Box.test(mod4$residuals, lag=lag.length, type="Ljung-Box")
+```
+
+```{r}
+checkresiduals(mod4)
+```
+
+```{r}
+plot(train[,1], 
+     col = "blue", lwd=0.5, 
+     main = "Fitted Values")
+lines(xts(mod4$fitted, order.by = index(train)), col="red", lwd=2.5)
+```
+
+### Previsione
+
+```{r}
+# Al momento vengono fatte previsioni 44 passi in avanti (lunghezza del validation set)
+pred_mod4 <- forecast(mod4, h = 44, 
+                      level = 95,
+                      xreg = validation_reg[, -c(1,11,12,14)])
+```
+
+```{r}
+autoplot(pred_mod4)
+```
+
+```{r}
+plot(validation_reg[,1], 
+     col = "blue", lwd=0.5, 
+     ylim = c(min(pred_mod4$lower), max(pred_mod4$upper)), main = "Fitted Value")
+lines(xts(pred_mod4$mean, order.by = index(validation_reg)), col="red", lwd=3)
+
+```
+
+```{r}
+mape(validation_reg[,1], xts(pred_mod4$mean, order.by = index(validation_reg)))
+```
+
+```{r}
+rmse(validation_reg[,1], xts(pred_mod4$mean, order.by = index(validation_reg)))
+```
+
+```{r}
+err_plot(validation_reg[,1], xts(pred_mod4$mean, order.by = index(validation_reg)))
+```
+
+# Forecasting with Prophet
+
+```{r}
+install.packages("prophet")
+library(prophet)
+```
+```{r}
+# Prophet vuole in input un df contenente data e dati storici
+df_prophet <- r1[, c(7,9)]
+head(df_prophet)
+```
+```{r}
+colnames(df_prophet)[1] <- "ds"
+colnames(df_prophet)[2] <- "y"
 ```
 
 
+```{r}
+# Divisione training-test set
+train_date <- nrow(df_prophet) *0.8
+train_temp <- df_prophet[1:train_date,]
+test <- df_prophet[-c(1:train_date),] # Usare alla fine
+```
 
+```{r}
+# Training - validation set 
+train_date_rid <- nrow(train_temp)*0.9
+train <- train_temp[1:train_date_rid,]
+validation <- train_temp[-c(1:train_date_rid),]
+```
+
+```{r}
+mod_prop <- prophet(train, weekly.seasonality = TRUE)
+```
+```{r}
+future <- make_future_dataframe(mod_prop, periods = 44)
+```
+
+```{r}
+forecast <- predict(mod_prop, future)
+```
+
+```{r}
+plot(mod_prop, forecast)
+```
+
+```{r}
+prophet_plot_components(mod_prop, forecast)
+```
+
+```{r}
+dyplot.prophet(mod_prop, forecast)
+```
 
