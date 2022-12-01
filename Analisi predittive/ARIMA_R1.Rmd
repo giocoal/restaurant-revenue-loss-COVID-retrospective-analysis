@@ -112,6 +112,7 @@ err_plot <- function(actual, pred){
 # Load data
 
 ```{r}
+# file: Dati ristoranti\pre-covid_r1.csv
 r1 <- read.csv(file.choose())
 r1$data  <- parse_date(r1$data, "%Y-%m-%d", locale = locale("it"))
 head(r1)
@@ -699,6 +700,115 @@ prophet_plot_components(mod_prop, forecast)
 dyplot.prophet(mod_prop, forecast)
 ```
 
+## SARIMAX CON NUOVI REGRESSORI
+
+```{r}
+# Dataset festività 
+fest <- read_xlsx("C:\\Users\\marco\\OneDrive\\UNIMIB_DataScience\\99-PROJECTS\\DataScienceLab2022\\Dati aggiuntivi\\fest.xlsx", col_types = NULL)
+str(fest)
+```
+
+```{r}
+index <- 2:ncol(fest)
+fest[,index] <- lapply(fest[,index], as.integer)
+```
+
+```{r}
+# xts object con variabili dummy giorno e festività 
+dum_day_fest <-cbind(dum_day, fest)
+dum_day_fest <- subset(dum_day_fest, select = -c(date))
+dum_day_fest <- xts(dum_day_fest[, -1], dum_day_fest$data)
+```
+
+```{r}
+df_fest <- cbind(vendite_r1, dum_day_fest)
+```
+
+```{r}
+# Divisione training-test set
+train_date <- nrow(df_fest) *0.8
+train_temp <- df_fest[1:train_date,]
+test <- df_fest[-c(1:train_date),] # Usare alla fine
+```
+
+```{r}
+# Training - validation set 
+train_date_rid <- nrow(train_temp)*0.9
+train <- train_temp[1:train_date_rid,]
+validation <- train_temp[-c(1:train_date_rid),]
+rm(list="train_temp")
+```
+
+```{r}
+mod5 <- Arima(y = train$vendite_r1,
+              order = c(3, 0, 2),
+              list(order = c(1, 0, 1), period = 7),
+              xreg = train[, -1], # Rimosse le variabili non significative
+              include.constant = FALSE,
+              )
+```
+
+```{r}
+summary(mod5)
+```
+
+```{r}
+tsdisplay(mod5$residuals) 
+```
+
+```{r}
+pars_test(mod5$coef, mod5$var.coef)
+```
+
+```{r}
+lag.length = 25
+Box.test(mod5$residuals, lag=lag.length, type="Ljung-Box")
+```
+
+```{r}
+checkresiduals(mod5)
+```
+
+```{r}
+plot(train[1:28,1], 
+     col = "blue", lwd=0.5, 
+     main = "Fitted Values")
+lines(xts(mod5$fitted[1:28], order.by = index(train[1:28])), col="red", lwd=2.5)
+```
+
+### Previsioni
+
+```{r}
+# Al momento vengono fatte previsioni 44 passi in avanti (lunghezza del validation set)
+pred_mod5 <- forecast(mod5, h = 44, 
+                      level = 95,
+                      xreg = validation[, -1])
+```
+
+```{r}
+autoplot(pred_mod5)
+```
+
+```{r}
+plot(validation[,1], 
+     col = "blue", lwd=0.5, 
+     ylim = c(min(pred_mod5$lower, min(validation[,1])), max(pred_mod5$upper, max(validation[,1]))), main = "Fitted Value")
+lines(xts(pred_mod5$mean, order.by = index(validation)), col="red", lwd=3)
+
+```
+
+```{r}
+mape(validation[,1], xts(pred_mod5$mean, order.by = index(validation)))
+```
+
+```{r}
+rmse(validation[,1], xts(pred_mod5$mean, order.by = index(validation)))
+```
+
+```{r}
+err_plot(validation[,1], pred_mod5$mean)
+```
+
 # Confronto ***forecasting performance*** **dei modelli**
 
 ## Scelta misura di *forecasting accuracy*
@@ -713,14 +823,8 @@ Si sceglie di utilizzare due misure di accuratezza (**MAE e RMSE**) di tipo **sc
 
 -   Si evitano tutte le problematiche relative alle misure di percentage errors legate:
 
-    -    al fatto che l'errore viene diviso per il valore dell'osservazione (valori infiniti per y che tende a 0)
+    -   al fatto che l'errore viene diviso per il valore dell'osservazione (valori infiniti per y che tende a 0)
 
     -   penalità maggiori per errori negativi piuttosto che quelli positivi
 
 ## Procedura di valutazione con *rolling forecasting origin*
-
-### Setup
-
-```{r}
-install.packages()
-```
