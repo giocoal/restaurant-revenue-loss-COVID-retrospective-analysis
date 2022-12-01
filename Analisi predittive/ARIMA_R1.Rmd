@@ -178,10 +178,9 @@ dum_day
 
 ```{r}
 # Costruzione dummuy per weekend e festivi
-dum_week <- r1[, c("data","Weekend", "Festivo")]
+dum_week <- r1[, c("data", "Festivo")]
 dum_week[, "Festivo"] <- as.factor(dum_week$Festivo)
-dum_week[, "Weekend"] <- as.factor(dum_week$Weekend)
-dum_week <- dummy_cols(dum_week, select_columns = c("Weekend", "Festivo"), 
+dum_week <- dummy_cols(dum_week, select_columns = "Festivo", 
                        remove_first_dummy = TRUE, 
                        remove_selected_columns = TRUE)
 dum_week
@@ -191,19 +190,17 @@ dum_week
 # xts object con tutte le variabili dummy
 dum <- cbind(dum_day, dum_week)
 dum <- xts(dum[, -1], dum$data)
+dum <- subset(dum, select = -c(data))
+rm(list=c("dum_day", "dum_week"))
 head(dum)
 ```
 
 ```{r}
 df <- cbind(vendite_r1, dum)
-df <- subset(df, select = -c(data))
 head(df)
 ```
 
-Schema: 
-- TRAINING, VALIDATION, TEST 
-- TRAINING, TEST: 80% 20% 
-- TRAINING, VALIDATION: 90% 10%
+### Partizionamento del dataset
 
 ```{r}
 # Divisione training-test set
@@ -217,6 +214,7 @@ test <- df[-c(1:train_date),] # Usare alla fine
 train_date_rid <- nrow(train_temp)*0.9
 train <- train_temp[1:train_date_rid,]
 validation <- train_temp[-c(1:train_date_rid),]
+rm(list="train_temp")
 ```
 
 # Stazionarietà della serie storica
@@ -268,6 +266,7 @@ tsdisplay(diff7)
 ```{r}
 lag.length = 25
 Box.test(diff7, lag=lag.length, type="Ljung-Box")
+rm(list="diff7")
 ```
 
 Il test indica che è ancora presente correlazione seriale. Notiamo però come la ACF, nei primi 25 ritardi, abbia solamente il settimo ritardo significativi, mentre ora la PACF tende a zero molto più lentamente rispetto a prima (con ritardi particolarmente significativi ai ritardi stagionali multipli di 7)
@@ -313,13 +312,13 @@ checkresiduals(mod1)
 lag.length = 25
 Box.test(mod1$residuals, lag=lag.length, type="Ljung-Box")
 ```
+
 ```{r}
-plot(train[,1], 
+plot(train[1:28,1], 
      col = "blue", lwd=0.5, 
      main = "Fitted Values")
-lines(xts(mod1$fitted, order.by = index(train)), col="red", lwd=2.5)
+lines(xts(mod1$fitted[1:28], order.by = index(train[1:28])), col="red", lwd=2.5)
 ```
-
 
 #### Previsioni
 
@@ -341,7 +340,6 @@ plot(validation[,1],
 lines(xts(pred_mod1$mean, order.by = index(validation)), col="red", lwd=3)
 
 ```
-
 
 ```{r}
 mape(validation[,1], xts(pred_mod1$mean, order.by = index(validation)))
@@ -373,6 +371,8 @@ mod2 <- Arima(y = train$vendite_r1,
               )
 ```
 
+#### Diagnostica
+
 ```{r}
 summary(mod2)
 ```
@@ -393,11 +393,12 @@ Box.test(mod2$residuals, lag=lag.length, type="Ljung-Box")
 ```{r}
 checkresiduals(mod2)
 ```
+
 ```{r}
-plot(train[,1], 
+plot(train[1:28,1], 
      col = "blue", lwd=0.5, 
      main = "Fitted Values")
-lines(xts(mod2$fitted, order.by = index(train)), col="red", lwd=2.5)
+lines(xts(mod2$fitted[1:28], order.by = index(train[1:28])), col="red", lwd=2.5)
 ```
 
 #### Previsioni
@@ -420,7 +421,6 @@ plot(validation[,1],
 lines(xts(pred_mod2$mean, order.by = index(validation)), col="red", lwd=3)
 
 ```
-
 
 ```{r}
 mape(validation[,1], xts(pred_mod2$mean, order.by = index(validation)))
@@ -452,6 +452,8 @@ mod3 <- Arima(y = train$vendite_r1,
               )
 ```
 
+#### Diagnostica
+
 ```{r}
 summary(mod3)
 ```
@@ -472,6 +474,7 @@ Box.test(mod3$residuals, lag=lag.length, type="Ljung-Box")
 ```{r}
 checkresiduals(mod3)
 ```
+
 ```{r}
 plot(train[,1], 
      col = "blue", lwd=0.5, 
@@ -479,7 +482,7 @@ plot(train[,1],
 lines(xts(mod3$fitted, order.by = index(train)), col="red", lwd=2.5)
 ```
 
-### Previsione
+#### Previsioni
 
 ```{r}
 # Al momento vengono fatte previsioni 44 passi in avanti (lunghezza del validation set)
@@ -535,7 +538,6 @@ r1$Precipitazioni.mm.[r1$data == "2018-11-23"] <- 0
 r1$Pioggia[r1$Pioggia==''] <- "False"
 
 df_reg <- df
-df_reg$Precipitazioni <- r1$Precipitazioni.mm.
 df_reg$Benzina <- r1$BENZINA.LITRO
 df_reg$Benzina <- r1$GASOLIO_AUTO.LITRO
 df_reg$Gpl <- r1$GPL.LITRO
@@ -582,6 +584,8 @@ mod4 <- Arima(y = train_reg$vendite_r1,
               )
 ```
 
+#### Diagnostica
+
 ```{r}
 summary(mod4)
 ```
@@ -604,13 +608,13 @@ checkresiduals(mod4)
 ```
 
 ```{r}
-plot(train[,1], 
+plot(train[1:28,1], 
      col = "blue", lwd=0.5, 
      main = "Fitted Values")
-lines(xts(mod4$fitted, order.by = index(train)), col="red", lwd=2.5)
+lines(xts(mod4$fitted[1:28], order.by = index(train[1:28])), col="red", lwd=2.5)
 ```
 
-### Previsione
+#### Previsioni
 
 ```{r}
 # Al momento vengono fatte previsioni 44 passi in avanti (lunghezza del validation set)
@@ -626,7 +630,7 @@ autoplot(pred_mod4)
 ```{r}
 plot(validation_reg[,1], 
      col = "blue", lwd=0.5, 
-     ylim = c(min(pred_mod4$lower), max(pred_mod4$upper)), main = "Fitted Value")
+     ylim = c(min(pred_mod4$lower, min(validation_reg[,1])), max(pred_mod4$upper, max(validation_reg[,1]))), main = "Fitted Value")
 lines(xts(pred_mod4$mean, order.by = index(validation_reg)), col="red", lwd=3)
 
 ```
@@ -640,25 +644,22 @@ rmse(validation_reg[,1], xts(pred_mod4$mean, order.by = index(validation_reg)))
 ```
 
 ```{r}
-err_plot(validation_reg[,1], xts(pred_mod4$mean, order.by = index(validation_reg)))
+err_plot(validation_reg[,1], pred_mod4$mean)
 ```
 
-# Forecasting with Prophet
+### Forecasting with Prophet
 
 ```{r}
-install.packages("prophet")
 library(prophet)
-```
-```{r}
 # Prophet vuole in input un df contenente data e dati storici
 df_prophet <- r1[, c(7,9)]
 head(df_prophet)
 ```
+
 ```{r}
 colnames(df_prophet)[1] <- "ds"
 colnames(df_prophet)[2] <- "y"
 ```
-
 
 ```{r}
 # Divisione training-test set
@@ -677,6 +678,7 @@ validation <- train_temp[-c(1:train_date_rid),]
 ```{r}
 mod_prop <- prophet(train, weekly.seasonality = TRUE)
 ```
+
 ```{r}
 future <- make_future_dataframe(mod_prop, periods = 44)
 ```
@@ -696,4 +698,3 @@ prophet_plot_components(mod_prop, forecast)
 ```{r}
 dyplot.prophet(mod_prop, forecast)
 ```
-
