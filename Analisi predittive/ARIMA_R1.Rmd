@@ -118,7 +118,7 @@ r1$data  <- parse_date(r1$data, "%Y-%m-%d", locale = locale("it"))
 head(r1)
 ```
 
-## Data preparation
+# Data preparation
 
 ```{r}
 # ts vendite
@@ -201,7 +201,7 @@ df <- cbind(vendite_r1, dum)
 head(df)
 ```
 
-### Partizionamento del dataset
+## Partizionamento del dataset
 
 ```{r}
 # Divisione training-test set
@@ -233,7 +233,7 @@ tsdisplay(train[,1])
 
 ACF risulta avere ritardi significativi che decadono a zero molto lentamente, sintomo di una non stazionarietà della serie storica. Notiamo come i ritardi maggiormente significativi sono quelli ai ritardi stagionali multipli di 7.
 
-### Ljung-Box test
+## Ljung-Box test
 
 (a non-stationary signal will have a low p-value)
 
@@ -257,7 +257,7 @@ adf.test(train[,1])
 
 Come effettivamente viene suggerito dal test di Dickey Fuller (valuta la presenza di radici unitarie)
 
-### Differenza stagionale
+# Differenza stagionale
 
 ```{r}
 diff7 <- diff(train[,1], 7)
@@ -828,3 +828,27 @@ Si sceglie di utilizzare due misure di accuratezza (**MAE e RMSE**) di tipo **sc
     -   penalità maggiori per errori negativi piuttosto che quelli positivi
 
 ## Procedura di valutazione con *rolling forecasting origin*
+
+### Modello 1
+
+```{r}
+
+# Definisco la forecast-function
+
+f_mod1 <- function(x, h, xreg, newxreg) {
+  forecast(Arima(x,
+                 order = c(0, 0, 2),
+                 seasonal = list(order = c(1, 0, 1), period = 7),
+                 xreg = xreg,
+                 include.constant = FALSE
+                 ),
+           h = h,
+           xreg=newxreg)
+}
+
+xreg <- df[, -1]
+e <- tsCV(y = df$vendite_r1, forecastfunction = f_mod1, h=1, xreg=xreg, initial = 60)
+
+print(e)
+sqrt(mean(e^2, na.rm=TRUE))
+```
