@@ -58,7 +58,7 @@ knit_hooks$set(source = function(x, options){
 })
 ```
 
-## Setting & Function
+# Setting & Function
 
 ```{r}
 set.seed(100)
@@ -79,8 +79,8 @@ invisible(lapply(packages, library, character.only = TRUE))
 
 
 # Setting working directory
-working_dir = "C:/Users/marco/OneDrive/UNIMIB_DataScience/99-PROJECTS/DataScienceLab2022/Dati ristoranti"
-setwd(working_dir)
+# working_dir = "C:/Users/marco/OneDrive/UNIMIB_DataScience/99-PROJECTS/DataScienceLab2022/Dati ristoranti"
+# setwd(working_dir)
 
 # MAPE 
 mape <- function(actual,pred){
@@ -699,10 +699,28 @@ prophet_plot_components(mod_prop, forecast)
 dyplot.prophet(mod_prop, forecast)
 ```
 
-# Confronto ***forecasting accuracy*** dei modelli mediante ***rolling forecasting origin***
+# Confronto ***forecasting performance*** **dei modelli**
 
 ## Scelta misura di *forecasting accuracy*
 
-Al fine di confrontare i diversi modelli definiti precedentemente è importante valutare la forecasting accuracy. Prima di definire la procedura di calcolo della forecasting accuracy è importante selezionare la propria misura di accuratezza.
+Al fine di confrontare i diversi modelli definiti precedentemente è importante valutare le performance in termini forecasting accuracy. Prima di definire la procedura di calcolo della forecasting accuracy è importante selezionare la propria misura di accuratezza.
 
-Si sceglie di utilizzare due misure di accuratezza (**MAE e RMSE**) di tipo **scale-dependent**
+Si sceglie di utilizzare due misure di accuratezza (**MAE e RMSE**) di tipo **scale-dependent** perchè:
+
+-   Misure di accuratezza basate su percentage errors e scaled errors (unit-free) sono indicate per comparare le performance di forecasting tra data set diversi
+
+-   Errori di tipo scale-dependent sono nella stessa scala dei dati, ma in questo caso non è un problema
+
+-   Si evitano tutte le problematiche relative alle misure di percentage errors legate:
+
+    -    al fatto che l'errore viene diviso per il valore dell'osservazione (valori infiniti per y che tende a 0)
+
+    -   penalità maggiori per errori negativi piuttosto che quelli positivi
+
+## Procedura di valutazione con *rolling forecasting origin*
+
+### Setup
+
+```{r}
+install.packages()
+```
