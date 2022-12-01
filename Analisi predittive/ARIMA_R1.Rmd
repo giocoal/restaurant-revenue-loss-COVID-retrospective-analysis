@@ -835,7 +835,7 @@ Si sceglie di utilizzare due misure di accuratezza (**MAE e RMSE**) di tipo **sc
 
 # Definisco la forecast-function
 
-f_mod1 <- function(x, h, xreg, newxreg) {
+f_mod1 <- function(x, h, xreg, newxreg) { 
   forecast(Arima(x,
                  order = c(0, 0, 2),
                  seasonal = list(order = c(1, 0, 1), period = 7),
