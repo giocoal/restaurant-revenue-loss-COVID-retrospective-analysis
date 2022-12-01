@@ -1,0 +1,358 @@
+---
+title: "Untitled"
+author: "Gianluca Scuri"
+date: "2022-11-28"
+output: html_document
+---
+
+```{r}
+# SETTING PROGETTO -------------------------------------------------------------
+
+set.seed(100)
+
+# Setting librerie utili
+# Package names
+packages <- c("KFAS", "xts", "readxl", "fastDummies") 
+
+# Install packages if not yet installed
+installed_packages <- packages %in% rownames(installed.packages())
+if (any(installed_packages == FALSE)) {
+  install.packages(packages[!installed_packages])
+}
+
+# Packages loading
+invisible(lapply(packages, library, character.only = TRUE))
+
+
+# setwd(working_dir)
+setwd("C:/Users/gianl/Desktop/Uni Bicocca/GitHub/Data-Science-Lab/Dati ristoranti/")
+precovid1 <- read.csv("C:\\Users\\gianl\\Desktop\\Uni Bicocca\\GitHub\\Data-Science-Lab\\Dati ristoranti\\pre-covid_r1.csv", row.names = 1)
+
+fest <- read_xlsx("C:\\Users\\gianl\\Desktop\\fest.xlsx", col_types = NULL)
+
+```
+
+```{r}
+# MAPE 
+mape <- function(actual,pred){
+  mape <- mean(abs((actual - pred)/actual))*100
+  return (mape)
+}
+
+#MSE
+rmse <- function(actual, pred){
+  rmse <- sqrt(mean((actual - pred)^2))
+  return (rmse)
+}
+```
+
+```{r}
+prova <- precovid1[, c(8,14,15)]
+prova$Weekend <- as.integer(as.logical(prova$Weekend))
+prova$Festivo <- as.integer(as.logical(prova$Festivo))
+ss <- xts(prova,
+            as.Date(as.character(precovid1$data),
+                    format = "%Y-%m-%d"))
+plot(ss$lordototale)
+```
+
+```{r}
+train_date <- nrow(ss) *0.8
+val <- ss[1:train_date,]
+test <- ss[-c(1:train_date),] # Usare alla fine
+
+validation_date <- nrow(val) *0.9
+train <- val
+train$lordototale[validation_date:nrow(val),] <- NA
+```
+
+## Modello 1 (10 armoniche, no regressori)
+
+```{r}
+mod1 <- SSModel(log(lordototale+10)~
+                  SSMtrend(2, list(NA, NA))+
+                  SSMseasonal(7, NA)+
+                  SSMseasonal(365, NA, "trigonometric", harmonics = 1:10),
+                H=NA,
+                data=train)
+```
+
+```{r}
+mod1$P1inf[] <- 0 # no componenti diffuse
+mod1$a1[1] <- mean(log(train$lordototale[1:50])) # scelta basata sui valori del primo mese
+
+vy <- var(log(train$lordototale[1:50])) # calcoliamo la varianza
+diag(mod1$P1) <- vy*10 # specifichiamo che abbiamo molta incertezza sui valori che abbiamo specificato
+```
+
+```{r}
+pars <- log(c(
+  logVarEta = vy/10,
+  logVarZeta = vy/1000,
+  logVarOm7 = vy/1000,
+  logVarOm365 = vy/10000,
+  logVarEps = vy/10
+))
+```
+
+```{r}
+updt1 <- function(pars, model){
+  model$Q[1,1,1] <- exp(pars[1])
+  model$Q[2,2,1] <- exp(pars[2])
+  model$Q[3,3,1] <- exp(pars[3])
+  diag(model$Q[4:23, 4:23, 1]) <- exp(pars[4])
+  model$H[1,1,1] <- exp(pars[5])
+  model
+}
+```
+
+```{r}
+fit1 <- fitSSM(mod1, pars, updt1)
+fit1$optim.out
+```
+
+```{r}
+kfs1 <- KFS(fit1$model,
+            smoothing = c("state", "signal", "disturbance"))
+
+
+alphahat <- xts(as.matrix(kfs1$alphahat),
+                index(train))
+alphahat <- as.xts(alphahat)
+
+plot(log(train$lordototale))
+lines(alphahat[, "level"], col = "red", lwd = 3)
+```
+
+```{r}
+plot(log(val$lordototale[validation_date:nrow(val),]), lwd=3)
+
+muhat <- xts(as.matrix(kfs1$muhat),
+                index(train))
+muhat <- as.xts(muhat)
+lines(muhat[validation_date:nrow(val),], type = "l", col = "red") # [1801:1826,]
+```
+
+```{r}
+mape(val$lordototale[validation_date:nrow(val),], exp(muhat[validation_date:nrow(val),]))
+rmse(val$lordototale[validation_date:nrow(val),], exp(muhat[validation_date:nrow(val),]))
+```
+
+```{r}
+smo_lev_se <- sqrt(kfs1$V[1,1,])
+plot(smo_lev_se)
+```
+
+## Modello 2 (10 armoniche e regressori)
+
+```{r}
+mod2 <- SSModel(log(lordototale+10)~Weekend + Festivo +
+                  SSMtrend(2, list(NA, NA))+
+                  SSMseasonal(7, NA)+
+                  SSMseasonal(365, NA, "trigonometric", harmonics = 1:10),
+                H=NA,
+                data=train)
+
+mod2$P1inf[] <- 0 # no componenti diffuse
+mod2$a1[1] <- mean(log(train$lordototale[1:50])) # scelta basata sui valori del primo mese
+
+diag(mod2$P1) <- vy*10 # specifichiamo che abbiamo molta incertezza sui valori che abbiamo specificato
+
+fit2 <- fitSSM(mod2, pars, updt1)
+fit2$optim.out
+
+kfs2 <- KFS(fit2$model,
+            smoothing = c("state", "signal", "disturbance"))
+
+
+plot(log(val$lordototale[validation_date:nrow(val),]), lwd=3)
+
+muhat2 <- xts(as.matrix(kfs2$muhat),
+                index(train))
+muhat2 <- as.xts(muhat2)
+lines(muhat[validation_date:nrow(val),], type = "l", col = "red") # [1801:1826,]
+lines(muhat2[validation_date:nrow(val),], type = "l", col = "blue") # [1801:1826,]
+```
+
+```{r}
+
+```
+
+```{r}
+mape(val$lordototale[validation_date:nrow(val),], exp(muhat2[validation_date:nrow(val),]))
+rmse(val$lordototale[validation_date:nrow(val),], exp(muhat2[validation_date:nrow(val),]))
+```
+
+## Modello 3 (40 armoniche, regressori)
+
+```{r}
+mod3 <- SSModel(log(lordototale+10)~Weekend + Festivo +
+                  SSMtrend(2, list(NA, NA))+
+                  SSMseasonal(7, NA)+
+                  SSMseasonal(365, NA, "trigonometric", harmonics = 1:10),
+                H=NA,
+                data=train)
+
+updt3 <- function(pars, model){
+  model$Q[1,1,1] <- exp(pars[1])
+  model$Q[2,2,1] <- exp(pars[2])
+  model$Q[3,3,1] <- exp(pars[3])
+  diag(model$Q[4:23, 4:23, 1]) <- exp(pars[4])
+  model$H[1,1,1] <- exp(pars[5])
+  model
+}
+
+mod3$P1inf[] <- 0 # no componenti diffuse
+mod3$a1[1] <- mean(log(train$lordototale[1:50])) # scelta basata sui valori del primo mese
+
+diag(mod3$P1) <- vy*10 # specifichiamo che abbiamo molta incertezza sui valori che abbiamo specificato
+
+fit3 <- fitSSM(mod3, pars, updt3)
+fit3$optim.out
+
+kfs3 <- KFS(fit3$model,
+            smoothing = c("state", "signal", "disturbance"))
+
+
+plot(log(val$lordototale[validation_date:nrow(val),]), lwd=3)
+
+muhat3 <- xts(as.matrix(kfs3$muhat),
+                index(train))
+muhat3 <- as.xts(muhat3)
+lines(muhat[validation_date:nrow(val),], type = "l", col = "red") # [1801:1826,]
+lines(muhat3[validation_date:nrow(val),], type = "l", col = "blue") # [1801:1826,]
+```
+
+```{r}
+mape(val$lordototale[validation_date:nrow(val),], exp(muhat3[validation_date:nrow(val),]))
+rmse(val$lordototale[validation_date:nrow(val),], exp(muhat3[validation_date:nrow(val),]))
+```
+
+## Modello 4 (seasonal 7 gg)
+
+```{r}
+mod4 <- SSModel(log(lordototale+10)~Weekend + Festivo +
+                  SSMtrend(2, list(NA, NA))+
+                  SSMseasonal(7, NA, "trigonometric"),
+                  # SSMseasonal(365, NA, "trigonometric", harmonics = 1:10),
+                H=NA,
+                data=train)
+
+updt4 <- function(pars, model){
+  model$Q[1,1,1] <- exp(pars[1])
+  model$Q[2,2,1] <- exp(pars[2])
+  model$Q[3,3,1] <- exp(pars[3])
+  diag(model$Q[4:8, 4:8, 1]) <- exp(pars[4])
+  model$H[1,1,1] <- exp(pars[5])
+  model
+}
+
+mod4$P1inf[] <- 0 # no componenti diffuse
+mod4$a1[1] <- mean(log(train$lordototale[1:50])) # scelta basata sui valori del primo mese
+
+diag(mod4$P1) <- vy*10 # specifichiamo che abbiamo molta incertezza sui valori che abbiamo specificato
+
+fit4 <- fitSSM(mod4, pars, updt4)
+fit4$optim.out
+
+kfs4 <- KFS(fit4$model,
+            smoothing = c("state", "signal", "disturbance"))
+
+
+iniz <- validation_date -50
+fine <- nrow(val) -50
+
+plot(log(val$lordototale[iniz:fine,]), lwd=3)
+
+muhat4 <- xts(as.matrix(kfs4$muhat),
+                index(train))
+muhat4 <- as.xts(muhat4)
+lines(muhat[iniz:fine,], type = "l", col = "red") # [1801:1826,]
+lines(muhat4[iniz:fine,], type = "l", col = "blue") # [1801:1826,]
+```
+
+```{r}
+mape(val$lordototale[validation_date:nrow(val),], exp(muhat4[validation_date:nrow(val),]))
+rmse(val$lordototale[validation_date:nrow(val),], exp(muhat4[validation_date:nrow(val),]))
+```
+
+## Modello 5 (usando fest)
+
+```{r}
+temp <- dummy_cols(precovid1[10], select_columns = c("Giorno"), 
+                      remove_first_dummy = TRUE, 
+                      remove_selected_columns = TRUE)
+
+prova <- cbind(precovid1[, c(8)], fest[,-1], temp)
+#prova[,2] <- as.integer(as.logical(prova[,2]))
+
+ss <- xts(prova,
+            as.Date(as.character(precovid1$data),
+                    format = "%Y-%m-%d"))
+
+colnames(ss)[1] <- "lordototale"
+ss$lordototale <- as.numeric(ss$lordototale)
+
+train_date <- nrow(ss) *0.8
+val <- ss[1:train_date,]
+test <- ss[-c(1:train_date),] # Usare alla fine
+
+validation_date <- nrow(val) *0.9
+train <- val
+train$lordototale[validation_date:nrow(val),] <- NA
+```
+
+```{r}
+mod5 <- SSModel(log(lordototale)~dec24+dec25+jan1+jan6+aug15+dec31+eastsun+eastermon+oct31+nov1+apr25+mag1+bridge+#Giorno_Monday+Giorno_Tuesday+Giorno_Wednesday+Giorno_Thursday+Giorno_Saturday+Giorno_Sunday+
+                  SSMtrend(2, list(NA, NA))+
+                  #SSMseasonal(7, NA, "trigonometric"),
+                  SSMseasonal(365, NA, "trigonometric", harmonics = 1:10),
+                H=NA,
+                data=train)
+
+updt5 <- function(pars, model){
+  model$Q[1,1,1] <- exp(pars[1])
+  model$Q[2,2,1] <- exp(pars[2])
+  model$Q[3,3,1] <- exp(pars[3])
+  diag(model$Q[4:8, 4:8, 1]) <- exp(pars[4])
+  model$H[1,1,1] <- exp(pars[5])
+  model
+}
+
+mod5$P1inf[] <- 0 # no componenti diffuse
+mod5$a1[1] <- mean(log(train$lordototale[1:50])) # scelta basata sui valori del primo mese
+
+diag(mod5$P1) <- vy*10 # specifichiamo che abbiamo molta incertezza sui valori che abbiamo specificato
+
+fit5 <- fitSSM(mod5, pars, updt5)
+fit5$optim.out
+
+kfs5 <- KFS(fit5$model,
+            smoothing = c("state", "signal", "disturbance"))
+
+
+iniz <- validation_date
+fine <- nrow(val)
+
+plot(log(val$lordototale[iniz:fine,]), lwd=2)
+
+muhat5 <- xts(as.matrix(kfs5$muhat),
+                index(train))
+muhat5 <- as.xts(muhat5)
+#lines(muhat[iniz:fine,], type = "l", col = "red") # [1801:1826,]
+lines(muhat5[iniz:fine,], type = "l", col = "blue", lwd=3) # [1801:1826,]
+```
+
+```{r}
+mape(val$lordototale[validation_date:nrow(val),], exp(muhat5[validation_date:nrow(val),]))
+rmse(val$lordototale[validation_date:nrow(val),], exp(muhat5[validation_date:nrow(val),]))
+```
+
+```{r}
+summary(val$lordototale - exp(muhat4))
+#abline(v=index(val[validation_date]))
+```
+
+```{r}
+plot(val$lordototale - exp(muhat4))
+```
