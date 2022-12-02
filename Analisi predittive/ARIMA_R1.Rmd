@@ -1053,12 +1053,25 @@ RMSE_mod4 <- sqrt(colMeans(e4^2, na.rm = TRUE))
 RMSE_mod5 <- sqrt(colMeans(e5^2, na.rm = TRUE))
 #RMSE_mod6 <- sqrt(colMeans(e6^2, na.rm = TRUE))
 
-plot(1:90, RMSE_mod1, type="l", col=1, xlab="horizon", ylab="RMSE")
+
+# Zoom in
+plot(1:90, RMSE_mod1, type="l", col=1, xlab="horizon", ylab="RMSE", ylim = c(2500,5000))
 lines(1:90, RMSE_mod2, type="l",col=2)
 lines(1:90, RMSE_mod3, type="l",col=3)
 lines(1:90, RMSE_mod4, type="l",col=4)
 lines(1:90, RMSE_mod5, type="l",col=5)
-legend("topleft",legend=c("1_ARIMA1","2_ARIMA2","3_ARIMA3","4_SARIMAX1", "5_SARIMAX2"),col=2:4,lty=1)
+legend("topleft",legend=c("1_ARIMA1","2_ARIMA2","3_ARIMA3","4_SARIMAX1", "5_SARIMAX2"),col=1:5,lty=1)
+
+# Zoom out
+plot(1:90, RMSE_mod1, type="l", col=1, xlab="horizon", ylab="RMSE", ylim = c(2500,7000))
+lines(1:90, RMSE_mod2, type="l",col=2)
+lines(1:90, RMSE_mod3, type="l",col=3)
+lines(1:90, RMSE_mod4, type="l",col=4)
+lines(1:90, RMSE_mod5, type="l",col=5)
+legend("topleft",legend=c("1_ARIMA1","2_ARIMA2","3_ARIMA3","4_SARIMAX1", "5_SARIMAX2"),col=1:5,lty=1)
+```
+```{r}
+RMSE_mod5
 ```
 
 **RMSE Medi**
