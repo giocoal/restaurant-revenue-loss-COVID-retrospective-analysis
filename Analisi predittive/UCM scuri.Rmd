@@ -28,7 +28,7 @@ invisible(lapply(packages, library, character.only = TRUE))
 setwd("C:/Users/gianl/Desktop/Uni Bicocca/GitHub/Data-Science-Lab/Dati ristoranti/")
 precovid1 <- read.csv("C:\\Users\\gianl\\Desktop\\Uni Bicocca\\GitHub\\Data-Science-Lab\\Dati ristoranti\\pre-covid_r1.csv", row.names = 1)
 
-fest <- read_xlsx("C:\\Users\\gianl\\Desktop\\fest.xlsx", col_types = NULL)
+fest <- read_xlsx("C:\\Users\\gianl\\Desktop\\Uni Bicocca\\GitHub\\Data-Science-Lab\\Dati aggiuntivi\\fest.xlsx")
 
 ```
 
@@ -127,15 +127,19 @@ lines(alphahat[, "level"], col = "red", lwd = 3)
 ```{r}
 plot(log(val$lordototale[validation_date:nrow(val),]), lwd=3)
 
-muhat <- xts(as.matrix(kfs1$muhat),
+muhat1 <- xts(as.matrix(kfs1$muhat),
                 index(train))
-muhat <- as.xts(muhat)
-lines(muhat[validation_date:nrow(val),], type = "l", col = "red") # [1801:1826,]
+muhat1 <- as.xts(muhat1)
+lines(muhat1[validation_date:nrow(val),], type = "l", col = "red", lwd=3) # [1801:1826,]
 ```
 
 ```{r}
-mape(val$lordototale[validation_date:nrow(val),], exp(muhat[validation_date:nrow(val),]))
-rmse(val$lordototale[validation_date:nrow(val),], exp(muhat[validation_date:nrow(val),]))
+mape(val$lordototale[validation_date:nrow(val),], exp(muhat1[validation_date:nrow(val),]))
+rmse(val$lordototale[validation_date:nrow(val),], exp(muhat1[validation_date:nrow(val),]))
+```
+
+```{r}
+plot(val$lordototale - exp(muhat1))
 ```
 
 ```{r}
@@ -170,7 +174,7 @@ plot(log(val$lordototale[validation_date:nrow(val),]), lwd=3)
 muhat2 <- xts(as.matrix(kfs2$muhat),
                 index(train))
 muhat2 <- as.xts(muhat2)
-lines(muhat[validation_date:nrow(val),], type = "l", col = "red") # [1801:1826,]
+lines(muhat1[validation_date:nrow(val),], type = "l", col = "red") # [1801:1826,]
 lines(muhat2[validation_date:nrow(val),], type = "l", col = "blue") # [1801:1826,]
 ```
 
@@ -219,7 +223,7 @@ plot(log(val$lordototale[validation_date:nrow(val),]), lwd=3)
 muhat3 <- xts(as.matrix(kfs3$muhat),
                 index(train))
 muhat3 <- as.xts(muhat3)
-lines(muhat[validation_date:nrow(val),], type = "l", col = "red") # [1801:1826,]
+lines(muhat1[validation_date:nrow(val),], type = "l", col = "red") # [1801:1826,]
 lines(muhat3[validation_date:nrow(val),], type = "l", col = "blue") # [1801:1826,]
 ```
 
@@ -267,7 +271,7 @@ plot(log(val$lordototale[iniz:fine,]), lwd=3)
 muhat4 <- xts(as.matrix(kfs4$muhat),
                 index(train))
 muhat4 <- as.xts(muhat4)
-lines(muhat[iniz:fine,], type = "l", col = "red") # [1801:1826,]
+lines(muhat1[iniz:fine,], type = "l", col = "red") # [1801:1826,]
 lines(muhat4[iniz:fine,], type = "l", col = "blue") # [1801:1826,]
 ```
 
@@ -276,7 +280,7 @@ mape(val$lordototale[validation_date:nrow(val),], exp(muhat4[validation_date:nro
 rmse(val$lordototale[validation_date:nrow(val),], exp(muhat4[validation_date:nrow(val),]))
 ```
 
-## Modello 5 (usando fest)
+## Modello 5 (usando regressori festivita)
 
 ```{r}
 temp <- dummy_cols(precovid1[10], select_columns = c("Giorno"), 
@@ -284,7 +288,8 @@ temp <- dummy_cols(precovid1[10], select_columns = c("Giorno"),
                       remove_selected_columns = TRUE)
 
 prova <- cbind(precovid1[, c(8)], fest[,-1], temp)
-#prova[,2] <- as.integer(as.logical(prova[,2]))
+# prova[,2] <- as.integer(as.logical(prova[,2]))
+# prova <- merge(x=precovid1[, c(8)], y=fest[,-1], by.x=precovid1$data, by.y=fest$date)
 
 ss <- xts(prova,
             as.Date(as.character(precovid1$data),
@@ -293,20 +298,19 @@ ss <- xts(prova,
 colnames(ss)[1] <- "lordototale"
 ss$lordototale <- as.numeric(ss$lordototale)
 
-train_date <- nrow(ss) *0.8
+train_date <- nrow(ss) * 0.8
 val <- ss[1:train_date,]
 test <- ss[-c(1:train_date),] # Usare alla fine
 
-validation_date <- nrow(val) *0.9
+validation_date <- nrow(val) * 0.9
 train <- val
-train$lordototale[validation_date:nrow(val),] <- NA
+train$lordototale[as.integer(validation_date+1):nrow(val),] <- NA
 ```
 
 ```{r}
-mod5 <- SSModel(log(lordototale)~dec24+dec25+jan1+jan6+aug15+dec31+eastsun+eastermon+oct31+nov1+apr25+mag1+bridge+#Giorno_Monday+Giorno_Tuesday+Giorno_Wednesday+Giorno_Thursday+Giorno_Saturday+Giorno_Sunday+
+mod5 <- SSModel(log(lordototale)~dec24+dec25+dec26+jan1+jan6+aug15+dec31+eastsun+eastermon+apr25+mag1+jun2+oct31+nov1+#bridge+#Giorno_Monday+Giorno_Tuesday+Giorno_Wednesday+Giorno_Thursday+Giorno_Saturday+Giorno_Sunday+
                   SSMtrend(2, list(NA, NA))+
-                  #SSMseasonal(7, NA, "trigonometric"),
-                  SSMseasonal(365, NA, "trigonometric", harmonics = 1:10),
+                  SSMseasonal(7, NA, 'trigonometric'),
                 H=NA,
                 data=train)
 
@@ -334,13 +338,23 @@ kfs5 <- KFS(fit5$model,
 iniz <- validation_date
 fine <- nrow(val)
 
-plot(log(val$lordototale[iniz:fine,]), lwd=2)
+plot(log(val$lordototale[iniz:fine,]), lwd=2, ylim=c(9,11))
+
+muhat5 <- xts(as.matrix(kfs5$muhat),
+                index(train))
+muhat5 <- as.xts(muhat5)
+#lines(muhat1[iniz:fine,], type = "l", col = "red") # [1801:1826,]
+lines(muhat5[iniz:fine,], type = "l", col = "red", lwd=3) # [1801:1826,]
+```
+
+```{r}
+plot(val$lordototale[iniz:fine,], lwd=2, ylim=c(9000,50000))
 
 muhat5 <- xts(as.matrix(kfs5$muhat),
                 index(train))
 muhat5 <- as.xts(muhat5)
 #lines(muhat[iniz:fine,], type = "l", col = "red") # [1801:1826,]
-lines(muhat5[iniz:fine,], type = "l", col = "blue", lwd=3) # [1801:1826,]
+lines(exp(muhat5[iniz:fine,]), type = "l", col = "red", lwd=3) # [1801:1826,]
 ```
 
 ```{r}
@@ -349,10 +363,32 @@ rmse(val$lordototale[validation_date:nrow(val),], exp(muhat5[validation_date:nro
 ```
 
 ```{r}
-summary(val$lordototale - exp(muhat4))
-#abline(v=index(val[validation_date]))
+summary(val$lordototale - exp(muhat5))
 ```
 
 ```{r}
-plot(val$lordototale - exp(muhat4))
+plot(val$lordototale - exp(muhat5))
+#abline(v=index(val[validation_date]))
+abline(v=index(val[validation_date]))
+```
+
+```{r}
+val[val$lordototale - exp(muhat5) <  -5000,]
+```
+
+## Confronto modelli
+
+```{r}
+comp <- data.frame(Modello=c("mod1", "mod2", "mod3", "mod4", "mod5"),
+           RMSE=c(rmse(val$lordototale[validation_date:nrow(val),], exp(muhat1[validation_date:nrow(val),])),
+                  rmse(val$lordototale[validation_date:nrow(val),], exp(muhat2[validation_date:nrow(val),])),
+                  rmse(val$lordototale[validation_date:nrow(val),], exp(muhat3[validation_date:nrow(val),])),
+                  rmse(val$lordototale[validation_date:nrow(val),], exp(muhat4[validation_date:nrow(val),])),
+                  rmse(val$lordototale[validation_date:nrow(val),], exp(muhat5[validation_date:nrow(val),]))),
+           MAPE=c(mape(val$lordototale[validation_date:nrow(val),], exp(muhat1[validation_date:nrow(val),])),
+                  mape(val$lordototale[validation_date:nrow(val),], exp(muhat2[validation_date:nrow(val),])),
+                  mape(val$lordototale[validation_date:nrow(val),], exp(muhat3[validation_date:nrow(val),])),
+                  mape(val$lordototale[validation_date:nrow(val),], exp(muhat4[validation_date:nrow(val),])),
+                  mape(val$lordototale[validation_date:nrow(val),], exp(muhat5[validation_date:nrow(val),]))))
+comp
 ```
