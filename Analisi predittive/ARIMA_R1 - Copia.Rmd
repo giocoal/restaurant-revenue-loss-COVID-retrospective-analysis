@@ -112,13 +112,12 @@ err_plot <- function(actual, pred){
 # Load data
 
 ```{r}
-# file: Dati ristoranti\pre-covid_r1.csv
-r1 <- read.csv("..\\Dati ristoranti\\pre-covid_r1.csv")
+r1 <- read.csv(file.choose())
 r1$data  <- parse_date(r1$data, "%Y-%m-%d", locale = locale("it"))
 head(r1)
 ```
 
-# Data preparation
+## Data preparation
 
 ```{r}
 # ts vendite
@@ -192,7 +191,6 @@ dum_week
 dum <- cbind(dum_day, dum_week)
 dum <- xts(dum[, -1], dum$data)
 dum <- subset(dum, select = -c(data))
-#rm(list=c("dum_day", "dum_week"))
 head(dum)
 ```
 
@@ -201,7 +199,7 @@ df <- cbind(vendite_r1, dum)
 head(df)
 ```
 
-## Partizionamento del dataset
+### Partizionamento del dataset
 
 ```{r}
 # Divisione training-test set
@@ -233,7 +231,7 @@ tsdisplay(train[,1])
 
 ACF risulta avere ritardi significativi che decadono a zero molto lentamente, sintomo di una non stazionarietà della serie storica. Notiamo come i ritardi maggiormente significativi sono quelli ai ritardi stagionali multipli di 7.
 
-## Ljung-Box test
+### Ljung-Box test
 
 (a non-stationary signal will have a low p-value)
 
@@ -257,7 +255,7 @@ adf.test(train[,1])
 
 Come effettivamente viene suggerito dal test di Dickey Fuller (valuta la presenza di radici unitarie)
 
-# Differenza stagionale
+### Differenza stagionale
 
 ```{r}
 diff7 <- diff(train[,1], 7)
@@ -648,7 +646,7 @@ rmse(validation_reg[,1], xts(pred_mod4$mean, order.by = index(validation_reg)))
 err_plot(validation_reg[,1], pred_mod4$mean)
 ```
 
-## Modello 6: Forecasting with Prophet
+## Forecasting with Prophet
 
 ```{r}
 library(prophet)
@@ -700,16 +698,15 @@ prophet_plot_components(mod_prop, forecast)
 dyplot.prophet(mod_prop, forecast)
 ```
 
-## Modello 5: SARIMAX CON NUOVI REGRESSORI
+
+### SARIMAX CON NUOVI REGRESSORI
 
 ```{r}
 # Dataset festività 
-# fest <- read_xlsx("C:\\Users\\marco\\OneDrive\\UNIMIB_DataScience\\99-PROJECTS\\DataScienceLab2022\\Dati aggiuntivi\\fest.xlsx", 
-#                  col_types = NULL)
-fest <- read_xlsx("..\\Dati aggiuntivi\\fest.xlsx", 
-                  col_types = NULL)
+fest <- read_xlsx("C:\\Users\\marco\\OneDrive\\UNIMIB_DataScience\\99-PROJECTS\\DataScienceLab2022\\Dati aggiuntivi\\fest.xlsx", col_types = NULL)
 str(fest)
 ```
+
 
 ```{r}
 index <- 2:ncol(fest)
@@ -727,6 +724,7 @@ dum_day_fest <- xts(dum_day_fest[, -1], dum_day_fest$data)
 df_fest <- cbind(vendite_r1, dum_day_fest)
 ```
 
+
 ```{r}
 # Divisione training-test set
 train_date <- nrow(df_fest) *0.8
@@ -741,6 +739,7 @@ train <- train_temp[1:train_date_rid,]
 validation <- train_temp[-c(1:train_date_rid),]
 rm(list="train_temp")
 ```
+
 
 ```{r}
 mod5 <- Arima(y = train$vendite_r1,
@@ -779,7 +778,7 @@ plot(train[1:28,1],
 lines(xts(mod5$fitted[1:28], order.by = index(train[1:28])), col="red", lwd=2.5)
 ```
 
-### Previsioni
+#### Previsioni
 
 ```{r}
 # Al momento vengono fatte previsioni 44 passi in avanti (lunghezza del validation set)
@@ -812,13 +811,13 @@ rmse(validation[,1], xts(pred_mod5$mean, order.by = index(validation)))
 err_plot(validation[,1], pred_mod5$mean)
 ```
 
-# Evaluation: Confronto ***forecasting performance*** **dei modelli**
+# Confronto ***forecasting performance*** **dei modelli**
 
 ## Scelta misura di *forecasting accuracy*
 
 Al fine di confrontare i diversi modelli definiti precedentemente è importante valutare le performance in termini forecasting accuracy. Prima di definire la procedura di calcolo della forecasting accuracy è importante selezionare la propria misura di accuratezza.
 
-Si sceglie di utilizzare due misure di accuratezza (**MAE, RMSE e MSE**) di tipo **scale-dependent** perchè:
+Si sceglie di utilizzare due misure di accuratezza (**MAE e RMSE**) di tipo **scale-dependent** perchè:
 
 -   Misure di accuratezza basate su percentage errors e scaled errors (unit-free) sono indicate per comparare le performance di forecasting tra data set diversi
 
@@ -826,261 +825,14 @@ Si sceglie di utilizzare due misure di accuratezza (**MAE, RMSE e MSE**) di tipo
 
 -   Si evitano tutte le problematiche relative alle misure di percentage errors legate:
 
-    -   al fatto che l'errore viene diviso per il valore dell'osservazione (valori infiniti per y che tende a 0)
+    -    al fatto che l'errore viene diviso per il valore dell'osservazione (valori infiniti per y che tende a 0)
 
     -   penalità maggiori per errori negativi piuttosto che quelli positivi
 
-## Procedura di *Cross-Validation* con *rolling forecasting origin*
+## Procedura di valutazione con *rolling forecasting origin*
 
-Effettuo la procedura di *Time-Series Cross Validation* o *Evaluating on a Rolling Forecasting Origin* al fine di:
-
--   Confrontare i diversi modelli in termini di Performance di Forecasting
-
--   Potera allenare i modelli sull'intero dataset e non perdere i dati del test set (essendo questo già piccolo)
-
--   Ottenere comunque due misure di performarmance di accuratezza di forecasting accuracy
-
--   Determino la forecasting accuracy (come MAE/RMSE/MSE) per k-step avanti dove k (chiamato h, orizzonte, nella funzione `tsCV()`) sarà il mio orizzonte di previsione nel periodo covid
-
-    -   Confrontare l'andamento dei diversi modelli all'aumentare degli step ci consentirà di selezionare
-
--   Parametri di cross-validation -\> Scelgo come tipologia di Time Series Cross Validation quella **Constant Holdout**
-
-    -   Scelgo arbitrariamente una finestra iniziale (**fixed origin**) di training (il numero minimo di osservazioni necessario a stimare il modello) come 60 -\> parametro `initial`
-
-    -   **Non-Constant Holdout** -\> in modo da utilizzare tutti i dati per il training (altrimenti il training si fermerebbe all'osservazione n-h)
-
-    -   **Non-Constant In-Sample -\>** Non impostiamo il parametro `window`, che altrimenti andrebbe a settare un dimensione fissata del training set e quindi una moving window
-
-### Test su Mod1
+### Setup
 
 ```{r}
-start.time <- Sys.time()
-print(start.time)
-# Definisco la forecast-function
-
-f_mod1 <- function(x, h, xreg, newxreg) { 
-  forecast(Arima(x,
-                 order = c(0, 0, 2),
-                 seasonal = list(order = c(1, 0, 1), period = 7),
-                 xreg = xreg,
-                 include.constant = FALSE
-                 ),
-           h = h,
-           xreg=newxreg)
-}
-
-
-xreg <- df[, -1]
-
-initial = 90 
-e <- tsCV(y = df$vendite_r1, forecastfunction = f_mod1, h=90, xreg=xreg, initial = initial)
-e <- tail(e, n = -initial)
-
-end.time <- Sys.time()
-print(end.time)
-time.taken <- end.time - start.time
-print(time.taken)
-
-#print(e)
-#sqrt(mean(e^2, na.rm=TRUE))
-```
-
-```{r}
-print(nrow(df))
-print(nrow(e)+ initial)
-
-# Posso osservare dal print della coda della matrice degli errori come siano presenti NA, questo conferma che tsCV() effettua CV con Non-Constant Holdout
-#print(tail(e))
-```
-
-```{r}
-#print(head(e, 5))
-print("MSE:")
-MSE_mod1 <- colMeans(e^2, na.rm = TRUE)
-print(MSE_mod1)
-print("RMSE:")
-RMSE_mod1 <- sqrt(colMeans(e^2, na.rm = TRUE))
-print(RMSE_mod1)
-print("MAE:")
-MAE_mod1 <- colMeans(abs(e), na.rm = TRUE)
-print(MAE_mod1)
-
-data.frame(h = 1:90, MSE = RMSE_mod1) %>%
-  ggplot(aes(x = h, y = MSE)) + geom_point()
-```
-
-Ora stimo il modello nella sua interezza e confronto RMSE ottenuto dai residui con quello ottenuto con CV:
-
-```{r}
-mod1 <- Arima(y = df$vendite_r1,
-              order = c(0, 0, 2),
-              list(order = c(1, 0, 1), period = 7),
-              xreg = df[, -1],
-              include.constant = FALSE,
-              )
-summary(mod1)
-```
-
--   Come atteso l'RMSE in previsione è sempre maggiore di quello ottenuto sui residui di trainin (medi primo allenamento del modello)
-
-### Confronto tra i modelli
-
-**Cross-Validation**
-
-```{r}
-
-# Calcolo tempo di computazione
-start.time <- Sys.time()
-print(start.time)
-
-# Definisco la forecast-function per i diversi modelli
-
-#1_ARIMA
-f_mod1 <- function(x, h, xreg, newxreg) { 
-  forecast(Arima(x,
-                 order = c(0, 0, 2),
-                 seasonal = list(order = c(1, 0, 1), period = 7),
-                 xreg = xreg,
-                 include.constant = FALSE
-                 ),
-           h = h,
-           xreg=newxreg)
-}
-
-#2_ARIMA
-f_mod2 <- function(x, h, xreg, newxreg) { 
-  forecast(Arima(x,
-                 order = c(5, 0, 2),
-                 seasonal = list(order = c(1, 0, 1), period = 7),
-                 xreg = xreg,
-                 include.constant = FALSE
-                 ),
-           h = h,
-           xreg=newxreg)
-}
-
-#3_ARIMA
-f_mod3 <- function(x, h, xreg, newxreg) { 
-  forecast(Arima(x,
-                 order = c(3, 0, 2),
-                 seasonal = list(order = c(1, 0, 1), period = 7),
-                 xreg = xreg,
-                 include.constant = FALSE
-                 ),
-           h = h,
-           xreg=newxreg)
-}
-
-#4_SARIMAX
-f_mod4 <- function(x, h, xreg, newxreg) { 
-  forecast(Arima(x,
-                 order = c(3, 0, 2),
-                 seasonal = list(order = c(1, 0, 1), period = 7),
-                 xreg = xreg,
-                 include.constant = FALSE
-                 ),
-           h = h,
-           xreg=newxreg)
-}
-
-#5_SARIMAX
-f_mod5 <- function(x, h, xreg, newxreg) { 
-  forecast(Arima(x,
-                 order = c(3, 0, 2),
-                 seasonal = list(order = c(1, 0, 1), period = 7),
-                 xreg = xreg,
-                 include.constant = FALSE
-                 ),
-           h = h,
-           xreg=newxreg)
-}
-
-#6_Prophet
-f_mod6 <- function(x, h, xreg, newxreg) { 
-  forecast(prophet(x,
-                 weekly.seasonality = TRUE
-                 ))
-}
-
-
-# Parametri di cross-validation globali
-h = 90
-initial = 60
-
-# Stima degli errori di previsione con CV
-
-xreg1 <- df[, -1]
-e1 <- tsCV(y = df$vendite_r1, forecastfunction = f_mod1, h=h, xreg=xreg1, initial = initial)
-e1 <- tail(e1, n = -initial)
-
-xreg2 <- df[, -1]
-e2 <- tsCV(y = df$vendite_r1, forecastfunction = f_mod2, h=h, xreg=xreg2, initial = initial)
-e2 <- tail(e2, n = -initial)
-
-xreg3 <- df[, -1]
-e3 <- tsCV(y = df$vendite_r1, forecastfunction = f_mod3, h=h, xreg=xreg3, initial = initial)
-e3 <- tail(e3, n = -initial)
-
-# Runna il preprocessing nella sezione del modello 4 (df_reg) !
-xreg4 <- df_reg[, -c(1,11,12,14)]
-e4 <- tsCV(y = df_reg$vendite_r1, forecastfunction = f_mod4, h=h, xreg=xreg4, initial = initial)
-e4 <- tail(e4, n = -initial)
-
-# Runna il preprocessing nella sezione del modello 5 (SARIMAX) !
-xreg5 <- df_fest[, -1]
-e5 <- tsCV(y = df_fest$vendite_r1, forecastfunction = f_mod5, h=h, xreg=xreg5, initial = initial)
-e5 <- tail(e5, n = -initial)
-
-# Runna il preprocessing nella sezione del modello 6 (df_prophet) !
-# e6 <- tsCV(y = df_prophet, forecastfunction = f_mod6, h=h, initial = initial)
-# e6 <- tail(e6, n = -initial)
-
-
-end.time <- Sys.time()
-print(end.time)
-time.taken <- end.time - start.time
-print(time.taken)
-```
-
-**Accuratezze**
-
-```{r}
-RMSE_mod1 <- sqrt(colMeans(e1^2, na.rm = TRUE))
-RMSE_mod2 <- sqrt(colMeans(e2^2, na.rm = TRUE))
-RMSE_mod3 <- sqrt(colMeans(e3^2, na.rm = TRUE))
-RMSE_mod4 <- sqrt(colMeans(e4^2, na.rm = TRUE))
-RMSE_mod5 <- sqrt(colMeans(e5^2, na.rm = TRUE))
-#RMSE_mod6 <- sqrt(colMeans(e6^2, na.rm = TRUE))
-
-
-# Zoom in
-plot(1:90, RMSE_mod1, type="l", col=1, xlab="horizon", ylab="RMSE", ylim = c(2500,5000))
-lines(1:90, RMSE_mod2, type="l",col=2)
-lines(1:90, RMSE_mod3, type="l",col=3)
-lines(1:90, RMSE_mod4, type="l",col=4)
-lines(1:90, RMSE_mod5, type="l",col=5)
-legend("topleft",legend=c("1_ARIMA1","2_ARIMA2","3_ARIMA3","4_SARIMAX1", "5_SARIMAX2"),col=1:5,lty=1)
-
-# Zoom out
-plot(1:90, RMSE_mod1, type="l", col=1, xlab="horizon", ylab="RMSE", ylim = c(2500,7000))
-lines(1:90, RMSE_mod2, type="l",col=2)
-lines(1:90, RMSE_mod3, type="l",col=3)
-lines(1:90, RMSE_mod4, type="l",col=4)
-lines(1:90, RMSE_mod5, type="l",col=5)
-legend("topleft",legend=c("1_ARIMA1","2_ARIMA2","3_ARIMA3","4_SARIMAX1", "5_SARIMAX2"),col=1:5,lty=1)
-```
-```{r}
-RMSE_mod5
-```
-
-**RMSE Medi**
-
-```{r}
-mean(RMSE_mod1)
-mean(RMSE_mod2)
-mean(RMSE_mod3)
-mean(RMSE_mod4)
-mean(RMSE_mod5)
-
+install.packages()
 ```
