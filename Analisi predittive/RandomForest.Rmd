@@ -128,16 +128,17 @@ validation_ndx <- train_ndx*0.9
 ```
 
 
-# Primo tentativo: previsione solo con dati della serie storica
+# MODELLO 1: PREVISIONE SOLO ATTRAVERSO I RITARDI DELLA SERIE STORICA
 
 ```{r}
+# Spilitting in train/validation/test
 train_validation <- rf_r1[1:train_ndx, ]
 train <- train_validation[1:validation_ndx, ]
 validation <- train_validation[-c(1:validation_ndx), ]
 test <- rf_r1[-c(1:train_ndx), ]
 ```
 
-# Estraggo la matrice con la serie storica come prima colonna e il numero di ritardi che voglio considerare come colonne ulteriori (7 in questo caso)
+# Costruzione della matrice dei ritardi
 
 ```{r}
 # Ho provato con solo 7 ritardi, e le performance erano piuttosto scadenti. Con 14 ritardi (2 settimane) i risultati sono decisamente migliori
@@ -172,24 +173,24 @@ for (h in 1:nrow(validation)) {
   X[1, 1] <- y_hat[h]
 }
 
-pred <- as.xts(y_hat, order.by = date(validation))
+rf_pred1 <- as.xts(y_hat, order.by = date(validation))
 ```
 
 # Confronto previsioni vs. test
 
 ```{r}
 plot(validation, type = "l")
-lines(pred, type = "l", col = "red")
+lines(rf_pred1, type = "l", col = "red")
 ```
 
 # Performance
 
 ```{r}
-mape(validation, pred)
-rmse(validation, pred)
+mape(validation, rf_pred1)
+rmse(validation, rf_pred1)
 ```
 
-# Secondo tentativo - REGRESSORI
+# SECONDO MODELLO - REGRESSORI (Giorno dell'anno, Giorno della settimana, Festivo, Pioggia)
 
 ```{r}
 # Tengo Festivo e Pioggia come regressori
@@ -202,7 +203,6 @@ rf_r1$Festivo[rf_r1$Festivo=="True"] <- 1
 rf_r1$Pioggia[rf_r1$Pioggia==""] <- 0
 rf_r1$Pioggia[rf_r1$Pioggia=="True"] <- 1
 ```
-
 
 ```{r}
 # Costruisco i regressori da 0
@@ -219,33 +219,169 @@ data_train <- data[1:train_ndx, ]
 train_ndx2 <- 1:(validation_ndx-14)
 valid_ndx2 <- (validation_ndx-14+1):(nrow(train_validation)-14)
 
-X <- embed(data_train$lordototale, 15) # Numero di ritardi + 1
+X2 <- embed(data_train$lordototale, 15) # Numero di ritardi + 1
 
-y <- X[, 1] # Variabile target
+y2 <- X2[, 1] # Variabile target
 
-X <- cbind(X[, -1], data_train[-(1:14), c("Festivo","Pioggia","yday", "wday")]) # Regressori
+X2 <- cbind(X2[, -1], data_train[-(1:14), c("Festivo","Pioggia","yday", "wday")]) # Regressori
 
 # Split training-test
 
-y_train <- y[train_ndx2]
-X_train <- X[train_ndx2, ]
+y_train2 <- y2[train_ndx2]
+X_train2 <- X2[train_ndx2, ]
 
-y_test <- y[valid_ndx2]
-X_test <- X[valid_ndx2,]
+y_test2 <- y2[valid_ndx2]
+X_test2 <- X2[valid_ndx2,]
 
 # Addestramento modello
 
-rf2 <- randomForest(X_train, y_train,
-                    xtest = X_test,
-                    ytest = y_test)
+rf2 <- randomForest(X_train2, y_train2,
+                    xtest = X_test2,
+                    ytest = y_test2)
 
 rf_pred2 <- rf2$test$predicted
+rf_pred2 <- as.xts(rf_pred2, order.by = date(head(validation, -1)))
 
-plot(y_test, type = "l")
+plot(y_test2, type = "l")
 lines(rf_pred2, type="l", col = "red")
 
-mape(y_test, rf_pred2)
-rmse(y_test, rf_pred2)
+mape(y_test2, rf_pred2)
+rmse(y_test2, rf_pred2)
 ```
 
+# TERZO MODELLO - REGRESSORI (stessi regressori precedenti, ma Festivo spezzato in diverse dummies, una per tipologia di festività)
+
+```{r}
+df_festivi <- readxl::read_xlsx("~/GitHub/Data-Science-Lab/Dati aggiuntivi/fest.xlsx")
+dum_festivi_ts <- xts(df_festivi[, 2:17], as.Date(as.character(r1$data), format = "%Y-%m-%d"))
+```
+
+```{r}
+data3 <- subset(data, select = -c(2))
+data3 <- cbind(data3, dum_festivi_ts)
+
+data_train3 <- data3[1:train_ndx, ]
+```
+
+```{r}
+train_ndx3 <- 1:(validation_ndx-14)
+valid_ndx3 <- (validation_ndx-14+1):(nrow(train_validation)-14)
+
+X3 <- embed(data_train3$lordototale, 15) # Numero di ritardi + 1
+
+y3 <- X3[, 1] # Variabile target
+
+X3 <- cbind(X3[, -1], data_train3[-(1:14), c("Pioggia", "yday", "wday", "dec24", "dec25", "dec26", "jan1", "jan6", "aug15", "dec31", "eastsun", "eastermon",
+                                             "oct31", "nov1", "apr25", "mag1", "jun2", "martgrasso", "bridge")]) # Regressori
+
+# Split training-test
+
+y_train3 <- y3[train_ndx3]
+X_train3 <- X3[train_ndx3, ]
+
+y_test3 <- y3[valid_ndx3]
+X_test3 <- X3[valid_ndx3,]
+
+# Addestramento modello
+
+rf3 <- randomForest(X_train3, y_train3,
+                    xtest = X_test3,
+                    ytest = y_test3)
+
+rf_pred3 <- rf3$test$predicted
+rf_pred3 <- as.xts(rf_pred3, order.by = date(head(validation, -1)))
+
+plot(y_test3, type = "l")
+lines(rf_pred3, type="l", col = "red")
+
+mape(y_test3, rf_pred3)
+rmse(y_test3, rf_pred3)
+```
+
+# QUARTO MODELLO - MODELLO CON VECCHI REGRESSORI
+
+```{r}
+# Preparazione dati
+
+# Metto i NA a 0
+r1$lordototale[is.na(r1$lordototale)] <- 0
+r1$scontrini[is.na(r1$scontrini)] <- 0  
+r1$Prezzo_medio_per_scontrino[is.na(r1$Prezzo_medio_per_scontrino)] <- 0
+
+r1$Giorno <- as.factor(r1$Giorno)
+r1$Giorno <- factor(r1$Giorno, levels=c('Monday','Tuesday','Wednesday',
+                                        'Thursday','Friday','Saturday',
+                                        'Sunday'))
+
+r1$Month <- as.factor(r1$Month)
+
+r1$Year <- as.factor(r1$Year)
+
+r1$Season <- as.factor(r1$Season)
+r1$Season <- factor(r1$Season, levels=c('Spring','Summer','Autumn', 'Winter'))
+
+r1$Weekend <- as.factor(r1$Weekend)
+
+r1$Festivo <- as.factor(r1$Festivo)
+
+r1$Pioggia <- as.factor(r1$Pioggia)
+
+r1$ColoreCOVID <- as.factor(r1$ColoreCOVID)
+
+r1 <- subset(r1, select = -c(X.1, X, id_ristorante, Location, Regione, Provincia, data, scontrini, Prezzo_medio_per_scontrino, ColoreCOVID,
+                             Dose1, Dose2, DoseUnica, Booster1, Booster3Dosi, Booster2, Dose1Cum, Dose2Cum, DoseUnicaCum, Booster1Cum, Booster3DosiCum,
+                             Booster2Cum))
+
+r1[is.na(r1)] <- 0
+```
+
+```{r}
+# Divisione train-validation-test
+
+train_validation4 <- r1[1:train_ndx, ]
+train4 <- train_validation4[1:validation_ndx, ]
+validation4 <- train_validation4[-c(1:validation_ndx), ]
+test4 <- r1[-c(1:train_ndx), ]
+```
+
+```{r}
+rf4 <- randomForest(lordototale ~ Giorno + Month + Year + Season + Weekend + Festivo + Precipitazioni.mm. + Pioggia + BENZINA.LITRO + GASOLIO_AUTO.LITRO +
+                      GPL.LITRO + GASOLIO_RISCALDAMENTO.LITRO + O.C._FLUIDO_BTZ.LITRO + O.C._DENSO_BTZ.LITRO + Durum_Wheat + Feed_Barley + Maize +
+                      Milling_Wheat, data = train4)
+print(rf4)
+```
+
+```{r}
+rf_pred4 <- predict(rf4, newdata = validation4)
+rf_pred4 <- as.xts(rf_pred4, order.by = date(validation))
+
+plot(validation4$lordototale, type = "l")
+lines(rf_pred4, type="l", col = "red")
+
+mape(validation4$lordototale, rf_pred4)
+rmse(validation4$lordototale, rf_pred4)
+```
+
+# CONFRONTO MODELLI
+
+```{r}
+confronto <- cbind(validation, rf_pred1, rf_pred2, rf_pred3, rf_pred4)
+confronto_df <- fortify(confronto, melt = TRUE)
+```
+
+```{r}
+ggplot(aes(x = Index, y = Value, color = Series), data = confronto_df) + geom_line()
+```
+
+```{r}
+cat("Mod 1 - MAPE:", mape(validation, rf_pred1))
+cat("\nMod 2 - MAPE:", mape(y_test2, rf_pred2))
+cat("\nMod 3 - MAPE:", mape(y_test3, rf_pred3))
+cat("\nMod 4 - MAPE:", mape(validation4$lordototale, rf_pred4))
+
+cat("\nMod 1 - RMSE:", rmse(validation, rf_pred1))
+cat("\nMod 2 - RMSE:", rmse(y_test2, rf_pred2))
+cat("\nMod 3 - RMSE:", rmse(y_test3, rf_pred3))
+cat("\nMod 4 - RMSE:", rmse(validation4$lordototale, rf_pred4))
+```
 
