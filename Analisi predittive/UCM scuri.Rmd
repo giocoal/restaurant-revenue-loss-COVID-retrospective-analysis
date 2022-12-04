@@ -235,7 +235,7 @@ rmse(val$lordototale[validation_date:nrow(val),], exp(muhat3[validation_date:nro
 ## Modello 4 (seasonal 7 gg)
 
 ```{r}
-mod4 <- SSModel(log(lordototale+10)~Weekend + Festivo +
+mod4 <- SSModel(log(lordototale+10)~Festivo + #Weekend + 
                   SSMtrend(2, list(NA, NA))+
                   SSMseasonal(7, NA, "trigonometric"),
                   # SSMseasonal(365, NA, "trigonometric", harmonics = 1:10),
@@ -308,7 +308,7 @@ train$lordototale[as.integer(validation_date+1):nrow(val),] <- NA
 ```
 
 ```{r}
-mod5 <- SSModel(log(lordototale)~dec24+dec25+dec26+jan1+jan6+aug15+dec31+eastsun+eastermon+apr25+mag1+jun2+oct31+nov1+#bridge+#Giorno_Monday+Giorno_Tuesday+Giorno_Wednesday+Giorno_Thursday+Giorno_Saturday+Giorno_Sunday+
+mod5 <- SSModel(log(lordototale)~dec24+dec25+dec26+jan1+jan6+aug15+dec31+eastsun+eastermon+apr25+mag1+jun2+oct31+nov1+martgrasso+#bridge+#Giorno_Monday+Giorno_Tuesday+Giorno_Wednesday+Giorno_Thursday+Giorno_Saturday+Giorno_Sunday+
                   SSMtrend(2, list(NA, NA))+
                   SSMseasonal(7, NA, 'trigonometric'),
                 H=NA,
@@ -349,11 +349,6 @@ lines(muhat5[iniz:fine,], type = "l", col = "red", lwd=3) # [1801:1826,]
 
 ```{r}
 plot(val$lordototale[iniz:fine,], lwd=2, ylim=c(9000,50000))
-
-muhat5 <- xts(as.matrix(kfs5$muhat),
-                index(train))
-muhat5 <- as.xts(muhat5)
-#lines(muhat[iniz:fine,], type = "l", col = "red") # [1801:1826,]
 lines(exp(muhat5[iniz:fine,]), type = "l", col = "red", lwd=3) # [1801:1826,]
 ```
 
