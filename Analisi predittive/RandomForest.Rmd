@@ -191,6 +191,8 @@ rmse(validation, rf_pred1)
 ```
 
 # SECONDO MODELLO - REGRESSORI (Giorno dell'anno, Giorno della settimana, Festivo, Pioggia)
+# Per questo modello e per il successivo sarebbe necessario de-trendizzare la serie storica, essendo il trend una componente che i modelli di ML
+# non possono prevedere. Tuttavia, nel train non si nota un trend evidente, pertanto ritengo non necessario procedere con questa trasformazione
 
 ```{r}
 # Tengo Festivo e Pioggia come regressori
