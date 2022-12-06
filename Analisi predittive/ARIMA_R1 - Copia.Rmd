@@ -88,6 +88,11 @@ mape <- function(actual,pred){
   return (mape)
 }
 
+#MAE
+mae <- function(actual,pred){
+  mae <- mean(abs((actual - pred)))
+  return (mae)
+}
 #MSE
 rmse <- function(actual, pred){
   rmse <- sqrt(mean((actual - pred)^2))
@@ -112,7 +117,7 @@ err_plot <- function(actual, pred){
 # Load data
 
 ```{r}
-r1 <- read.csv(file.choose())
+r1 <- read.csv("..\\Dati ristoranti\\pre-covid_r1.csv")
 r1$data  <- parse_date(r1$data, "%Y-%m-%d", locale = locale("it"))
 head(r1)
 ```
@@ -171,32 +176,56 @@ require('fastDummies')
 dum_day <- r1[, c("data", "Giorno")]
 dum_day[,"Giorno"] <- as.factor(dum_day$Giorno)
 dum_day <- dummy_cols(dum_day, select_columns = c("Giorno"), 
-                      remove_first_dummy = TRUE, 
+                      # remove_first_dummy = TRUE, 
                       remove_selected_columns = TRUE)
 dum_day
 ```
 
 ```{r}
+dum_day_rid <- subset(dum_day, select = -Giorno_Monday)
+dum_day_rid
+```
+
+```{r}
+# ___IGNORE___ per i primi tre modelli. Userò solo le dummy a 7 giorni per la modellazione della stagionalità
+
+
 # Costruzione dummuy per weekend e festivi
-dum_week <- r1[, c("data", "Festivo")]
-dum_week[, "Festivo"] <- as.factor(dum_week$Festivo)
-dum_week <- dummy_cols(dum_week, select_columns = "Festivo", 
-                       remove_first_dummy = TRUE, 
-                       remove_selected_columns = TRUE)
-dum_week
+# dum_week <- r1[, c("data", "Festivo")]
+# dum_week[, "Festivo"] <- as.factor(dum_week$Festivo)
+# dum_week <- dummy_cols(dum_week, select_columns = "Festivo", 
+#                       remove_first_dummy = TRUE, 
+#                       remove_selected_columns = TRUE)
+# dum_week
 ```
 
 ```{r}
 # xts object con tutte le variabili dummy
-dum <- cbind(dum_day, dum_week)
-dum <- xts(dum[, -1], dum$data)
-dum <- subset(dum, select = -c(data))
-head(dum)
+# dum <- cbind(dum_day, dum_week)
+# dum <- xts(dum[, -1], dum$data)
+# dum <- subset(dum, select = -c(data))
+# head(dum)
 ```
 
 ```{r}
-df <- cbind(vendite_r1, dum)
+dum_day_xts <- xts(dum_day[, -1], dum_day$data)
+head(dum_day_xts)
+```
+
+```{r}
+dum_day_xts_rid <- xts(dum_day_rid[, -1], dum_day$data)
+head(dum_day_xts_rid)
+```
+
+```{r}
+# df <- cbind(vendite_r1, dum_day_xts)
+# head(df)
+```
+
+```{r}
+df <- cbind(vendite_r1, dum_day_xts_rid)
 head(df)
+write.zoo(df, file="..\\Dati aggiuntivi\\Dati CV_Arima\\df_123.csv", sep=",")
 ```
 
 ### Partizionamento del dataset
@@ -226,24 +255,25 @@ autoplot(train[,1])
 La serie storica sembra non avere una tendenza di medio/lungo periodo a crescere o scendere (trend). Valutiamo l'andamento della funzione di autocorrelazione (totale e parziale)
 
 ```{r}
-tsdisplay(train[,1])
+tsdisplay(train[,1], lag.max = 49)
 ```
 
-ACF risulta avere ritardi significativi che decadono a zero molto lentamente, sintomo di una non stazionarietà della serie storica. Notiamo come i ritardi maggiormente significativi sono quelli ai ritardi stagionali multipli di 7.
+ACF risulta avere ritardi significativi che **decadono a zero molto lentamente**, sintomo di una non stazionarietà della serie storica. Notiamo come i ritardi maggiormente significativi sono quelli ai **ritardi stagionali** multipli di 7.
 
-### Ljung-Box test
 
-(a non-stationary signal will have a low p-value)
 
 ```{r}
+#Ljung-Box test
+# (a non-stationary signal will have a low p-value)
+
 lag.length = 25
 Box.test(train[,1], lag=lag.length, type="Ljung-Box")
 
 ```
 
-Il test di Ljung-Box conferma l'ipotesi di non stazionarietà.
+Il test di Ljung-Box conferma l'**ipotesi di non stazionarietà.**
 
-La non stazionarietà potrebbe però essere dovuta alla presenza di stagionalità nella serie storica:
+La non stazionarietà potrebbe però essere dovuta alla **presenza di stagionalità** nella serie storica:
 
 ```{r}
 # Augmented Dickey–Fuller (ADF) t-statistic test for unit root
@@ -253,13 +283,13 @@ require(tseries)
 adf.test(train[,1])
 ```
 
-Come effettivamente viene suggerito dal test di Dickey Fuller (valuta la presenza di radici unitarie)
+Come effettivamente viene suggerito dal **test di Dickey Fuller** (valuta la presenza di radici unitarie)
 
 ### Differenza stagionale
 
 ```{r}
 diff7 <- diff(train[,1], 7)
-tsdisplay(diff7)
+tsdisplay(diff7, lag.max = 49)
 ```
 
 ```{r}
@@ -268,24 +298,32 @@ Box.test(diff7, lag=lag.length, type="Ljung-Box")
 rm(list="diff7")
 ```
 
-Il test indica che è ancora presente correlazione seriale. Notiamo però come la ACF, nei primi 25 ritardi, abbia solamente il settimo ritardo significativi, mentre ora la PACF tende a zero molto più lentamente rispetto a prima (con ritardi particolarmente significativi ai ritardi stagionali multipli di 7)
+Il test indica che **è ancora presente correlazione seriale**. Notiamo però come la ACF, nei primi 25 ritardi, abbia solamente il settimo ritardo significativo, mentre ora la PACF tende a zero molto più lentamente rispetto a prima (con ritardi particolarmente significativi ai ritardi stagionali multipli di 7).
+
+Tutto questo probabilmente è dovuto al fatto che nella serie storica è presente una stagionalità **multipla**, nello specifico una stagionalità a 7 giorni e una stagionalità a 365 giorni. 
 
 # Identificazione del modello
 
+In questa fase cercheremo di individuare un modello ARIMA adatto a modellare i nostri dati. Nei primi 3 modelli verrà modellata la stagionalità a 7 giorni attraverso variabili dummy, mentre nel 4 modello introdurremmo anche variabili che modellino una stagionalità a 365 giorni.
+
 ## Modello1
 
--   Componente AR stagionale: ACF presenta correlazione significativa al ritardo 7
--   Componente MA stagionale: PACF presenta correlazioni particolarmente significative ai riatdi multipli di 7
+-   Componente AR stagionale di ordine 1:
+
+-   Componente MA stagionale di ordine 1:
+
 -   Componente MA non stagionale di ordine 2
--   Dummy come regressori esterni
--   Costante non inclusa
+
+-   Dummy stagionali come regressori esterni 
+
+-   Costante inclusa
 
 ```{r}
 mod1 <- Arima(y = train$vendite_r1,
               order = c(0, 0, 2),
               list(order = c(1, 0, 1), period = 7),
               xreg = train[, -1],
-              include.constant = FALSE,
+              include.constant = TRUE,
               )
 ```
 
@@ -299,33 +337,101 @@ summary(mod1)
 tsdisplay(mod1$residuals) 
 ```
 
+
+```{r}
+checkresiduals(mod1, test = FALSE)
+```
+
+```{r}
+checkresiduals(mod1, test = "LB", lag = 25, plot = FALSE)
+```
+
+
+
 ```{r}
 pars_test(mod1$coef, mod1$var.coef)
 ```
 
+I parametri che **risultano essere significativi**, ad un livello $\alpha = 0.05$ , sono:
+
+-   MA(1): *p-value:* $0.000$
+
+-   MA(2): *p-value:* $0.000$
+
+-   SAR(1)[7]: *p-value:* $0.000$
+
+-   SMA(1)[7]: *p-value:* $0.000$
+
+-   Inercetta: *p-value:* $0.000$
+
+-   Giorno_Saturday *p-value:* $0.001$
+
+-   Giorno_Sunday *p-value:* $0.002$
+
+-   Giorno_Friday: *p-value:* $0.000$
+
+Mentre quelle che **non risultano essere significativi**:
+
+-   Giorno_Thursday *p-value:* $0.086$
+
+-   Giorno_Tuesday *p-value:* $0.73$
+
+-   Giorno_Wednesday *p-value:* $0.085$
+
+Risultano essere i giorni della settimana **non-weekend**, ovvero tutti i giorni che hanno una **media simile** alla variabile dummy esclusa (Monday)
+
+**L'AIC** risulta essere pari a : $7332.05$
+
+L'errore sul training set **MAE** risulta pari a $2049.89$ mentre l'**RMSE** pari a: $3047.18$
+
+Il **Box-Ljung test** (*p-value* = $0.002735$ ) ci indica che i residui presentano ancora auto-correlazione seriale.
+
+### Modello1 ridotto
+
+Ristimo il modello togliendo tutte le variabili non significative:
+
 ```{r}
-checkresiduals(mod1)
+mod1_rid <- Arima(y = train$vendite_r1,
+              order = c(0, 0, 2),
+              list(order = c(1, 0, 1), period = 7),
+              xreg = train[, -c(1,5,6,7)],
+              include.constant = TRUE,
+              )
 ```
 
 ```{r}
-lag.length = 25
-Box.test(mod1$residuals, lag=lag.length, type="Ljung-Box")
+summary(mod1_rid)
 ```
 
 ```{r}
-plot(train[1:28,1], 
+checkresiduals(mod1_rid, test = FALSE)
+```
+
+```{r}
+checkresiduals(mod1_rid, test = "LB", lag = 25, plot = FALSE)
+```
+
+```{r}
+pars_test(mod1_rid$coef, mod1_rid$var.coef)
+```
+Le variabili considerate ora risultano essere tutte significative.
+
+```{r}
+# Fit prime 7 settimane
+plot(train[1:49,1], 
      col = "blue", lwd=0.5, 
      main = "Fitted Values")
-lines(xts(mod1$fitted[1:28], order.by = index(train[1:28])), col="red", lwd=2.5)
+lines(xts(mod1_rid$fitted[1:49], order.by = index(train[1:49])), col="red", lwd=3)
 ```
+Notiamo come i picchi stagionali a 7 giorni vengono modellati bene, mentre gli altri comportamenti non vengono ben interpretati dal modello
 
 ### Previsioni
 
 ```{r}
 # Al momento vengono fatte previsioni 44 passi in avanti (lunghezza del validation set)
-pred_mod1 <- forecast(mod1, h = 44, 
+pred_mod1 <- forecast(mod1_rid, h = 44, 
                       level = 95,
-                      xreg = validation[, -1])
+                      xreg = validation[, -c(1,5,6,7)])
 ```
 
 ```{r}
@@ -345,6 +451,10 @@ mape(validation[,1], xts(pred_mod1$mean, order.by = index(validation)))
 ```
 
 ```{r}
+mae(validation[,1], xts(pred_mod1$mean, order.by = index(validation)))
+```
+
+```{r}
 rmse(validation[,1], xts(pred_mod1$mean, order.by = index(validation)))
 ```
 
@@ -352,13 +462,22 @@ rmse(validation[,1], xts(pred_mod1$mean, order.by = index(validation)))
 err_plot(validation[,1], xts(pred_mod1$mean, order.by = index(validation)))
 ```
 
+Sono state effettuate 44 previsioni con il modello considerato e sono state confrontate con il validation set. 
+
+Il MAE risulta pari a $2585.921$, mentre l'RMSE risulta pari $3805.724$. Se confrontiamo tali risultati con gli errori riscontrati sul training set, notiamo come è stato evitato il fenomeno di overfitting, anche se gli errori di previsioni (sia sul training che sul validation) rimangono comunque notevoli. 
+
 ## Modello2
 
--   Componente AR stagionale: ACF presenta correlazione significativa al ritardo 7
--   Componente MA stagionale: PACF presenta correlazioni particolarmente significative ai riatdi multipli di 7
--   Componente MA non stagionale di ordine 2
--   Componente AR non stagionle di ordine 5
--   Dummy come regressori esterni
+-   Componente AR stagionale di ordine 1:
+
+-   Componente MA stagionale di ordine 1:
+
+-   **Componente MA non stagionale di ordine 2**
+
+-   **Componente AR non stagionle di ordine 5**
+
+-   Dummy stagionali 
+
 -   Costante non inclusa
 
 ```{r}
@@ -366,7 +485,7 @@ mod2 <- Arima(y = train$vendite_r1,
               order = c(5, 0, 2),
               list(order = c(1, 0, 1), period = 7),
               xreg = train[, -1],
-              include.constant = FALSE,
+              include.constant = TRUE,
               )
 ```
 
@@ -381,32 +500,111 @@ tsdisplay(mod2$residuals)
 ```
 
 ```{r}
+checkresiduals(mod2, test = FALSE)
+```
+
+```{r}
+checkresiduals(mod2, test = "LB", lag = 25, plot = FALSE)
+```
+
+
+```{r}
 pars_test(mod2$coef, mod2$var.coef)
 ```
 
+I parametri che **risultano essere significativi**, ad un livello $\alpha = 0.05$ , sono:
+
+-   AR(1): *p-value:* $0.0000$
+
+-   AR(2): *p-value:* $0.011$
+
+-   MA(1): *p-value:* $0.000$
+
+-   SAR(1)[7]: *p-value:* $0.000$
+
+-   SMA(1)[7]: *p-value:* $0.000$
+
+-   Intercetta: *p-value:* $0.000$
+
+-   Giorno_Saturday *p-value:* $0.000$
+
+-   Giorno_Sunday *p-value:* $0.000$
+
+-   Giorno_Friday *p-value:* $0.000$
+
+Mentre quelle che **non risultano essere significativi**:
+
+-   AR(3): *p-value:* $0.532$
+
+-   AR(4): *p-value:* $0.515$
+
+-   AR(5): *p-value:* $0.396$
+
+-   MA(2): *p-value:* $0.068$
+
+-   Giorno_Thursday *p-value:* $0.120$
+
+-   Giorno_Tuesday *p-value:* $0.733$
+
+-   Giorno_Wednesday *p-value:* $0.097$
+
+**L'AIC** risulta essere pari a : $7325.11$
+
+L'errore sul training set **MAE** risulta pari a $2011.298$ mentre l'**RMSE** pari a: $2980.188$
+
+Il **Box-Ljung test** (*p-value* = $0.0377$ ) ci indica che i residui presentano ancora auto-correlazione seriale.
+
+### Modello2 ridotto
+
+Ristimiamo il modello togliendo le i regressori **stagionali** non significativi, mentre i parametri AR e MA che non sono risultati significativi verranno tolti nel *modello3*:
+
 ```{r}
-lag.length = 25
-Box.test(mod2$residuals, lag=lag.length, type="Ljung-Box")
+mod2_rid <- Arima(y = train$vendite_r1,
+              order = c(5, 0, 2),
+              list(order = c(1, 0, 1), period = 7),
+              xreg = train[, -c(1,5,6,7)],
+              include.constant = TRUE,
+              )
 ```
 
 ```{r}
-checkresiduals(mod2)
+summary(mod2_rid)
 ```
 
 ```{r}
-plot(train[1:28,1], 
+tsdisplay(mod2_rid$residuals) 
+```
+
+```{r}
+checkresiduals(mod2_rid, test = FALSE)
+```
+
+```{r}
+checkresiduals(mod2_rid, test = "LB", lag = 25, plot = FALSE)
+```
+
+
+```{r}
+pars_test(mod2_rid$coef, mod2_rid$var.coef)
+```
+
+Le dummy stagionali ora risultano essere tutte significative, come ci aspettavamo. I parametri AR e MA non significativi verranno tolti nel prossimo modello, in quanto determinano anche un cambiamento nel comportamento dei residui che valuteremo successivamente. Procediamo quindi con il fit sul validation set.
+
+```{r}
+plot(train[1:49,1], 
      col = "blue", lwd=0.5, 
      main = "Fitted Values")
-lines(xts(mod2$fitted[1:28], order.by = index(train[1:28])), col="red", lwd=2.5)
+lines(xts(mod2_rid$fitted[1:49], order.by = index(train[1:49])), col="red", lwd=2.5)
 ```
+Anche in questo caso il modello riesce a spiegare bene i comportamenti stagionali a 7 giorni, ma per i comportamenti non stagionali l'errore, anche se notiamo qualche piccolo miglioramento, rimane comunque notevole.
 
 ### Previsioni
 
 ```{r}
 # Al momento vengono fatte previsioni 44 passi in avanti (lunghezza del validation set)
-pred_mod2 <- forecast(mod2, h = 44, 
+pred_mod2 <- forecast(mod2_rid, h = 44, 
                       level = 95,
-                      xreg = validation[, -1])
+                      xreg = validation[, -c(1,5,6,7)])
 ```
 
 ```{r}
@@ -426,6 +624,10 @@ mape(validation[,1], xts(pred_mod2$mean, order.by = index(validation)))
 ```
 
 ```{r}
+mae(validation[,1], xts(pred_mod2$mean, order.by = index(validation)))
+```
+
+```{r}
 rmse(validation[,1], xts(pred_mod2$mean, order.by = index(validation)))
 ```
 
@@ -433,21 +635,32 @@ rmse(validation[,1], xts(pred_mod2$mean, order.by = index(validation)))
 err_plot(validation[,1], xts(pred_mod2$mean, order.by = index(validation)))
 ```
 
+Sono state effettuate 44 previsioni con il modello considerato e sono state confrontate con il validation set. 
+
+Il MAE risulta pari a $2604.205$, mentre l'RMSE risulta pari $2604.205$. Se confrontiamo tali risultati con gli errori riscontrati sul training set, notiamo come è stato evitato il fenomeno di overfitting, anche se gli errori di previsioni (sia sul training che sul validation) rimangono comunque notevoli. Infine, nel complesso, non viene notato nessun miglioramento rispetto agli errori del modello1.
+
 ## Modello3
 
--   Componente AR stagionale: ACF presenta correlazione significativa al ritardo 7
--   Componente MA stagionale: PACF presenta correlazioni particolarmente significative ai riatdi multipli di 7
--   Componente MA non stagionale di ordine 2
--   Componente AR non stagionale di ordine 3
--   Dummy come regressori esterni
--   Costante non inclusa
+In questo modello andiamo ad escludere i parametri autoregressivi e a media mobile che nel modello 2 non sono risultati essere significativi. Nello specifico vengono considerati:
+
+-   Componente AR stagionale di ordine 1:
+
+-   Componente MA stagionale di ordine 1:
+
+-   **Componente MA non stagionale di ordine 3**
+
+-   **Componente AR non stagionale di ordine 4** (togliamol'ultimo coefficiente autoregressivo per valutare se il terzo e il quarto diventano significativi. Nel caso non lo fossero verranno omessi in un eventuale *mod3_rid*)
+
+-   Dummy come regressori esterni (solo quelle risultate significative)
+
+-   Costante inclusa
 
 ```{r}
 mod3 <- Arima(y = train$vendite_r1,
-              order = c(3, 0, 2),
+              order = c(4, 0, 2),
               list(order = c(1, 0, 1), period = 7),
-              xreg = train[, -1],
-              include.constant = FALSE,
+              xreg = train[, -c(1,5,6,7)],
+              include.constant = TRUE,
               )
 ```
 
@@ -462,32 +675,101 @@ tsdisplay(mod3$residuals)
 ```
 
 ```{r}
+checkresiduals(mod3, test = FALSE)
+```
+
+```{r}
+checkresiduals(mod3, test = "LB", lag = 25, plot = FALSE)
+```
+
+```{r}
 pars_test(mod3$coef, mod3$var.coef)
 ```
 
+I parametri che **risultano essere significativi**, ad un livello $\alpha = 0.05$ , sono:
+
+-   AR(1): *p-value:* $0.0000$
+
+-   AR(2): *p-value:* $0.000$
+
+-   AR(3): *p-value:* $0.000$
+
+-   MA(1): *p-value:* $0.000$
+
+-   MA(2): *p-value:* $0.000$
+
+-   SMA(1)[7]: *p-value:* $0.023$
+
+-   Giorno_Friday *p-value:* $0.000$
+
+-   Giorno_Saturday *p-value:* $0.000$
+
+-   Giorno_Sunday *p-value:* $0.000$
+
+Mentre quelle che **non risultano essere significativi**:
+
+-   SAR(1)[7]: *p-value:* $0.425$
+
+-   AR(4): *p-value:* $0.156$
+
+**L'AIC** risulta essere pari a : \$7335.86 \$
+
+L'errore sul training set **MAE** risulta pari a $2070.51$ mentre l'**RMSE** pari a: $3053.25$
+
+Il **Box-Ljung test** (*p-value* = $0.0006037$ ) ci indica che questo modello presenta residui auto-correlati
+
+Tale problema di autocorrelazione, potrebbe essere indotto dal fatto che non stiamo modellando la stagionalità a 365 giorni, la quale verrà inclusa nel successivo modello attraverso delle variabili dummy atte a modellare eventi annuali.
+
+### Modello3 ridotto
+
+Andiamo a togliere il parametro autoregressivo di ordine 4 mentre lasciamo il parametro autoregressivo stagionale. Nel caso non fosse ancora non significativo, si procederà ad ascludere anche
+
 ```{r}
-lag.length = 25
-Box.test(mod3$residuals, lag=lag.length, type="Ljung-Box")
+mod3_rid <- Arima(y = train$vendite_r1,
+              order = c(3, 0, 2),
+              list(order = c(1, 0, 1), period = 7),
+              xreg = train[, -c(1,5,6,7)],
+              include.constant = TRUE,
+              )
 ```
 
 ```{r}
-checkresiduals(mod3)
+summary(mod3_rid)
 ```
 
 ```{r}
-plot(train[,1], 
+tsdisplay(mod3_rid$residuals) 
+```
+
+```{r}
+checkresiduals(mod3_rid, test = FALSE)
+```
+
+```{r}
+checkresiduals(mod3_rid, test = "LB", lag = 25, plot = FALSE)
+```
+
+
+```{r}
+pars_test(mod3_rid$coef, mod3_rid$var.coef)
+```
+
+Il parametro autoregressivo stagionale risulta essere ora significativo. Procediamo quindi con il fit sul validation
+
+```{r}
+plot(train[1:49,1], 
      col = "blue", lwd=0.5, 
      main = "Fitted Values")
-lines(xts(mod3$fitted, order.by = index(train)), col="red", lwd=2.5)
+lines(xts(mod3$fitted[1:49], order.by = index(train[1:49])), col="red", lwd=2.5)
 ```
 
 ### Previsioni
 
 ```{r}
 # Al momento vengono fatte previsioni 44 passi in avanti (lunghezza del validation set)
-pred_mod3 <- forecast(mod3, h = 44, 
+pred_mod3 <- forecast(mod3_rid, h = 44, 
                       level = 95,
-                      xreg = validation[, -1])
+                      xreg = validation[, -c(1,5,6,7)])
 ```
 
 ```{r}
@@ -507,6 +789,10 @@ mape(validation[,1], xts(pred_mod3$mean, order.by = index(validation)))
 ```
 
 ```{r}
+mae(validation[,1], xts(pred_mod3$mean, order.by = index(validation)))
+```
+
+```{r}
 rmse(validation[,1], xts(pred_mod3$mean, order.by = index(validation)))
 ```
 
@@ -514,112 +800,237 @@ rmse(validation[,1], xts(pred_mod3$mean, order.by = index(validation)))
 err_plot(validation[,1], xts(pred_mod3$mean, order.by = index(validation)))
 ```
 
+Sono state effettuate 44 previsioni con il modello considerato e sono state confrontate con il validation set. 
+
+Il MAE risulta pari a $2618.055$, mentre l'RMSE risulta pari $3822.795$. Se confrontiamo tali risultati con gli errori riscontrati sul training set, notiamo come è stato evitato il fenomeno di overfitting, anche se gli errori di previsioni (sia sul training che sul validation) rimangono comunque notevoli. Infine, nel complesso, viene notato un peggioramento rispetto agli errori del modello2.
+
+### Considerazioni sui primi tre modelli
+
+I primi tre modelli considerati presentano svariati problemi:
+
+-   Tutti i modelli presentano residui autocorrelati, come suggerito dal test di Ljung-Box il quale ci indica che molta informazione è ancora inclusa all'interno dei residui. 
+
+-   Tutti i modelli presentano alti valori sia di MAE che di RMSE.
+
+- Osservando i fit, sia sul training che sul test, sembra che la stagionalità a 7 giorni venga ben interpretata.
+
+Tali problemi sono dovuti principalmente al fatto che non stiamo modellando la stagionalità annuale del modello (i.e.: Festività quali Natale, Ferragosto ecc..) con conseguenti stime pessime per tali andamenti.
+
 ## Modello 4 SARIMAX
 
--   Componente AR stagionale: ACF presenta correlazione significativa al ritardo 7
--   Componente MA stagionale: PACF presenta correlazioni particolarmente significative ai riatdi multipli di 7
--   Componente MA non stagionale di ordine 2
--   Componente AR non stagionale di ordine 3
--   Dummy come regressori esterni
--   Vari regressori (dei regressori disponibili sono stati incluse, dopo varie prove, solamente quelli significativi)
--   Costante non inclusa
+Consideriamo quindi un modello SARIMAX, dove:
+
+-   Componenti ARIMA: consideriamo quella del **modello3** (dove i parametri risultavano tutti signiticativi) SARIMA(4,0,2)(1,0,1)[7]
+
+-   Stagionalità settimanale: dummy **giorni settimanali** (Martedì-Domenica, Lunedì sempre escluso)
+
+-   Stagionalità annuale: variabili dummy per modellare tutti quegli andamenti che si riferiscono a stagionalità annuali: Natale, Halloween, Ferragosto ecc...
+
+-   Altri regressori: i.e. costo del riscaldamento in litri, precipitazioni giornaliere ecc..
+
+-   Costante INCLUSA
+
+### Pre-processing
+```{r}
+#Stagionalità annuale
+fest <- read_xlsx("..\\Dati aggiuntivi\\fest.xlsx", col_types = NULL)
+
+str(fest)
+```
+
 
 ```{r}
-# xts object regressori
-
-# Imposto a zero i giorni dove m.m. Pioggia  == 0 (Prima NaN)
-r1$Precipitazioni.mm.[is.na(r1$Precipitazioni.mm.)] <- 0
-
-# in data 23/11/2018 valore Precipitazione anomalo (-999.01) impostato a zero
-r1$Precipitazioni.mm.[r1$data == "2018-11-23"] <- 0
-
-# Manca modalità "False" per la variabile pioggia, aggiungo
-r1$Pioggia[r1$Pioggia==''] <- "False"
-
-df_reg <- df
-df_reg$Benzina <- r1$BENZINA.LITRO
-df_reg$Benzina <- r1$GASOLIO_AUTO.LITRO
-df_reg$Gpl <- r1$GPL.LITRO
-df_reg$Riscaldamento <- r1$GASOLIO_RISCALDAMENTO.LITRO
+# Unisco al df contenenti le dummy settimanali con quello contenenti le dummy annuali
+xreg <-cbind(dum_day_rid, fest)
+xreg <- subset(xreg, select = -c(date))
+head(xreg)
 ```
 
 ```{r}
-# Costruzione delle dummy, dove necessario
+r1$Pioggia[r1$Pioggia==''] <- "False"
+```
+
+```{r}
 require(fastDummies)
 dum_pioggia <- r1[, c("data", "Pioggia")]
 dum_pioggia[,"Pioggia"] <- as.factor(dum_pioggia$Pioggia)
 dum_pioggia <- dummy_cols(dum_pioggia, select_columns = c("Pioggia"), 
                       remove_first_dummy = TRUE, 
                       remove_selected_columns = TRUE)
-dum_pioggia
 ```
 
 ```{r}
-df_reg$Pioggia_True <- dum_pioggia$Pioggia_True
+xreg$Riscaldamento <- r1$GASOLIO_RISCALDAMENTO.LITRO
+xreg$Pioggia_True <- dum_pioggia$Pioggia_True
 ```
 
-Rifaccio la divisione trainin/validation/test set con il df_reg appena creato
+```{r}
+xreg <- xts(xreg[, -1], xreg$data)
+```
+
+```{r}
+colnames(xreg)
+dim(xreg)
+```
+
+```{r}
+df <- cbind(vendite_r1, xreg)
+head(df)
+write.zoo(df, file="..\\Dati aggiuntivi\\Dati CV_Arima\\df_4.csv", sep=",")
+```
+
+```{r}
+colnames(df)
+dim(df)
+```
+### Partizionamento del dataset 
+
+Rifaccio la divisione trainin/validation/test set con il dataset xreg appena creato.
 
 ```{r}
 # Divisione training-test set
-train_date <- nrow(df_reg) *0.8
-train_temp <- df_reg[1:train_date,]
-test_reg <- df_reg[-c(1:train_date),] # Usare alla fine
+train_date <- nrow(df) *0.8
+train_temp <- df[1:train_date,]
+test <- df[-c(1:train_date),] # Usare alla fine
 ```
 
 ```{r}
 # Training - validation set 
 train_date_rid <- nrow(train_temp)*0.9
-train_reg <- train_temp[1:train_date_rid,]
-validation_reg <- train_temp[-c(1:train_date_rid),]
+train<- train_temp[1:train_date_rid,]
+validation<- train_temp[-c(1:train_date_rid),]
 ```
 
+### Stima del modello
+
 ```{r}
-mod4 <- Arima(y = train_reg$vendite_r1,
+mod4 <- Arima(y = train$vendite_r1,
               order = c(3, 0, 2),
               list(order = c(1, 0, 1), period = 7),
-              xreg = train_reg[, -c(1,11,12,14)], # Rimosse le variabili non significative
-              include.constant = FALSE,
+              xreg = train[, -1],
+              include.constant = TRUE,
               )
 ```
 
-### Diagnostica
 
 ```{r}
 summary(mod4)
 ```
 
 ```{r}
-tsdisplay(mod4$residuals) 
-```
-
-```{r}
 pars_test(mod4$coef, mod4$var.coef)
 ```
 
+Come già riscontrato in precedenza le variabili che modellano i giorni della settimana, risultano essere non significative:
+
+-   Giorno_Thursday *p-value:* $0.265$
+
+-   Giorno_Tuesday *p-value:* $0.693$
+
+-   Giorno_Wednesday *p-value:* $0.279$
+
+Cominciamo quindi togliendo quelle.
+
 ```{r}
-lag.length = 25
-Box.test(mod4$residuals, lag=lag.length, type="Ljung-Box")
+mod4_rid1 <- Arima(y = train$vendite_r1,
+              order = c(3, 0, 2),
+              list(order = c(1, 0, 1), period = 7),
+              xreg = train[, -c(1,5,6,7)],
+              include.constant = TRUE,
+              )
 ```
 
 ```{r}
-checkresiduals(mod4)
+summary(mod4_rid1)
 ```
 
 ```{r}
-plot(train[1:28,1], 
+pars_test(mod4_rid1$coef, mod4_rid1$var.coef)
+```
+
+Le variabili che risultano essere maggiormente non significative sono:
+
+-   dec24 *p-value:* $0.29$ 8
+
+-   jun2 *p-value:* $0.31$ 21
+
+-   martgrasso *p-value:* $0.81$
+
+Ristiamo il modello togliendo le variabili maggiormente non significative
+
+```{r}
+mod4_rid2<- Arima(y = train$vendite_r1,
+              order = c(3, 0, 2),
+              list(order = c(1, 0, 1), period = 7),
+              xreg = train[, -c(1,5,6,7,8,21,22)],
+              include.constant = TRUE,
+              )
+```
+
+```{r}
+summary(mod4_rid2)
+```
+
+```{r}
+pars_test(mod4_rid2$coef, mod4_rid2$var.coef)
+```
+
+Le uniche due variabile , con un $\alpha = 0.05$, non risultano significative sono *eastermon* e *jan 6* con un *p-value* pari a $0.1055$ e $0.269$. Escludiamo quindi tali variabile e ristiamo il modello.
+
+```{r}
+mod4_rid3<- Arima(y = train$vendite_r1,
+              order = c(3, 0, 2),
+              list(order = c(1, 0, 1), period = 7),
+              xreg = train[, -c(1,5,6,7,8,12,16,21,22)],
+              include.constant = TRUE,
+              )
+```
+
+```{r}
+summary(mod4_rid3)
+```
+
+```{r}
+pars_test(mod4_rid3$coef, mod4_rid3$var.coef)
+```
+Ora tutte le variabili risultano essere statisticamente significative. Procediamo con la diagnostica del modello.
+
+#### Diagnostica 
+
+```{r}
+tsdisplay(mod4_rid3$residuals) 
+```
+
+```{r}
+checkresiduals(mod4_rid3, test = FALSE)
+```
+
+```{r}
+checkresiduals(mod4_rid3, test = "LB", lag = 25, plot = FALSE)
+```
+
+**L'AIC** risulta essere pari a : $7117.93$
+
+L'errore sul training set **MAE** risulta pari a $1705.291$ mentre l'**RMSE** pari a: $2215.425$
+
+Il **Box-Ljung test** (*p-value* = $0.001$ ) ci indica che i residui presentano ancora auto-correlazione seriale.
+
+Per quanto riguarda il fit del modello, possiamo notare come ci sia stato un netto miglioramento delle performance rispetto ai precedenti modelli. Permangono comunque ancora problemi di autocorrelazione, anche se osservando il grafico dell'ACF dei residui, le correlazioni che fuoriescono dalle bande di confidenza risultano comunque essere poche.
+
+```{r}
+plot(train[1:49,1], 
      col = "blue", lwd=0.5, 
      main = "Fitted Values")
-lines(xts(mod4$fitted[1:28], order.by = index(train[1:28])), col="red", lwd=2.5)
+lines(xts(mod4_rid3$fitted[1:49], order.by = index(train[1:49])), col="red", lwd=2.5)
 ```
 
 ### Previsioni
 
 ```{r}
 # Al momento vengono fatte previsioni 44 passi in avanti (lunghezza del validation set)
-pred_mod4 <- forecast(mod4, h = 44, 
+pred_mod4 <- forecast(mod4_rid3, h = 44, 
                       level = 95,
-                      xreg = validation_reg[, -c(1,11,12,14)])
+                      xreg = validation[, -c(1,5,6,7,8,12,16,21,22)])
 ```
 
 ```{r}
@@ -627,197 +1038,40 @@ autoplot(pred_mod4)
 ```
 
 ```{r}
-plot(validation_reg[,1], 
-     col = "blue", lwd=0.5, 
-     ylim = c(min(pred_mod4$lower, min(validation_reg[,1])), max(pred_mod4$upper, max(validation_reg[,1]))), main = "Fitted Value")
-lines(xts(pred_mod4$mean, order.by = index(validation_reg)), col="red", lwd=3)
-
-```
-
-```{r}
-mape(validation_reg[,1], xts(pred_mod4$mean, order.by = index(validation_reg)))
-```
-
-```{r}
-rmse(validation_reg[,1], xts(pred_mod4$mean, order.by = index(validation_reg)))
-```
-
-```{r}
-err_plot(validation_reg[,1], pred_mod4$mean)
-```
-
-## Forecasting with Prophet
-
-```{r}
-library(prophet)
-# Prophet vuole in input un df contenente data e dati storici
-df_prophet <- r1[, c(7,9)]
-head(df_prophet)
-```
-
-```{r}
-colnames(df_prophet)[1] <- "ds"
-colnames(df_prophet)[2] <- "y"
-```
-
-```{r}
-# Divisione training-test set
-train_date <- nrow(df_prophet) *0.8
-train_temp <- df_prophet[1:train_date,]
-test <- df_prophet[-c(1:train_date),] # Usare alla fine
-```
-
-```{r}
-# Training - validation set 
-train_date_rid <- nrow(train_temp)*0.9
-train <- train_temp[1:train_date_rid,]
-validation <- train_temp[-c(1:train_date_rid),]
-```
-
-```{r}
-mod_prop <- prophet(train, weekly.seasonality = TRUE)
-```
-
-```{r}
-future <- make_future_dataframe(mod_prop, periods = 44)
-```
-
-```{r}
-forecast <- predict(mod_prop, future)
-```
-
-```{r}
-plot(mod_prop, forecast)
-```
-
-```{r}
-prophet_plot_components(mod_prop, forecast)
-```
-
-```{r}
-dyplot.prophet(mod_prop, forecast)
-```
-
-
-### SARIMAX CON NUOVI REGRESSORI
-
-```{r}
-# Dataset festività 
-fest <- read_xlsx("C:\\Users\\marco\\OneDrive\\UNIMIB_DataScience\\99-PROJECTS\\DataScienceLab2022\\Dati aggiuntivi\\fest.xlsx", col_types = NULL)
-str(fest)
-```
-
-
-```{r}
-index <- 2:ncol(fest)
-fest[,index] <- lapply(fest[,index], as.integer)
-```
-
-```{r}
-# xts object con variabili dummy giorno e festività 
-dum_day_fest <-cbind(dum_day, fest)
-dum_day_fest <- subset(dum_day_fest, select = -c(date))
-dum_day_fest <- xts(dum_day_fest[, -1], dum_day_fest$data)
-```
-
-```{r}
-df_fest <- cbind(vendite_r1, dum_day_fest)
-```
-
-
-```{r}
-# Divisione training-test set
-train_date <- nrow(df_fest) *0.8
-train_temp <- df_fest[1:train_date,]
-test <- df_fest[-c(1:train_date),] # Usare alla fine
-```
-
-```{r}
-# Training - validation set 
-train_date_rid <- nrow(train_temp)*0.9
-train <- train_temp[1:train_date_rid,]
-validation <- train_temp[-c(1:train_date_rid),]
-rm(list="train_temp")
-```
-
-
-```{r}
-mod5 <- Arima(y = train$vendite_r1,
-              order = c(3, 0, 2),
-              list(order = c(1, 0, 1), period = 7),
-              xreg = train[, -1], # Rimosse le variabili non significative
-              include.constant = FALSE,
-              )
-```
-
-```{r}
-summary(mod5)
-```
-
-```{r}
-tsdisplay(mod5$residuals) 
-```
-
-```{r}
-pars_test(mod5$coef, mod5$var.coef)
-```
-
-```{r}
-lag.length = 25
-Box.test(mod5$residuals, lag=lag.length, type="Ljung-Box")
-```
-
-```{r}
-checkresiduals(mod5)
-```
-
-```{r}
-plot(train[1:28,1], 
-     col = "blue", lwd=0.5, 
-     main = "Fitted Values")
-lines(xts(mod5$fitted[1:28], order.by = index(train[1:28])), col="red", lwd=2.5)
-```
-
-#### Previsioni
-
-```{r}
-# Al momento vengono fatte previsioni 44 passi in avanti (lunghezza del validation set)
-pred_mod5 <- forecast(mod5, h = 44, 
-                      level = 95,
-                      xreg = validation[, -1])
-```
-
-```{r}
-autoplot(pred_mod5)
-```
-
-```{r}
 plot(validation[,1], 
      col = "blue", lwd=0.5, 
-     ylim = c(min(pred_mod5$lower, min(validation[,1])), max(pred_mod5$upper, max(validation[,1]))), main = "Fitted Value")
-lines(xts(pred_mod5$mean, order.by = index(validation)), col="red", lwd=3)
+     ylim = c(min(pred_mod4$lower, min(validation[,1])), max(pred_mod4$upper, max(validation[,1]))), 
+     main = "Fitted Value")
+lines(xts(pred_mod4$mean, order.by = index(validation)), col="red", lwd=3)
 
 ```
 
 ```{r}
-mape(validation[,1], xts(pred_mod5$mean, order.by = index(validation)))
+mape(validation[,1], xts(pred_mod4$mean, order.by = index(validation)))
 ```
 
 ```{r}
-rmse(validation[,1], xts(pred_mod5$mean, order.by = index(validation)))
+mae(validation[,1], xts(pred_mod4$mean, order.by = index(validation)))
 ```
 
 ```{r}
-err_plot(validation[,1], pred_mod5$mean)
+rmse(validation[,1], xts(pred_mod4$mean, order.by = index(validation)))
 ```
 
-# Confronto ***forecasting performance*** **dei modelli**
+```{r}
+err_plot(validation[,1], pred_mod4$mean)
+```
+
+Come precedentemente accennato, le previsioni anche sul validation set migliorano, attenstandosi su un MAE di $2091$ rispetto ad un MAE di $2618$ del modello3.
+
+
+# Evaluation: Confronto ***forecasting performance*** **dei modelli**
 
 ## Scelta misura di *forecasting accuracy*
 
 Al fine di confrontare i diversi modelli definiti precedentemente è importante valutare le performance in termini forecasting accuracy. Prima di definire la procedura di calcolo della forecasting accuracy è importante selezionare la propria misura di accuratezza.
 
-Si sceglie di utilizzare due misure di accuratezza (**MAE e RMSE**) di tipo **scale-dependent** perchè:
+Si sceglie di utilizzare due misure di accuratezza (**MAE, RMSE e MSE**) di tipo **scale-dependent** perchè:
 
 -   Misure di accuratezza basate su percentage errors e scaled errors (unit-free) sono indicate per comparare le performance di forecasting tra data set diversi
 
@@ -825,14 +1079,240 @@ Si sceglie di utilizzare due misure di accuratezza (**MAE e RMSE**) di tipo **sc
 
 -   Si evitano tutte le problematiche relative alle misure di percentage errors legate:
 
-    -    al fatto che l'errore viene diviso per il valore dell'osservazione (valori infiniti per y che tende a 0)
+    -   al fatto che l'errore viene diviso per il valore dell'osservazione (valori infiniti per y che tende a 0)
 
     -   penalità maggiori per errori negativi piuttosto che quelli positivi
 
-## Procedura di valutazione con *rolling forecasting origin*
+## Procedura di *Cross-Validation* con *rolling forecasting origin*
 
-### Setup
+Effettuo la procedura di *Time-Series Cross Validation* o *Evaluating on a Rolling Forecasting Origin* al fine di:
+
+-   Confrontare i diversi modelli in termini di Performance di Forecasting
+
+-   Potera allenare i modelli sull'intero dataset e non perdere i dati del test set (essendo questo già piccolo)
+
+-   Ottenere comunque due misure di performarmance di accuratezza di forecasting accuracy
+
+-   Determino la forecasting accuracy (come MAE/RMSE/MSE) per k-step avanti dove k (chiamato h, orizzonte, nella funzione `tsCV()`) sarà il mio orizzonte di previsione nel periodo covid
+
+    -   Confrontare l'andamento dei diversi modelli all'aumentare degli step ci consentirà di selezionare
+
+-   Parametri di cross-validation -\> Scelgo come tipologia di Time Series Cross Validation quella **Constant Holdout**
+
+    -   Scelgo arbitrariamente una finestra iniziale (**fixed origin**) di training (il numero minimo di osservazioni necessario a stimare il modello) come 60 -\> parametro `initial`
+
+    -   **Non-Constant Holdout** -\> in modo da utilizzare tutti i dati per il training (altrimenti il training si fermerebbe all'osservazione n-h)
+
+    -   **Non-Constant In-Sample -\>** Non impostiamo il parametro `window`, che altrimenti andrebbe a settare un dimensione fissata del training set e quindi una moving window
+
+### Test su Mod1
 
 ```{r}
-install.packages()
+# df per i modelli: 1,2,3
+df<- read.zoo("..\\Dati aggiuntivi\\Dati CV_Arima\\df_123.csv", index.column = 1, sep = ",", header = TRUE)
+df<- as.xts(df[,-c(5,6,7)])
+head(df)
+```
+```{r}
+# df per il modello 4
+df_x<- read.zoo("..\\Dati aggiuntivi\\Dati CV_Arima\\df_4.csv", index.column = 1, sep = ",", header = TRUE)
+df_x<- as.xts(df_x[,-c(5,6,7,8,12,16,21,22)])
+head(df_x)
+```
+
+
+```{r}
+start.time <- Sys.time()
+print(start.time)
+# Definisco la forecast-function
+
+f_mod1 <- function(x, h, xreg, newxreg) { 
+  forecast(Arima(x,
+                 order = c(0, 0, 2),
+                 seasonal = list(order = c(1, 0, 1), period = 7),
+                 xreg = xreg,
+                 include.constant = TRUE
+                 ),
+           h = h,
+           xreg=newxreg)
+}
+
+
+xreg <- df[, -1]
+
+initial = 90 
+e <- tsCV(y = df$vendite_r1, forecastfunction = f_mod1, h=90, xreg=xreg, initial = initial)
+e <- tail(e, n = -initial)
+
+end.time <- Sys.time()
+print(end.time)
+time.taken <- end.time - start.time
+print(time.taken)
+
+#print(e)
+#sqrt(mean(e^2, na.rm=TRUE))
+```
+
+```{r}
+print(nrow(df))
+print(nrow(e)+ initial)
+
+# Posso osservare dal print della coda della matrice degli errori come siano presenti NA, questo conferma che tsCV() effettua CV con Non-Constant Holdout
+#print(tail(e))
+```
+
+```{r}
+#print(head(e, 5))
+print("MSE:")
+MSE_mod1 <- colMeans(e^2, na.rm = TRUE)
+print(MSE_mod1)
+print("RMSE:")
+RMSE_mod1 <- sqrt(colMeans(e^2, na.rm = TRUE))
+print(RMSE_mod1)
+print("MAE:")
+MAE_mod1 <- colMeans(abs(e), na.rm = TRUE)
+print(MAE_mod1)
+
+data.frame(h = 1:90, MSE = RMSE_mod1) %>%
+  ggplot(aes(x = h, y = MSE)) + geom_point()
+```
+
+Ora stimo il modello nella sua interezza e confronto RMSE ottenuto dai residui con quello ottenuto con CV:
+
+```{r}
+mod1 <- Arima(y = df$vendite_r1,
+              order = c(0, 0, 2),
+              list(order = c(1, 0, 1), period = 7),
+              xreg = df[, -1],
+              include.constant = TRUE,
+              )
+summary(mod1)
+```
+
+-   Come atteso l'RMSE in previsione è sempre maggiore di quello ottenuto sui residui di trainin (medi primo allenamento del modello)
+
+### Confronto tra i modelli
+
+**Cross-Validation**
+
+```{r}
+
+# Calcolo tempo di computazione
+start.time <- Sys.time()
+print(start.time)
+
+# Definisco la forecast-function per i diversi modelli
+
+#1_ARIMA
+f_mod1 <- function(x, h, xreg, newxreg) { 
+  forecast(Arima(x,
+                 order = c(0, 0, 2),
+                 seasonal = list(order = c(1, 0, 1), period = 7),
+                 xreg = xreg,
+                 include.constant = FALSE
+                 ),
+           h = h,
+           xreg=newxreg)
+}
+
+#2_ARIMA
+f_mod2 <- function(x, h, xreg, newxreg) { 
+  forecast(Arima(x,
+                 order = c(5, 0, 2),
+                 seasonal = list(order = c(1, 0, 1), period = 7),
+                 xreg = xreg,
+                 include.constant = TRUE
+                 ),
+           h = h,
+           xreg=newxreg)
+}
+
+#3_ARIMA
+f_mod3 <- function(x, h, xreg, newxreg) { 
+  forecast(Arima(x,
+                 order = c(3, 0, 2),
+                 seasonal = list(order = c(1, 0, 1), period = 7),
+                 xreg = xreg,
+                 include.constant = TRUE
+                 ),
+           h = h,
+           xreg=newxreg)
+}
+#4_SARIMAX
+f_mod4 <- function(x, h, xreg, newxreg) { 
+  forecast(Arima(x,
+                 order = c(3, 0, 2),
+                 seasonal = list(order = c(1, 0, 1), period = 7),
+                 xreg = xreg,
+                 include.constant = TRUE
+                 ),
+           h = h,
+           xreg=newxreg)
+}
+
+# Parametri di cross-validation globali
+h = 90
+initial = 60
+
+# Stima degli errori di previsione con CV
+
+xreg1 <- df[, -1]
+e1 <- tsCV(y = df$vendite_r1, forecastfunction = f_mod1, h=h, xreg=xreg1, initial = initial)
+e1 <- tail(e1, n = -initial)
+
+xreg2 <- df[, -1]
+e2 <- tsCV(y = df$vendite_r1, forecastfunction = f_mod2, h=h, xreg=xreg2, initial = initial)
+e2 <- tail(e2, n = -initial)
+
+xreg3 <- df[, -1]
+e3 <- tsCV(y = df$vendite_r1, forecastfunction = f_mod3, h=h, xreg=xreg3, initial = initial)
+e3 <- tail(e3, n = -initial)
+
+# Runna il preprocessing nella sezione del modello 4 (df_reg) !
+xreg4 <- df_x[, -1]
+e4 <- tsCV(y = df_x$vendite_r1, forecastfunction = f_mod4, h=h, xreg=xreg4, initial = initial)
+e4 <- tail(e4, n = -initial)
+
+
+
+
+end.time <- Sys.time()
+print(end.time)
+time.taken <- end.time - start.time
+print(time.taken)
+```
+
+**Accuratezze**
+
+```{r}
+RMSE_mod1 <- sqrt(colMeans(e1^2, na.rm = TRUE))
+RMSE_mod2 <- sqrt(colMeans(e2^2, na.rm = TRUE))
+RMSE_mod3 <- sqrt(colMeans(e3^2, na.rm = TRUE))
+RMSE_mod4 <- sqrt(colMeans(e4^2, na.rm = TRUE))
+#RMSE_mod6 <- sqrt(colMeans(e6^2, na.rm = TRUE))
+
+
+# Zoom in
+plot(1:90, RMSE_mod1, type="l", col=1, xlab="horizon", ylab="RMSE", ylim = c(2500,5000))
+lines(1:90, RMSE_mod2, type="l",col=2)
+lines(1:90, RMSE_mod3, type="l",col=3)
+lines(1:90, RMSE_mod4, type="l",col=4)
+legend("topleft",legend=c("1_ARIMA1","2_ARIMA2","3_ARIMA3","4_SARIMAX1"),col=1:4,lty=1)
+
+# Zoom out
+plot(1:90, RMSE_mod1, type="l", col=1, xlab="horizon", ylab="RMSE", ylim = c(2500,7000))
+lines(1:90, RMSE_mod2, type="l",col=2)
+lines(1:90, RMSE_mod3, type="l",col=3)
+lines(1:90, RMSE_mod4, type="l",col=4)
+legend("topleft",legend=c("1_ARIMA1","2_ARIMA2","3_ARIMA3","4_SARIMAX1"),col=1:4,lty=1)
+```
+
+
+**RMSE Medi**
+
+```{r}
+mean(RMSE_mod1)
+mean(RMSE_mod2)
+mean(RMSE_mod3)
+mean(RMSE_mod4)
 ```
