@@ -5,6 +5,8 @@ date: "2022-11-28"
 output: html_document
 ---
 
+# Domanda 1
+
 ```{r}
 # SETTING PROGETTO -------------------------------------------------------------
 
@@ -22,14 +24,14 @@ if (any(installed_packages == FALSE)) {
 
 # Packages loading
 invisible(lapply(packages, library, character.only = TRUE))
+```
 
+```{r}
+working_dir = dirname(rstudioapi::getSourceEditorContext()$path)
+setwd(working_dir) # lo applica solo a questo chunk!
 
-# setwd(working_dir)
-setwd("C:/Users/gianl/Desktop/Uni Bicocca/GitHub/Data-Science-Lab/Dati ristoranti/")
-precovid1 <- read.csv("C:\\Users\\gianl\\Desktop\\Uni Bicocca\\GitHub\\Data-Science-Lab\\Dati ristoranti\\pre-covid_r1.csv", row.names = 1)
-
-fest <- read_xlsx("C:\\Users\\gianl\\Desktop\\Uni Bicocca\\GitHub\\Data-Science-Lab\\Dati aggiuntivi\\fest.xlsx")
-
+precovid1 <- read.csv("../Dati ristoranti/pre-covid_r1.csv", row.names = 1)
+fest_pre <- read_xlsx("../Dati aggiuntivi/fest_precovid.xlsx")
 ```
 
 ```{r}
@@ -66,7 +68,7 @@ train <- val
 train$lordototale[validation_date:nrow(val),] <- NA
 ```
 
-## Modello 1 (10 armoniche, no regressori)
+## Modello 1 (trend + stag7_d + stag365_10arm)
 
 ```{r}
 mod1 <- SSModel(log(lordototale+10)~
@@ -147,7 +149,7 @@ smo_lev_se <- sqrt(kfs1$V[1,1,])
 plot(smo_lev_se)
 ```
 
-## Modello 2 (10 armoniche e regressori)
+## Modello 2 (trend + stag7_d + stag365_10arm + weekend + festivo)
 
 ```{r}
 mod2 <- SSModel(log(lordototale+10)~Weekend + Festivo +
@@ -187,13 +189,12 @@ mape(val$lordototale[validation_date:nrow(val),], exp(muhat2[validation_date:nro
 rmse(val$lordototale[validation_date:nrow(val),], exp(muhat2[validation_date:nrow(val),]))
 ```
 
-## Modello 3 (40 armoniche, regressori)
+## Modello 3 (trend + stag7_t + weekend + festivo)
 
 ```{r}
 mod3 <- SSModel(log(lordototale+10)~Weekend + Festivo +
                   SSMtrend(2, list(NA, NA))+
-                  SSMseasonal(7, NA)+
-                  SSMseasonal(365, NA, "trigonometric", harmonics = 1:10),
+                  SSMseasonal(7, NA, 'trigonometric'),
                 H=NA,
                 data=train)
 
@@ -201,7 +202,7 @@ updt3 <- function(pars, model){
   model$Q[1,1,1] <- exp(pars[1])
   model$Q[2,2,1] <- exp(pars[2])
   model$Q[3,3,1] <- exp(pars[3])
-  diag(model$Q[4:23, 4:23, 1]) <- exp(pars[4])
+  diag(model$Q[4:8, 4:8, 1]) <- exp(pars[4])
   model$H[1,1,1] <- exp(pars[5])
   model
 }
@@ -232,7 +233,7 @@ mape(val$lordototale[validation_date:nrow(val),], exp(muhat3[validation_date:nro
 rmse(val$lordototale[validation_date:nrow(val),], exp(muhat3[validation_date:nrow(val),]))
 ```
 
-## Modello 4 (seasonal 7 gg)
+## Modello 4 (trend + stag7_t + festivo)
 
 ```{r}
 mod4 <- SSModel(log(lordototale+10)~Festivo + #Weekend + 
@@ -280,16 +281,16 @@ mape(val$lordototale[validation_date:nrow(val),], exp(muhat4[validation_date:nro
 rmse(val$lordototale[validation_date:nrow(val),], exp(muhat4[validation_date:nrow(val),]))
 ```
 
-## Modello 5 (usando regressori festivita)
+## Modello 5 (trend + stag7_t + fest_precovid)
 
 ```{r}
 temp <- dummy_cols(precovid1[10], select_columns = c("Giorno"), 
                       remove_first_dummy = TRUE, 
                       remove_selected_columns = TRUE)
 
-prova <- cbind(precovid1[, c(8)], fest[,-1], temp)
+prova <- cbind(precovid1[, c(8)], fest_pre[,-1], temp)
 # prova[,2] <- as.integer(as.logical(prova[,2]))
-# prova <- merge(x=precovid1[, c(8)], y=fest[,-1], by.x=precovid1$data, by.y=fest$date)
+# prova <- merge(x=precovid1[, c(8)], y=fest_pre[,-1], by.x=precovid1$data, by.y=fest_pre$date)
 
 ss <- xts(prova,
             as.Date(as.character(precovid1$data),
@@ -308,7 +309,7 @@ train$lordototale[as.integer(validation_date+1):nrow(val),] <- NA
 ```
 
 ```{r}
-mod5 <- SSModel(log(lordototale)~dec24+dec25+dec26+jan1+jan6+aug15+dec31+eastsun+eastermon+apr25+mag1+jun2+oct31+nov1+martgrasso+#bridge+#Giorno_Monday+Giorno_Tuesday+Giorno_Wednesday+Giorno_Thursday+Giorno_Saturday+Giorno_Sunday+
+mod5 <- SSModel(log(lordototale)~dec8+dec24+dec25+dec26+jan1+jan6+aug15+dec31+eastsun+eastermon+apr25+mag1+jun2+oct31+nov1+martgrasso+#bridge+#Giorno_Monday+Giorno_Tuesday+Giorno_Wednesday+Giorno_Thursday+Giorno_Saturday+Giorno_Sunday+
                   SSMtrend(2, list(NA, NA))+
                   SSMseasonal(7, NA, 'trigonometric'),
                 H=NA,
@@ -386,4 +387,65 @@ comp <- data.frame(Modello=c("mod1", "mod2", "mod3", "mod4", "mod5"),
                   mape(val$lordototale[validation_date:nrow(val),], exp(muhat4[validation_date:nrow(val),])),
                   mape(val$lordototale[validation_date:nrow(val),], exp(muhat5[validation_date:nrow(val),]))))
 comp
+```
+
+```{r}
+pars_test <- function(coef, var_coef){
+  test <- (1-pnorm(abs(coef)/sqrt(diag(var_coef))))*2
+  return(test)
+}
+```
+
+```{r}
+mod6 <- SSModel(lordototale~dec8+dec24+dec25+dec26+jan1+jan6+aug15+dec31+eastsun+eastermon+apr25+mag1+jun2+oct31+nov1+martgrasso+#bridge+#Giorno_Monday+Giorno_Tuesday+Giorno_Wednesday+Giorno_Thursday+Giorno_Saturday+Giorno_Sunday+
+                  SSMtrend(2, list(NA, NA))+
+                  SSMseasonal(7, NA),
+                H=NA,
+                data=train)
+
+updt6 <- function(pars, model){
+  model$Q[1,1,1] <- pars[1]
+  model$Q[2,2,1] <- pars[2]
+  model$Q[3,3,1] <- pars[3]
+  #un regressore che tdiag(model$Q[4:8, 4:8, 1]) <- pars[4]
+  model$H[1,1,1] <- pars[5]
+  model
+}
+
+mod6$P1inf[] <- 0 # no componenti diffuse
+mod6$a1[1] <- mean(train$lordototale[1:50]) # scelta basata sui valori del primo mese
+
+diag(mod6$P1) <- vy*10 # specifichiamo che abbiamo molta incertezza sui valori che abbiamo specificato
+
+fit6 <- fitSSM(mod6, pars, updt6)
+fit6$optim.out
+
+kfs6 <- KFS(fit6$model,
+            smoothing = c("state", "signal", "disturbance"))
+
+
+iniz <- validation_date
+fine <- nrow(val)
+
+plot(val$lordototale[iniz:fine,], lwd=2, ylim = c(0, 40000))
+
+muhat6 <- xts(as.matrix(kfs6$muhat),
+                index(train))
+muhat6 <- as.xts(muhat6)
+#lines(muhat1[iniz:fine,], type = "l", col = "red") # [1801:1826,]
+lines(muhat6[iniz:fine,], type = "l", col = "red", lwd=3) # [1801:1826,]
+```
+
+# Domanda 2
+
+```{r}
+working_dir = dirname(rstudioapi::getSourceEditorContext()$path)
+setwd(working_dir) # lo applica solo a questo chunk!
+
+postcovid1 <- read.csv("../Dati ristoranti/pre-covid_r1.csv", row.names = 1)
+fest_post <- read_xlsx("../Dati aggiuntivi/fest_postcovid.xlsx")
+```
+
+```{r}
+
 ```
