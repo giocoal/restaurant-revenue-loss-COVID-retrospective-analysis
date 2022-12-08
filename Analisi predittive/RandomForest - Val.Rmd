@@ -37,6 +37,7 @@ output:
     widescreen: yes
 course: Progetto Data Science Lab
 ---
+
 # Setup
 
 ```{r}
@@ -119,7 +120,14 @@ head(r1)
 
 # Data preparation
 
+Definisco la serie storica y
+
+-   come oggetto xts.
+
+-   Indice la data
+
 ```{r}
+# Tengo
 rf_r1 <- xts(r1[, "lordototale"], as.Date(as.character(r1$data), format = "%Y-%m-%d"))
 ```
 
@@ -127,7 +135,6 @@ rf_r1 <- xts(r1[, "lordototale"], as.Date(as.character(r1$data), format = "%Y-%m
 train_ndx <- nrow(r1)*0.8
 validation_ndx <- train_ndx*0.9
 ```
-
 
 # MODELLO 1: PREVISIONE SOLO ATTRAVERSO I RITARDI DELLA SERIE STORICA
 
@@ -141,7 +148,16 @@ test <- rf_r1[-c(1:train_ndx), ]
 
 # Costruzione della matrice dei ritardi
 
+-   Prende il lordo totale del train (non del validation) e costruisce una matrice in cui la prima colonna sono i valori del lordo totale ai vari istanti, le colonne successive sono 14 ritardi partendo da ogni istante temporale
+
+-   I primi 14 non sono considerati e quindi sono tolte le prime 14 osservazioni -\> per prevedere il modello ha bisogno dei dati precedenti
+
+-   la prima colonna è y, le altre y1,y14
+
+-   È una normale matrice (non xts)
+
 ```{r}
+# Tieni
 # Ho provato con solo 7 ritardi, e le performance erano piuttosto scadenti. Con 14 ritardi (2 settimane) i risultati sono decisamente migliori
 Y <- embed(train, 15) # numero di ritardi + 1 che vogliamo considerare
 colnames(Y) <- c("y", paste0("y_", 1:14))
@@ -149,27 +165,65 @@ colnames(Y) <- c("y", paste0("y_", 1:14))
 
 # Train modello
 
+Train:
+
+-   Passi la prima colonna che dipende dal resto (contro tutti gli altri regressori `.`)
+
+-   Il modello prende una normale matrice (no xts e non ts)
+
 ```{r}
 rf1 <- randomForest(y~., data = Y)
 print(rf1)
 ```
+
 # Costruzione vettore stime - stima ricorsiva (ogni valore stimato viene utilizzato per prevedere il successivo)
 
+Stime:
+
+-   Carico la ground truth in y_hat
+
+```{=html}
+<!-- -->
+```
+-   Stimo il primo orizzonte temporale (1 step)
+
+-   La stima step viene messo dentro la matrice, come regressori (perchè ricorda che hai bisogno di 14 dati precedenti)
+
 ```{r}
+# TIENI -> Vettore in cui salvo le previsioni
 y_hat <- numeric(nrow(validation)) # Test con 39 osservazioni da stimare
 
 # Matrice per le previsioni ricorsive
 
+# Predo l'ultima riga del train (dato più recedente) a cui tolgo l'ultimo ritardo (l'ultima colonna)
+# Crea il nuovo set di regressori per la previsione dopo (13 del dato prima a cui viene messo in coda il dato più recente come primo regressore)
 X <- Y[nrow(Y), -15, drop = FALSE] # Ultima riga della matrice utilizzata per il training, a cui tolgo il 7° ritardo (questi sono i ritardi per prevedere il valore al tempo t+1)
 colnames(X) <- colnames(Y)[-1] # Il modello ha bisogno dei nomi esatti
 ```
 
 # Previsioni
 
+Predict:
+
+-   rf1 è il modello
+
+-   X è il vettore che contiene la nuova riga di regressori, manca solo la colonna y
+
+    -   Li usa come regressori per una predizione one step
+
+    -   X viene shiftato, eliminato il dato più vecchio, stima predetta come y1
+
+-   Ottengo quindi y_hat che è il vettore delle predizioni
+
+-   Il numero di step viene assegnato come nrow(validation)
+
+-   I risultati sono VETTORI -\> alla fine y_hat è convertito in xts e gli sono passate le date del validation xts
+
 ```{r}
 for (h in 1:nrow(validation)) {
   y_hat[h] <- predict(rf1, X, predict.all = TRUE)$individual |> median() # predict.all=True mantiene la stima data da tutti gli alberi nella foresta. Dopodichè si vanno a selezionare tutti e a prenderne la mediana (in alternativa, la media)
   # Produco lo shift in X
+  # X viene aggionrato ogni volta, le stime entrano dei regressori
   X[1, 2:14] <- X[1, 1:13]
   X[1, 1] <- y_hat[h]
 }
@@ -192,14 +246,28 @@ rmse(validation, rf_pred1)
 ```
 
 # SECONDO MODELLO - REGRESSORI (Giorno dell'anno, Giorno della settimana, Festivo, Pioggia)
-# Per questo modello e per il successivo sarebbe necessario de-trendizzare la serie storica, essendo il trend una componente che i modelli di ML
-# non possono prevedere. Tuttavia, nel train non si nota un trend evidente, pertanto ritengo non necessario procedere con questa trasformazione
+
+# Per questo modello e per il successivo sarebbe necessario de-trendizzare la serie storica, essendo il trend una componente che i modelli di ML non possono prevedere. Tuttavia, nel train non si nota un trend evidente, pertanto ritengo non necessario procedere con questa trasformazione
+
+Il secondo e il terzo modello sono simili
+
+-   La cosa dei ritardi viene fatta in modo diverso
+
+-   Avviene comunque la stima ricorsiva
+
+-   In questo caso stima e training avvengono contestualmente nel momento di definizione del modello
+
+-   
+
+Pre processing da inserire
 
 ```{r}
 # Tengo Festivo e Pioggia come regressori
 
+# Prendo r1 (dataset importato) e tengo 3 colonne, convertite in xts
 rf_r1 <- xts(r1[, c("lordototale", "Festivo", "Pioggia")], as.Date(as.character(r1$data), format = "%Y-%m-%d"))
 
+# Imputazione 
 rf_r1$Festivo[rf_r1$Festivo=="False"] <- 0
 rf_r1$Festivo[rf_r1$Festivo=="True"] <- 1
 
@@ -207,25 +275,50 @@ rf_r1$Pioggia[rf_r1$Pioggia==""] <- 0
 rf_r1$Pioggia[rf_r1$Pioggia=="True"] <- 1
 ```
 
+Costruisco due variabili (yday e wday) che sono degli interi, uno che va da 0 a 265 e uno da 0 a 7, indicano giorno dell'anno e della settimana (sono degli indici per dire alla serie storica)
+
 ```{r}
 # Costruisco i regressori da 0
 
 yday <- yday(time(rf_r1))
 wday <- wday(time(rf_r1), week_start = getOption("lubridate.week.start", 1))
 
+# Attacati come colonne -> ancora xts
 data <- cbind(rf_r1, yday, wday)
 
+# Splitting (togli)
 data_train <- data[1:train_ndx, ]
 ```
 
+-   Ottengo X2 che sarà una matrice dei regressori (sempre xts) che contiene regressori normali e ritardi
+
+-   Cambiare questo
+
+    -   In questo caso, a differenza di sopra, crea la matrice dei ritardi anche sul validation usando la ground truth, questo non va bene per la CV, perchè dobbiamo usare le stime (altrimenti non testiamo se generalizza, nella realtà non sappiamo le previsioni future di y)
+
+    -   Cambiare e impostare stima ricorsiva come sopra
+
+    -   Attenzione che qui abbiamo anche i regressori, che invece è giusto siano usati con i dati veri
+
+    -   Invece i ritardi vanno aggiornati come sopra
+
+    -   **Riadatta quanto sopra**
+
 ```{r}
+
+# questa parte tieni
+# -14 perchè sono scartati
+# qui definisce solo gli indici di split
 train_ndx2 <- 1:(validation_ndx-14)
 valid_ndx2 <- (validation_ndx-14+1):(nrow(train_validation)-14)
 
+# embed costruisce automaticamente la matrice dei ridarti -> come prima
 X2 <- embed(data_train$lordototale, 15) # Numero di ritardi + 1
 
+# Estrai y
 y2 <- X2[, 1] # Variabile target
 
+# attacco la matrice dei ritardi agli altri regressori
 X2 <- cbind(X2[, -1], data_train[-(1:14), c("Festivo","Pioggia","yday", "wday")]) # Regressori
 
 # Split training-test
@@ -254,9 +347,23 @@ rmse(y_test2, rf_pred2)
 
 # TERZO MODELLO - REGRESSORI (stessi regressori precedenti, ma Festivo spezzato in diverse dummies, una per tipologia di festività)
 
+Molto simile al modello due
+
+-   La variabile festivo viene dummyzzata
+
+-   Anche qui cambiare la stima
+
+-   Si aggiungon oanche le dummy delle festività
+
+Da cambiare
+
+-   Usa fest_precovid.xlsx e non fest.xlsx
+
+-   Prendi da 2:18 per prendere il nuovo regressore
+
 ```{r}
-df_festivi <- readxl::read_xlsx("~/GitHub/Data-Science-Lab/Dati aggiuntivi/fest.xlsx")
-dum_festivi_ts <- xts(df_festivi[, 2:17], as.Date(as.character(r1$data), format = "%Y-%m-%d"))
+df_festivi <- readxl::read_xlsx("../Dati aggiuntivi/fest_precovid.xlsx")
+dum_festivi_ts <- xts(df_festivi[, 2:18], as.Date(as.character(r1$data), format = "%Y-%m-%d"))
 ```
 
 ```{r}
@@ -302,6 +409,14 @@ rmse(y_test3, rf_pred3)
 ```
 
 # QUARTO MODELLO - MODELLO CON VECCHI REGRESSORI
+
+Questo cambia:
+
+-   Sono dei vecchi regressori, buttati tutti insieme per vedere che fa
+
+-   Non viene trattata come serie storica, è un random forest con i soli regressori
+
+-   Toglierlo
 
 ```{r}
 # Preparazione dati
@@ -387,4 +502,3 @@ cat("\nMod 2 - RMSE:", rmse(y_test2, rf_pred2))
 cat("\nMod 3 - RMSE:", rmse(y_test3, rf_pred3))
 cat("\nMod 4 - RMSE:", rmse(validation4$lordototale, rf_pred4))
 ```
-

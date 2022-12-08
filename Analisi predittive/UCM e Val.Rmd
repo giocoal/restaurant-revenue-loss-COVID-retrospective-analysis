@@ -1,6 +1,6 @@
 ---
-title: "Untitled"
-author: "Gianluca Scuri"
+title: "UCM"
+author: "Gianluca Scuri, Giorgio Carbone"
 date: "2022-11-28"
 output: html_document
 editor_options: 
@@ -704,7 +704,7 @@ f_mod5 <- function(train) {
 
 ```{r}
 # Parametri di cross-validation globali
-h = 1 # 6 settimane
+h = 42 # 6 settimane
 initial = 365 # Un anno
 window = NULL # no moving window, si rolling origin
 
@@ -726,7 +726,7 @@ ss <- xts(prova,
 e1 <- tsCV_UCM(my_xts = ss, forecastfunction = f_mod1, h=h, initial = initial, window = window)
 #e1 <- tail(e1, n = -initial)
 
-e2 <- tsCV_UCM(my_xts = ss, forecastfunction = f_mod4, h=h, initial = initial, window = window)
+e4 <- tsCV_UCM(my_xts = ss, forecastfunction = f_mod4, h=h, initial = initial, window = window)
 
 # processing valido per modello 5
 
@@ -744,7 +744,7 @@ ss1$lordototale <- as.numeric(ss1$lordototale)
 
 # CV su MODELLO 5
 
-e2 <- tsCV_UCM(my_xts = ss1, forecastfunction = f_mod5, h=h, initial = initial, window = window)
+e5 <- tsCV_UCM(my_xts = ss1, forecastfunction = f_mod5, h=h, initial = initial, window = window)
 
 
 end.time <- Sys.time()
