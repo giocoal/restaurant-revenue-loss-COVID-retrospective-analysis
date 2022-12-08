@@ -1084,7 +1084,7 @@ Effettuo la procedura di *Time-Series Cross Validation* o *Evaluating on a Rolli
 
 -   Confrontare i diversi modelli in termini di Performance di Forecasting
 
--   Potera allenare i modelli sull'intero dataset e non perdere i dati del test set (essendo questo già piccolo)
+-   Potere allenare i modelli sull'intero dataset e non perdere i dati del test set (essendo questo già piccolo)
 
 -   Ottenere comunque due misure di performarmance di accuratezza di forecasting accuracy
 
@@ -1094,7 +1094,11 @@ Effettuo la procedura di *Time-Series Cross Validation* o *Evaluating on a Rolli
 
 -   Parametri di cross-validation -\> Scelgo come tipologia di Time Series Cross Validation quella **Constant Holdout**
 
-    -   Scelgo arbitrariamente una finestra iniziale (**fixed origin**) di training (il numero minimo di osservazioni necessario a stimare il modello) come 60 -\> parametro `initial`
+    -   Scelgo arbitrariamente una finestra iniziale (**fixed origin**) di training (il numero minimo di osservazioni necessario a stimare il modello) come 120-\> parametro `initial`
+
+        -   È prassi impostare una finestra iniziale che sia almeno 3 volte l'orizzonte di previsione
+
+        -   Per i modelli con regessori che si realizzano annualmente (es. natale) la finestra iniziale sarà 1 anno (365 giorni)
 
     -   **Non-Constant Holdout** -\> in modo da utilizzare tutti i dati per il training (altrimenti il training si fermerebbe all'osservazione n-h)
 
@@ -1354,6 +1358,7 @@ xreg3 <- df[, -1]
 e3 <- tsCV(y = df$vendite_r1, forecastfunction = f_mod3, h=h, xreg=xreg3, initial = initial)
 e3 <- tail(e3, n = -initial)
 
+initial <- 346
 # Runna il preprocessing nella sezione del modello 4 (df_reg) !
 xreg4 <- df_x[, -1]
 e4 <- tsCV(y = df_x$vendite_r1, forecastfunction = f_mod4, h=h, xreg=xreg4, initial = initial)

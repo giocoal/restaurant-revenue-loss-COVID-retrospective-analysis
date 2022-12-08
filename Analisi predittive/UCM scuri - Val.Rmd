@@ -3,9 +3,14 @@ title: "Untitled"
 author: "Gianluca Scuri"
 date: "2022-11-28"
 output: html_document
+editor_options: 
+  markdown: 
+    wrap: 72
 ---
 
 # Domanda 1
+
+## Setup e loading dataset
 
 ```{r}
 # SETTING PROGETTO -------------------------------------------------------------
@@ -58,34 +63,55 @@ ss <- xts(prova,
 plot(ss$lordototale)
 ```
 
+Splitting e imputazione del validation set a NA
+
 ```{r}
 train_date <- nrow(ss) *0.8
+# Val è la serie intera
 val <- ss[1:train_date,]
 test <- ss[-c(1:train_date),] # Usare alla fine
 
+# Data di fine del train
 validation_date <- nrow(val) *0.9
 train <- val
+# Quindi train include i dati di training e un insieme di dati di test (NA)
+# I regressori invece non sono impostati a NA
 train$lordototale[validation_date:nrow(val),] <- NA
 ```
 
 ## Modello 1 (trend + stag7_d + stag365_10arm)
+
+Definizione del modello, no train.
+
+\- Voglio stimare il log di lordo totale
+
+\- Le componenti che lo stimano sono Local Linear Trend, Stagionalità 7
+giorni, Stagionalità 365
+
+\- NA è per quelle cose che vanno stimate - Sia che la definizione del
+modello, questo oggetto contiene anche i dati e i regressioni
 
 ```{r}
 mod1 <- SSModel(log(lordototale+10)~
                   SSMtrend(2, list(NA, NA))+
                   SSMseasonal(7, NA)+
                   SSMseasonal(365, NA, "trigonometric", harmonics = 1:10),
-                H=NA,
+                H=NA, 
                 data=train)
 ```
+
+Assegna i valori iniziali ai parametri, parte da 0.
 
 ```{r}
 mod1$P1inf[] <- 0 # no componenti diffuse
 mod1$a1[1] <- mean(log(train$lordototale[1:50])) # scelta basata sui valori del primo mese
 
+# Varianza della serie storica, utilizzata sotto per dare un ordine di grandezza
 vy <- var(log(train$lordototale[1:50])) # calcoliamo la varianza
 diag(mod1$P1) <- vy*10 # specifichiamo che abbiamo molta incertezza sui valori che abbiamo specificato
 ```
+
+Inizializzazione delle varianze sulla base di vy
 
 ```{r}
 pars <- log(c(
@@ -96,6 +122,8 @@ pars <- log(c(
   logVarEps = vy/10
 ))
 ```
+
+Definita funzione di update
 
 ```{r}
 updt1 <- function(pars, model){
@@ -108,32 +136,50 @@ updt1 <- function(pars, model){
 }
 ```
 
+Train - Si allena sui valori passati (quindi quei valori di train non
+nulli) - Train è in mod1
+
 ```{r}
 fit1 <- fitSSM(mod1, pars, updt1)
 fit1$optim.out
 ```
 
+Filtro di karman - Effetua le predizioni - kfs1\$muhat contiene una
+serie storica predetta (anche i dati di train sono predetti)
+
 ```{r}
+# Filtro di karman
 kfs1 <- KFS(fit1$model,
             smoothing = c("state", "signal", "disturbance"))
 
-
+# Togli (plot del local linear trend, alphahat)
 alphahat <- xts(as.matrix(kfs1$alphahat),
                 index(train))
 alphahat <- as.xts(alphahat)
 
 plot(log(train$lordototale))
 lines(alphahat[, "level"], col = "red", lwd = 3)
+# Togli fino a qui
 ```
 
+Conversione di muhat1 (serie storica predetta) -\> previsioni del
+modello1
+
 ```{r}
+# Togli plot validation dato vero
 plot(log(val$lordototale[validation_date:nrow(val),]), lwd=3)
 
+# Questo tieni
 muhat1 <- xts(as.matrix(kfs1$muhat),
                 index(train))
 muhat1 <- as.xts(muhat1)
+# Prendi questa parte: muhat1[validation_date:nrow(val) per la selezione del validation
+
+# Togli Plot delle predizioni muhat1
 lines(muhat1[validation_date:nrow(val),], type = "l", col = "red", lwd=3) # [1801:1826,]
 ```
+
+Da qui in poi faccio io
 
 ```{r}
 mape(val$lordototale[validation_date:nrow(val),], exp(muhat1[validation_date:nrow(val),]))
@@ -150,6 +196,8 @@ plot(smo_lev_se)
 ```
 
 ## Modello 2 (trend + stag7_d + stag365_10arm + weekend + festivo)
+
+Aggiunta di due regressori
 
 ```{r}
 mod2 <- SSModel(log(lordototale+10)~Weekend + Festivo +
@@ -263,11 +311,12 @@ fit4$optim.out
 kfs4 <- KFS(fit4$model,
             smoothing = c("state", "signal", "disturbance"))
 
-
+# Togli
 iniz <- validation_date -50
 fine <- nrow(val) -50
 
 plot(log(val$lordototale[iniz:fine,]), lwd=3)
+# Togli fino a qui
 
 muhat4 <- xts(as.matrix(kfs4$muhat),
                 index(train))
@@ -283,7 +332,11 @@ rmse(val$lordototale[validation_date:nrow(val),], exp(muhat4[validation_date:nro
 
 ## Modello 5 (trend + stag7_t + fest_precovid)
 
+Processing, ottenimento di prova, il dataset che contiene serie storica
+e regressori - Da inserire
+
 ```{r}
+# Processing fuori la funzione
 temp <- dummy_cols(precovid1[10], select_columns = c("Giorno"), 
                       remove_first_dummy = TRUE, 
                       remove_selected_columns = TRUE)
@@ -299,6 +352,7 @@ ss <- xts(prova,
 colnames(ss)[1] <- "lordototale"
 ss$lordototale <- as.numeric(ss$lordototale)
 
+# Processing dentro la funzione
 train_date <- nrow(ss) * 0.8
 val <- ss[1:train_date,]
 test <- ss[-c(1:train_date),] # Usare alla fine
@@ -436,6 +490,324 @@ muhat6 <- as.xts(muhat6)
 lines(muhat6[iniz:fine,], type = "l", col = "red", lwd=3) # [1801:1826,]
 ```
 
+## Evaluation: Confronto forecasting performance dei modelli
+
+### Scelta misura di *forecasting accuracy*
+
+Al fine di confrontare i diversi modelli definiti precedentemente è
+importante valutare le performance in termini forecasting accuracy.
+Prima di definire la procedura di calcolo della forecasting accuracy è
+importante selezionare la propria misura di accuratezza.
+
+Si sceglie di utilizzare due misure di accuratezza (**MAE, RMSE e MSE**)
+di tipo **scale-dependent** perchè:
+
+-   Misure di accuratezza basate su percentage errors e scaled errors
+    (unit-free) sono indicate per comparare le performance di
+    forecasting tra data set diversi
+
+-   Errori di tipo scale-dependent sono nella stessa scala dei dati, ma
+    in questo caso non è un problema
+
+-   Si evitano tutte le problematiche relative alle misure di percentage
+    errors legate:
+
+    -   al fatto che l'errore viene diviso per il valore
+        dell'osservazione (valori infiniti per y che tende a 0)
+
+    -   penalità maggiori per errori negativi piuttosto che quelli
+        positivi
+
+### Procedura di *Cross-Validation* con *rolling forecasting origin*
+
+Effettuo la procedura di *Time-Series Cross Validation* o *Evaluating on
+a Rolling Forecasting Origin* al fine di:
+
+-   Confrontare i diversi modelli in termini di Performance di
+    Forecasting
+
+-   Potere allenare i modelli sull'intero dataset e non perdere i dati
+    del test set (essendo questo già piccolo)
+
+-   Ottenere comunque due misure di performarmance di accuratezza di
+    forecasting accuracy
+
+-   Determino la forecasting accuracy (come MAE/RMSE/MSE) per k-step
+    avanti dove k (chiamato h, orizzonte, nella funzione `tsCV()`) sarà
+    il mio orizzonte di previsione nel periodo covid
+
+    -   Confrontare l'andamento dei diversi modelli all'aumentare degli
+        step ci consentirà di selezionare
+
+-   Parametri di cross-validation -\> Scelgo come tipologia di Time
+    Series Cross Validation quella **Constant Holdout**
+
+    -   Scelgo arbitrariamente una finestra iniziale (**fixed origin**)
+        di training (il numero minimo di osservazioni necessario a
+        stimare il modello) come 120-\> parametro `initial`
+
+        -   È prassi impostare una finestra iniziale che sia almeno 3
+            volte l'orizzonte di previsione
+
+        -   Per i modelli con regessori che si realizzano annualmente
+            (es. natale) la finestra iniziale sarà 1 anno (365 giorni)
+
+    -   **Non-Constant Holdout** -\> in modo da utilizzare tutti i dati
+        per il training (altrimenti il training si fermerebbe
+        all'osservazione n-h)
+
+    -   **Non-Constant In-Sample -\>** Non impostiamo il parametro
+        `window`, che altrimenti andrebbe a settare un dimensione
+        fissata del training set e quindi una moving window
+
+### Definizione funzione di Time Series Cross-Validation (`tsCV_UCM()`)
+
+La funzione che ho definito è nello script
+`My-TSCrossValidation-Functions.R`
+
+```{r}
+source("My-TSCrossValidation-Functions.R")
+```
+
+### Load Data
+
+Carico dataset
+
+```{r}
+precovid1 <- read.csv("../Dati ristoranti/pre-covid_r1.csv", row.names = 1)
+fest_pre <- read_xlsx("../Dati aggiuntivi/fest_precovid.xlsx")
+```
+
+### Definizione funzioni dei modelli
+
+```{r}
+## Modello 1 (trend + stag7_d + stag365_10arm)
+
+# Definizione modelli e assegnazione
+f_mod1 <- function(train) {
+  # Definizione del modello
+  mod1 <- SSModel(log(lordototale+10)~
+                    SSMtrend(2, list(NA, NA))+
+                    SSMseasonal(7, NA)+
+                    SSMseasonal(365, NA, "trigonometric", harmonics = 1:10),
+                  H=NA, 
+                  data=train)
+
+  mod1$P1inf[] <- 0 # no componenti diffuse
+  mod1$a1[1] <- mean(log(train$lordototale[1:50])) # scelta basata sui valori del primo mese
+  
+  vy <- var(log(train$lordototale[1:50])) # calcoliamo la varianza
+  diag(mod1$P1) <- vy*10 # specifichiamo che abbiamo molta incertezza sui valori che abbiamo specificato
+  
+  pars <- log(c(
+    logVarEta = vy/10,
+    logVarZeta = vy/1000,
+    logVarOm7 = vy/1000,
+    logVarOm365 = vy/10000,
+    logVarEps = vy/10
+  ))
+  
+  updt1 <- function(pars, model){
+    model$Q[1,1,1] <- exp(pars[1])
+    model$Q[2,2,1] <- exp(pars[2])
+    model$Q[3,3,1] <- exp(pars[3])
+    diag(model$Q[4:23, 4:23, 1]) <- exp(pars[4])
+    model$H[1,1,1] <- exp(pars[5])
+    model
+  }
+  
+  fit1 <- fitSSM(mod1, pars, updt1)
+  fit1$optim.out
+  
+  kfs1 <- KFS(fit1$model,
+            smoothing = c("state", "signal", "disturbance"))
+  
+  muhat1 <- xts(as.matrix(kfs1$muhat),
+                index(train))
+  muhat1 <- as.xts(muhat1)
+  return(muhat1)
+}
+
+## Modello 4 (trend + stag7_t + festivo)
+
+f_mod4 <- function(train) {
+  # Definizione del modello
+  mod4 <- SSModel(log(lordototale+10)~Festivo + #Weekend + 
+                  SSMtrend(2, list(NA, NA))+
+                  SSMseasonal(7, NA, "trigonometric"),
+                  # SSMseasonal(365, NA, "trigonometric", harmonics = 1:10),
+                H=NA,
+                data=train)
+
+  updt4 <- function(pars, model){
+    model$Q[1,1,1] <- exp(pars[1])
+    model$Q[2,2,1] <- exp(pars[2])
+    model$Q[3,3,1] <- exp(pars[3])
+    diag(model$Q[4:8, 4:8, 1]) <- exp(pars[4])
+    model$H[1,1,1] <- exp(pars[5])
+    model
+  }
+  
+  mod4$P1inf[] <- 0 # no componenti diffuse
+  mod4$a1[1] <- mean(log(train$lordototale[1:50])) # scelta basata sui valori del primo mese
+  
+  diag(mod4$P1) <- vy*10 # specifichiamo che abbiamo molta incertezza sui valori che abbiamo specificato
+  
+  fit4 <- fitSSM(mod4, pars, updt4)
+  fit4$optim.out
+  
+  kfs4 <- KFS(fit4$model,
+              smoothing = c("state", "signal", "disturbance"))
+  
+  muhat4 <- xts(as.matrix(kfs4$muhat),
+                index(train))
+  muhat4 <- as.xts(muhat4)
+  return(muhat4)
+}
+
+## Modello 5 (trend + stag7_t + fest_precovid)
+f_mod5 <- function(train) {
+  mod5 <- SSModel(log(lordototale)~dec8+dec24+dec25+dec26+jan1+jan6+aug15+dec31+eastsun+eastermon+apr25+mag1+jun2+oct31+nov1+martgrasso+#bridge+#Giorno_Monday+Giorno_Tuesday+Giorno_Wednesday+Giorno_Thursday+Giorno_Saturday+Giorno_Sunday+
+                    SSMtrend(2, list(NA, NA))+
+                    SSMseasonal(7, NA, 'trigonometric'),
+                  H=NA,
+                  data=train)
+  
+  updt5 <- function(pars, model){
+    model$Q[1,1,1] <- exp(pars[1])
+    model$Q[2,2,1] <- exp(pars[2])
+    model$Q[3,3,1] <- exp(pars[3])
+    diag(model$Q[4:8, 4:8, 1]) <- exp(pars[4])
+    model$H[1,1,1] <- exp(pars[5])
+    model
+  }
+  
+  mod5$P1inf[] <- 0 # no componenti diffuse
+  mod5$a1[1] <- mean(log(train$lordototale[1:50])) # scelta basata sui valori del primo mese
+  
+  diag(mod5$P1) <- vy*10 # specifichiamo che abbiamo molta incertezza sui valori che abbiamo specificato
+  
+  fit5 <- fitSSM(mod5, pars, updt5)
+  fit5$optim.out
+  
+  kfs5 <- KFS(fit5$model,
+              smoothing = c("state", "signal", "disturbance"))
+
+  muhat5 <- xts(as.matrix(kfs5$muhat),
+                index(train))
+  muhat5 <- as.xts(muhat5)
+  return(muhat5)
+}
+```
+
+### Cross-Validation e eventuali processing ad hoc
+
+```{r}
+# Parametri di cross-validation globali
+h = 1 # 6 settimane
+initial = 365 # Un anno
+window = NULL # no moving window, si rolling origin
+
+# Calcolo tempo di computazione
+start.time <- Sys.time()
+print(start.time)
+
+# Processing valido per modello 1 e 4
+
+prova <- precovid1[, c(8,14,15)]
+prova$Weekend <- as.integer(as.logical(prova$Weekend))
+prova$Festivo <- as.integer(as.logical(prova$Festivo))
+ss <- xts(prova,
+            as.Date(as.character(precovid1$data),
+                    format = "%Y-%m-%d"))
+
+# CV su MODELLO 1 e 4
+
+e1 <- tsCV_UCM(my_xts = ss, forecastfunction = f_mod1, h=h, initial = initial, window = window)
+#e1 <- tail(e1, n = -initial)
+
+e2 <- tsCV_UCM(my_xts = ss, forecastfunction = f_mod4, h=h, initial = initial, window = window)
+
+# processing valido per modello 5
+
+temp <- dummy_cols(precovid1[10], select_columns = c("Giorno"), 
+                      remove_first_dummy = TRUE, 
+                      remove_selected_columns = TRUE)
+
+prova1 <- cbind(precovid1[, c(8)], fest_pre[,-1], temp)
+ss1 <- xts(prova1,
+            as.Date(as.character(precovid1$data),
+                    format = "%Y-%m-%d"))
+
+colnames(ss1)[1] <- "lordototale"
+ss1$lordototale <- as.numeric(ss1$lordototale)
+
+# CV su MODELLO 5
+
+e2 <- tsCV_UCM(my_xts = ss1, forecastfunction = f_mod5, h=h, initial = initial, window = window)
+
+
+end.time <- Sys.time()
+print(end.time)
+time.taken <- end.time - start.time
+print(time.taken)
+```
+
+#### Alcuni test
+
+```{r}
+y <- as.ts(ss$lordototale)
+tsp(y)
+#class(y)
+#y <- subset(y, start = 1, end = 100)
+#class(y)
+# e <- xts(matrix(NA_real_, nrow = 539, ncol = 4))
+e <- xts(matrix(NA, nrow = nrow(ss), ncol = 5), order.by = index(ss))
+
+#tsp(e) <- tsp(y)
+e
+
+# time(ss$lordototale)
+#xreg1 <- ts(as.matrix(xreg1))
+#xreg1 <- ts(rbind(xreg1, matrix(NA, nrow = h, ncol = NCOL(xreg1))), 
+#            start = start(y), frequency = frequency(y))
+```
+
+```{r}
+h = 5
+na_df <- seq(from = end(ss) + 1, 
+    to = end(ss) + h*1, 
+    by = "day")
+
+my_xts_new <- merge(ss$lordototale, na_df)
+class(my_xts_new)
+
+
+#na_df <- (matrix(NA, nrow = 30, ncol = ncol(ss)))
+#my_xts_extended <- rbind(ss, na_df)
+#class(my_xts_extended)
+```
+
+### Confrontro tra i modelli
+
+```{r}
+RMSE_mod1 <- sqrt(colMeans(e1^2, na.rm = TRUE))
+RMSE_mod4 <- sqrt(colMeans(e4^2, na.rm = TRUE))
+RMSE_mod5 <- sqrt(colMeans(e5^2, na.rm = TRUE))
+
+# Zoom in
+plot(1:42, RMSE_mod1, type="l", col=1, xlab="horizon", ylab="RMSE", ylim = c(2500,5000))
+lines(1:42, RMSE_mod4, type="l",col=2)
+lines(1:42, RMSE_mod5, type="l",col=3)
+legend("topleft",legend=c("1_UCM","4_UCM","5_UCM"),col=1:4,lty=1)
+
+# Zoom out
+plot(1:42, RMSE_mod1, type="l", col=1, xlab="horizon", ylab="RMSE", ylim = c(0,7000))
+lines(1:42, RMSE_mod4, type="l",col=2)
+lines(1:42, RMSE_mod5, type="l",col=3)
+legend("topleft",legend=c("1_UCM","4_UCM","5_UCM"),col=1:4,lty=1)
+```
+
 # Domanda 2
 
 ```{r}
@@ -444,8 +816,4 @@ setwd(working_dir) # lo applica solo a questo chunk!
 
 postcovid1 <- read.csv("../Dati ristoranti/pre-covid_r1.csv", row.names = 1)
 fest_post <- read_xlsx("../Dati aggiuntivi/fest_postcovid.xlsx")
-```
-
-```{r}
-
 ```
