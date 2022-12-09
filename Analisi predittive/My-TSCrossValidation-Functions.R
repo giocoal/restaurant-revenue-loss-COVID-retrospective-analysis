@@ -109,14 +109,15 @@ tsCV_UCM <- function(my_xts,  forecastfunction, h = 1, window = NULL,
         y_ground_truth <- my_xts[,1]
         if (!is.element("try-error", class(muhat))) {
             e[i, ] <- y_ground_truth[i + seq(h)] - muhat[i + seq(h)]
+            e_percentage[i, ] <- 100*(t(e[i, ])/y_ground_truth[i + seq(h)])
         }
     }
     if (h == 1) {
-        return(e[, 1L])
+        return(list(e = e[, 1L], e_percentage = e_percentage[, 1L]))
     }
     else {
         colnames(e) <- paste("h=", 1:h, sep = "")
-        return(e)
+        return(list(e = e, e_percentage = e_percentage))
     }   
 }
 
@@ -130,6 +131,8 @@ tsCV_RandomForest <- function(my_xts, xreg = NULL,  forecastfunction, h = 1, win
     #Creo una matrice xts degli errori, con lo stesso numero di righe e indice della serie storica
     #ma con un numero di colonne h e vuota
     e <- xts(matrix(NA, nrow = nrow(my_xts), ncol = h), order.by = index(my_xts))
+    e_percentage <- e
+    
     if (initial >= n) 
         stop("initial period too long")
     
@@ -169,9 +172,11 @@ tsCV_RandomForest <- function(my_xts, xreg = NULL,  forecastfunction, h = 1, win
 
     #print("ok1") # CHECK
 
-    if (is.null(window)) 
+    if (is.null(window)) {
         indx <- seq(1 + initial, n - 1L)
-    else indx <- seq(window + initial, n - 1L, by = 1L)
+    } else {
+        indx <- seq(window + initial, n - 1L, by = 1L)
+    }
 
     #print("ok2") # CHECK
 
@@ -220,14 +225,16 @@ tsCV_RandomForest <- function(my_xts, xreg = NULL,  forecastfunction, h = 1, win
         ## La posizione è i + 14 perchè i prim i 14 dati vanno persi a causa dei ritardi
         if (!is.element("try-error", class(fc))) {
             e[i, ] <- y_test[seq(h)] - fc[seq(h)]
+            # Trasposta per poter dividere per ogni riga
+            e_percentage[i, ] <- 100*(t(e[i, ])/y_test[seq(h)])
         }
     }
     if (h == 1) {
-        return(e[, 1L])
+        return(list(e = e[, 1L], e_percentage = e_percentage[, 1L]))
     }
     else {
         colnames(e) <- paste("h=", 1:h, sep = "")
-        return(e)
+        return(list(e = e, e_percentage = e_percentage))
     }   
 }
 

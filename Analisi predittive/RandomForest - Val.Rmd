@@ -1,12 +1,10 @@
 ---
 title: "Random Forest - Ristorante 1"
 output:
-  prettydoc::html_pretty:
+  html_document:
     df_print: paged
-    highlight: vignette
-    theme: architect
     toc: yes
-    toc_depth: 5
+    toc_depth: '5'
   beamer_presentation:
     colortheme: lily
     fig_caption: no
@@ -15,10 +13,12 @@ output:
     fonttheme: structurebold
     theme: Hannover
     toc: yes
-  html_document:
+  prettydoc::html_pretty:
     df_print: paged
+    highlight: vignette
+    theme: architect
     toc: yes
-    toc_depth: '5'
+    toc_depth: 5
   pdf_document:
     toc: yes
     toc_depth: 5
@@ -632,10 +632,10 @@ f_mod3 <- function(Y, h, newxreg = NULL) {
   for (i in 1:h) {
     y_hat[i] <- predict(rf1, X, predict.all = TRUE)$individual |> median() # predict.all=True mantiene la stima data da tutti gli alberi nella foresta. Dopodichè si vanno a selezionare tutti e a prenderne la mediana (in alternativa, la media)
     # Produco lo shift in X
-    # X viene aggionrato ogni volta, le stime entrano dei regressori
+    # X viene aggionrato ogni volta, le STIME entrano dei regressori
     X[1, 2:14] <- X[1, 1:13]
-    # Aggiorniamo anche i regressori
-    X[1, 15:ncol(X)] <- newxreg[i, 15:ncol(newxreg)]
+    # Aggiorniamo anche i regressori con i VALORI VERI del validation
+    X[1, 15:ncol(X)] <- newxreg[i, ]
     X[1, 1] <- y_hat[i]
   }
   return(y_hat)
@@ -661,7 +661,9 @@ rf_r1 <- xts(r1[, "lordototale"], as.Date(as.character(r1$data), format = "%Y-%m
 
 # CV su MODELLO 1
 
-e1 <- tsCV_RandomForest(my_xts = rf_r1[,1], forecastfunction = f_mod1, h=h, initial = initial, window = window)
+e_1 <- tsCV_RandomForest(my_xts = rf_r1[,1], forecastfunction = f_mod1, h=h, initial = initial, window = window)
+e1 <- e_1$e
+e1_percentage <- e_1$e_percentage
 
 # Pre processing modello 2
 
@@ -677,7 +679,9 @@ data <- cbind(rf_r1, yday, wday)
 
 # CV su MODELLO 2
 
-e2 <- tsCV_RandomForest(my_xts = data[,1], xreg = data[,-1], forecastfunction = f_mod2, h=h, initial = initial, window = window)
+e_2 <- tsCV_RandomForest(my_xts = data[,1], xreg = data[,-1], forecastfunction = f_mod2, h=h, initial = initial, window = window)
+e2 <- e_2$e
+e2_percentage <- e_2$e_percentage
 
 # Pre processing modello 3
 
@@ -688,16 +692,19 @@ data3 <- cbind(data3, dum_festivi_ts)
 
 # CV su MODELLO 3
 
-e3 <- tsCV_RandomForest(my_xts = data3[,1], xreg = data3[,-1], forecastfunction = f_mod3, h=h, initial = initial, window = window)
-```
+e_3 <- tsCV_RandomForest(my_xts = data3[,1], xreg = data3[,-1], forecastfunction = f_mod3, h=h, initial = initial, window = window)
+e3 <- e_3$e
+e3_percentage <- e_3$e_percentage
 
-### Alcuni test
-
-```{r}
-
+end.time <- Sys.time()
+print(end.time)
+time.taken <- end.time - start.time
+print(time.taken)
 ```
 
 ## Confrontro tra i modelli
+
+### RMSE
 
 ```{r}
 RMSE_mod1 <- sqrt(colMeans(e1^2, na.rm = TRUE))
@@ -705,14 +712,124 @@ RMSE_mod2 <- sqrt(colMeans(e2^2, na.rm = TRUE))
 RMSE_mod3 <- sqrt(colMeans(e3^2, na.rm = TRUE))
 
 # Zoom in
-plot(1:42, RMSE_mod1, type="l", col=1, xlab="horizon", ylab="RMSE", ylim = c(2500,5000))
-lines(1:42, RMSE_mod2, type="l",col=2)
-lines(1:42, RMSE_mod3, type="l",col=3)
-legend("topleft",legend=c("1_RandomForest_noregr","2_RandomForest_regr","3_RandomForest_regr"),col=1:3,lty=1)
+#plot(1:42, RMSE_mod1, type="l", col=1, xlab="horizon", ylab="RMSE", ylim = c(2500,5000))
+#lines(1:42, RMSE_mod2, type="l",col=2)
+#lines(1:42, RMSE_mod3, type="l",col=3)
+#legend("topleft",legend=c("1_RandomForest_noregr","2_RandomForest_regr","3_RandomForest_regr"),col=1:3,lty=1)
 
 # Zoom out
-plot(1:42, RMSE_mod1, type="l", col=1, xlab="horizon", ylab="RMSE", ylim = c(0,7000))
+plot(1:42, RMSE_mod1, type="l", col=1, xlab="horizon", ylab="RMSE", ylim = c(0,13000))
 lines(1:42, RMSE_mod2, type="l",col=2)
 lines(1:42, RMSE_mod3, type="l",col=3)
-legend("topleft",legend=c("1_RandomForest_noregr","2_RandomForest_regr","3_RandomForest_regr"),col=1:3,lty=1)
+legend("topleft",legend=c("1_RandomForest_noregr","2_RandomForest_regr","3_RandomForest_regr_DUmmy"),col=1:3,lty=1)
+```
 
+### MAE
+
+```{r}
+MAE_mod1 <- colMeans(abs(e1), na.rm = TRUE)
+MAE_mod2 <- colMeans(abs(e2), na.rm = TRUE)
+MAE_mod3 <- colMeans(abs(e3), na.rm = TRUE)
+
+plot(1:42, MAE_mod1, type="l", col=1, xlab="horizon", ylab="MAE", ylim = c(0,13000))
+lines(1:42, MAE_mod2, type="l",col=2)
+lines(1:42, MAE_mod3, type="l",col=3)
+legend("topleft",legend=c("1_RandomForest_noregr","2_RandomForest_regr","3_RandomForest_regrDummy"),col=1:3,lty=1)
+```
+### MAPE
+
+```{r}
+MAPE_mod1 <- colMeans(abs(e1_percentage), na.rm = TRUE)
+MAPE_mod2 <- colMeans(abs(e2_percentage), na.rm = TRUE)
+MAPE_mod3 <- colMeans(abs(e3_percentage), na.rm = TRUE)
+
+plot(1:42, MAPE_mod1, type="l", col=1, xlab="horizon", ylab="MAPE", ylim = c(0,100))
+lines(1:42, MAPE_mod2, type="l",col=2)
+lines(1:42, MAPE_mod3, type="l",col=3)
+legend("topleft",legend=c("1_RandomForest_noregr","2_RandomForest_regr","3_RandomForest_regrDummy"),col=1:3,lty=1)
+```
+
+## Debug
+
+### Debug terza funzione
+
+```{r}
+# dum_festivi_ts <- xts(df_festivi[, 2:18], as.Date(as.character(r1$data), format = "%Y-%m-%d"))
+# 
+# data3 <- subset(data, select = -c(2))
+# data3 <- cbind(data3, dum_festivi_ts)
+# 
+# my_xts = data3[,1]
+# xreg = data3[,-1]
+# n <- nrow(my_xts)
+# 
+# if (nrow(xreg) != nrow(my_xts)) 
+#             stop("xreg must be of the same size as y")
+#         
+#         # Creo una matrixe xts di NA, che parte dall'ultimo giorno + 1 della nostra serie storica
+#         na_df <- seq(from = end(my_xts) + 1, 
+#             to = end(my_xts) + h, 
+#             by = "day")
+#         # Stessa cosa per i regressori
+#         na_df_xreg <- seq(from = end(xreg) + 1, 
+#             to = end(xreg) + h, 
+#             by = "day")
+# 
+#         # Aggiungo la matrice dei NA alla fine della serie storica e della matrice dei regressori
+#         my_xts <- merge(my_xts, na_df)
+#         xreg <- merge(xreg, na_df_xreg)
+#         
+# if (is.null(window)) {
+#   indx <- seq(1 + initial, n - 1L)
+# } else {
+#     indx <- seq(window + initial, n - 1L, by = 1L)
+# }
+#         
+# i = 366
+# 
+# start <- ifelse(is.null(window), 1L, ifelse(i - window >= 0L, i - window + 1L, stop("small window")))
+# end <- i  # imposto come end i + h perchè così ho il train
+# 
+# y_subset <- my_xts[start:end,]
+# y_test <- my_xts[(end + 1):(end + h),]
+# 
+# y_subset <- xts(embed(y_subset, 15), order.by = index(tail(y_subset, n = -14)))
+# colnames(y_subset) <- c("y", paste0("y_", 1:14))
+# 
+# xreg_subset <- xreg[start:end,]
+# xreg_future <- xreg[(end + 1):(end + h),]
+# 
+# ## Combino i regressori di train con la matrice dei ritardi e y
+# # Rimuovo le prime 14 osservazioni di xreg
+# xreg_subset <- tail(xreg_subset, n = -14)
+# # Combino
+# Y <- cbind(y_subset, xreg_subset)
+# names(Y) <- c(names(y_subset), names(xreg_subset))
+# 
+# rf1 <- randomForest(y~., data = Y)
+#   
+# # Definizione vettore vuoto che conterrà le previsioni
+# y_hat <- numeric(h)
+# 
+# ## Regressori per le previsioni
+# # Prendo ultima riga della matrice dei regressori, elimino l'ultimo ritardo
+# X <- Y[nrow(Y), -15, drop = FALSE] 
+# colnames(X) <- colnames(Y)[-1] 
+# 
+# newxreg <- xreg_future
+# 
+# # Itero la generazione dei regressori sulle h previsioni
+# for (i in 1:h) {
+#   y_hat[i] <- predict(rf1, X, predict.all = TRUE)$individual |> median() # predict.all=True mantiene la stima data da tutti gli alberi nella foresta. Dopodichè si vanno a selezionare tutti e a prenderne la mediana (in alternativa, la media)
+#   # Produco lo shift in X
+#   # X viene aggionrato ogni volta, le STIME entrano dei regressori
+#   #print(1)
+#   X[1, 2:14] <- X[1, 1:13]
+#   # Aggiorniamo anche i regressori con quelli più recenti VERI
+#   X[1, 15:ncol(X)] <- newxreg[i, ]
+#   X[1, 1] <- y_hat[i]
+# }
+# 
+# fc <- as.xts(y_hat, order.by = date(y_test))
+# e[i, ] <- y_test[seq(h)] - fc[seq(h)]
+```
