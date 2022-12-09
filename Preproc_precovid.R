@@ -21,8 +21,8 @@ invisible(lapply(packages, library, character.only = TRUE))
 
 # Setting working directory
 # working_dir = percorso cartella dati
-working_dir = "C:/Users/marco/OneDrive/UNIMIB_DataScience/99-PROJECTS/DataScienceLab2022/Dati ristoranti"
-setwd(working_dir)
+working_dir = dirname(rstudioapi::getSourceEditorContext()$path)
+setwd(working_dir) # lo applica solo a questo chunk!
 
 # Funzione utile 
 mape <- function(actual,pred){
@@ -31,7 +31,7 @@ mape <- function(actual,pred){
 }
 
 # Caricamento datasets
-ristorante1 <- read.csv("ristorante1.csv")
+ristorante1 <- read.csv("Dati ristoranti/ristorante1.csv")
 
 # Metto i NA a 0
 ristorante1$lordototale[is.na(ristorante1$lordototale)] <- 0
@@ -72,11 +72,17 @@ data_covid <- as.Date("2020-02-23", format = "%Y-%m-%d")
 # Ristorante 1 pre-COVID
 copy_ristorante1_pre_covid <- copy_ristorante1 %>% filter(copy_ristorante1$data <= data_covid)
 
-write.csv(copy_ristorante1_pre_covid, "pre-covid_R1.csv")
+write.csv(copy_ristorante1_pre_covid, "Dati ristoranti/pre-covid_R1.csv")
+
+# Ristorante 1 pre-COVID
+data_finecovid <- as.Date("2020-05-07", format = "%Y-%m-%d") #DA DECIDERE
+copy_ristorante1_post_covid <- copy_ristorante1 %>% filter(copy_ristorante1$data >= data_finecovid)
+
+write.csv(copy_ristorante1_post_covid, "Dati ristoranti/post-covid_R1.csv")
 
 # Dataset covid per previsioni (tutto il resto del 2020)
 ref_date <- as.Date("2020-12-31", format = "%Y-%m-%d")
 
 r1_covidperiod <- copy_ristorante1 %>% filter(copy_ristorante1$data > data_covid, copy_ristorante1$data <= ref_date)
 
-write.csv(r1_covidperiod, "periodo-covid_r1.csv")
+write.csv(r1_covidperiod, "Dati ristoranti/periodo-covid_r1.csv")
