@@ -182,9 +182,8 @@ Stime:
 
 -   Carico la ground truth in y_hat
 
-```{=html}
 <!-- -->
-```
+
 -   Stimo il primo orizzonte temporale (1 step)
 
 -   La stima step viene messo dentro la matrice, come regressori (perchè ricorda che hai bisogno di 14 dati precedenti)
@@ -502,3 +501,218 @@ cat("\nMod 2 - RMSE:", rmse(y_test2, rf_pred2))
 cat("\nMod 3 - RMSE:", rmse(y_test3, rf_pred3))
 cat("\nMod 4 - RMSE:", rmse(validation4$lordototale, rf_pred4))
 ```
+
+# Evaluation: Confronto forecasting performance dei modelli
+
+## Scelta misura di *forecasting accuracy*
+
+Al fine di confrontare i diversi modelli definiti precedentemente è importante valutare le performance in termini forecasting accuracy. Prima di definire la procedura di calcolo della forecasting accuracy è importante selezionare la propria misura di accuratezza.
+
+Si sceglie di utilizzare due misure di accuratezza (**MAE, RMSE e MSE**) di tipo **scale-dependent** perchè:
+
+-   Misure di accuratezza basate su percentage errors e scaled errors (unit-free) sono indicate per comparare le performance di forecasting tra data set diversi
+
+-   Errori di tipo scale-dependent sono nella stessa scala dei dati, ma in questo caso non è un problema
+
+-   Si evitano tutte le problematiche relative alle misure di percentage errors legate:
+
+    -   al fatto che l'errore viene diviso per il valore dell'osservazione (valori infiniti per y che tende a 0)
+
+    -   penalità maggiori per errori negativi piuttosto che quelli positivi
+
+## Procedura di *Cross-Validation* con *rolling forecasting origin*
+
+Effettuo la procedura di *Time-Series Cross Validation* o *Evaluating on a Rolling Forecasting Origin* al fine di:
+
+-   Confrontare i diversi modelli in termini di Performance di Forecasting
+
+-   Potere allenare i modelli sull'intero dataset e non perdere i dati del test set (essendo questo già piccolo)
+
+-   Ottenere comunque due misure di performarmance di accuratezza di forecasting accuracy
+
+-   Determino la forecasting accuracy (come MAE/RMSE/MSE) per k-step avanti dove k (chiamato h, orizzonte, nella funzione `tsCV()`) sarà il mio orizzonte di previsione nel periodo covid
+
+    -   Confrontare l'andamento dei diversi modelli all'aumentare degli step ci consentirà di selezionare
+
+-   Parametri di cross-validation -\> Scelgo come tipologia di Time Series Cross Validation quella **Constant Holdout**
+
+    -   Scelgo arbitrariamente una finestra iniziale (**fixed origin**) di training (il numero minimo di osservazioni necessario a stimare il modello) come 120-\> parametro `initial`
+
+        -   È prassi impostare una finestra iniziale che sia almeno 3 volte l'orizzonte di previsione
+
+        -   Per i modelli con regessori che si realizzano annualmente (es. natale) la finestra iniziale sarà 1 anno (365 giorni)
+
+    -   **Non-Constant Holdout** -\> in modo da utilizzare tutti i dati per il training (altrimenti il training si fermerebbe all'osservazione n-h)
+
+    -   **Non-Constant In-Sample -\>** Non impostiamo il parametro `window`, che altrimenti andrebbe a settare un dimensione fissata del training set e quindi una moving window
+
+## Definizione funzione di Time Series Cross-Validation (`tsCV_UCM()`)
+
+La funzione che ho definito è nello script `My-TSCrossValidation-Functions.R`  .
+
+```{r}
+source("My-TSCrossValidation-Functions.R")
+```
+
+## Load Data
+
+Carico dataset
+
+```{r}
+r1 <- read.csv("..\\Dati ristoranti\\pre-covid_r1.csv")
+r1$data  <- parse_date(r1$data, "%Y-%m-%d", locale = locale("it"))
+
+df_festivi <- readxl::read_xlsx("../Dati aggiuntivi/fest_precovid.xlsx")
+```
+
+## Definizione funzioni dei modelli
+
+```{r}
+f_mod1 <- function(Y, h, newxreg = NULL) {
+  # Definizione e train del modello
+  rf1 <- randomForest(y~., data = Y)
+  
+  # Definizione vettore vuoto che conterrà le previsioni
+  y_hat <- numeric(h)
+  
+  ## Regressori per le previsioni
+  # Prendo ultima riga della matrice dei regressori, elimino l'ultimo ritardo
+  X <- Y[nrow(Y), -15, drop = FALSE] 
+  colnames(X) <- colnames(Y)[-1] 
+  
+  # Itero la generazione dei regressori sulle h previsioni
+  for (i in 1:h) {
+    y_hat[i] <- predict(rf1, X, predict.all = TRUE)$individual |> median() # predict.all=True mantiene la stima data da tutti gli alberi nella foresta. Dopodichè si vanno a selezionare tutti e a prenderne la mediana (in alternativa, la media)
+    # Produco lo shift in X
+    # X viene aggionrato ogni volta, le stime entrano dei regressori
+    X[1, 2:14] <- X[1, 1:13]
+    X[1, 1] <- y_hat[i]
+  }
+  return(y_hat)
+}
+
+f_mod2 <- function(Y, h, newxreg = NULL) {
+  # Definizione e train del modello
+  rf1 <- randomForest(y~., data = Y)
+  
+  # Definizione vettore vuoto che conterrà le previsioni
+  y_hat <- numeric(h)
+  
+  ## Regressori per le previsioni
+  # Prendo ultima riga della matrice dei regressori, elimino l'ultimo ritardo
+  X <- Y[nrow(Y), -15, drop = FALSE] 
+  colnames(X) <- colnames(Y)[-1] 
+  
+  # Itero la generazione dei regressori sulle h previsioni
+  for (i in 1:h) {
+    y_hat[i] <- predict(rf1, X, predict.all = TRUE)$individual |> median() # predict.all=True mantiene la stima data da tutti gli alberi nella foresta. Dopodichè si vanno a selezionare tutti e a prenderne la mediana (in alternativa, la media)
+    # Produco lo shift in X
+    # X viene aggionrato ogni volta, le stime entrano dei regressori
+    X[1, 2:14] <- X[1, 1:13]
+    # Aggiorniamo anche i regressori
+    X[1, c("Festivo", "Pioggia", "yday", "wday")] <- newxreg[i, c("Festivo", "Pioggia", "yday", "wday")]
+    X[1, 1] <- y_hat[i]
+  }
+  return(y_hat)
+}
+
+f_mod3 <- function(Y, h, newxreg = NULL) {
+  # Definizione e train del modello
+  rf1 <- randomForest(y~., data = Y)
+  
+  # Definizione vettore vuoto che conterrà le previsioni
+  y_hat <- numeric(h)
+  
+  ## Regressori per le previsioni
+  # Prendo ultima riga della matrice dei regressori, elimino l'ultimo ritardo
+  X <- Y[nrow(Y), -15, drop = FALSE] 
+  colnames(X) <- colnames(Y)[-1] 
+  
+  # Itero la generazione dei regressori sulle h previsioni
+  for (i in 1:h) {
+    y_hat[i] <- predict(rf1, X, predict.all = TRUE)$individual |> median() # predict.all=True mantiene la stima data da tutti gli alberi nella foresta. Dopodichè si vanno a selezionare tutti e a prenderne la mediana (in alternativa, la media)
+    # Produco lo shift in X
+    # X viene aggionrato ogni volta, le stime entrano dei regressori
+    X[1, 2:14] <- X[1, 1:13]
+    # Aggiorniamo anche i regressori
+    X[1, 15:ncol(X)] <- newxreg[i, 15:ncol(newxreg)]
+    X[1, 1] <- y_hat[i]
+  }
+  return(y_hat)
+}
+```
+
+
+## Cross-Validation e eventuali processing ad hoc
+
+```{r}
+# Parametri di cross-validation globali
+h = 42 # 6 settimane
+initial = 365 # Un anno
+window = NULL # no moving window, si rolling origin
+
+# Calcolo tempo di computazione
+start.time <- Sys.time()
+print(start.time)
+
+# Pre processing modello 1
+
+rf_r1 <- xts(r1[, "lordototale"], as.Date(as.character(r1$data), format = "%Y-%m-%d"))
+
+# CV su MODELLO 1
+
+e1 <- tsCV_RandomForest(my_xts = rf_r1[,1], forecastfunction = f_mod1, h=h, initial = initial, window = window)
+
+# Pre processing modello 2
+
+rf_r1 <- xts(r1[, c("lordototale", "Festivo", "Pioggia")], as.Date(as.character(r1$data), format = "%Y-%m-%d"))
+
+rf_r1$Festivo[rf_r1$Festivo=="False"] <- 0
+rf_r1$Festivo[rf_r1$Festivo=="True"] <- 1
+rf_r1$Pioggia[rf_r1$Pioggia==""] <- 0
+rf_r1$Pioggia[rf_r1$Pioggia=="True"] <- 1
+yday <- yday(time(rf_r1))
+wday <- wday(time(rf_r1), week_start = getOption("lubridate.week.start", 1))
+data <- cbind(rf_r1, yday, wday)
+
+# CV su MODELLO 2
+
+e2 <- tsCV_RandomForest(my_xts = data[,1], xreg = data[,-1], forecastfunction = f_mod2, h=h, initial = initial, window = window)
+
+# Pre processing modello 3
+
+dum_festivi_ts <- xts(df_festivi[, 2:18], as.Date(as.character(r1$data), format = "%Y-%m-%d"))
+
+data3 <- subset(data, select = -c(2))
+data3 <- cbind(data3, dum_festivi_ts)
+
+# CV su MODELLO 3
+
+e3 <- tsCV_RandomForest(my_xts = data3[,1], xreg = data3[,-1], forecastfunction = f_mod3, h=h, initial = initial, window = window)
+```
+
+### Alcuni test
+
+```{r}
+
+```
+
+## Confrontro tra i modelli
+
+```{r}
+RMSE_mod1 <- sqrt(colMeans(e1^2, na.rm = TRUE))
+RMSE_mod2 <- sqrt(colMeans(e2^2, na.rm = TRUE))
+RMSE_mod3 <- sqrt(colMeans(e3^2, na.rm = TRUE))
+
+# Zoom in
+plot(1:42, RMSE_mod1, type="l", col=1, xlab="horizon", ylab="RMSE", ylim = c(2500,5000))
+lines(1:42, RMSE_mod2, type="l",col=2)
+lines(1:42, RMSE_mod3, type="l",col=3)
+legend("topleft",legend=c("1_RandomForest_noregr","2_RandomForest_regr","3_RandomForest_regr"),col=1:3,lty=1)
+
+# Zoom out
+plot(1:42, RMSE_mod1, type="l", col=1, xlab="horizon", ylab="RMSE", ylim = c(0,7000))
+lines(1:42, RMSE_mod2, type="l",col=2)
+lines(1:42, RMSE_mod3, type="l",col=3)
+legend("topleft",legend=c("1_RandomForest_noregr","2_RandomForest_regr","3_RandomForest_regr"),col=1:3,lty=1)
+
