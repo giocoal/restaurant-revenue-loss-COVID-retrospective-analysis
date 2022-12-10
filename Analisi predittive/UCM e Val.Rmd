@@ -723,10 +723,14 @@ ss <- xts(prova,
 
 # CV su MODELLO 1 e 4
 
-e1 <- tsCV_UCM(my_xts = ss, forecastfunction = f_mod1, h=h, initial = initial, window = window)
+e_1 <- tsCV_UCM(my_xts = ss, forecastfunction = f_mod1, h=h, initial = initial, window = window)
 #e1 <- tail(e1, n = -initial)
+e1 <- e_1$e
+e1_percentage <- e_1$e_percentage
 
-e4 <- tsCV_UCM(my_xts = ss, forecastfunction = f_mod4, h=h, initial = initial, window = window)
+e_4 <- tsCV_UCM(my_xts = ss, forecastfunction = f_mod4, h=h, initial = initial, window = window)
+e4 <- e_4$e
+e4_percentage <- e_4$e_percentage
 
 # processing valido per modello 5
 
@@ -744,8 +748,9 @@ ss1$lordototale <- as.numeric(ss1$lordototale)
 
 # CV su MODELLO 5
 
-e5 <- tsCV_UCM(my_xts = ss1, forecastfunction = f_mod5, h=h, initial = initial, window = window)
-
+e_5 <- tsCV_UCM(my_xts = ss1, forecastfunction = f_mod5, h=h, initial = initial, window = window)
+e5 <- e_5$e
+e5_percentage <- e_5$e_percentage
 
 end.time <- Sys.time()
 print(end.time)
@@ -790,6 +795,8 @@ class(my_xts_new)
 
 ### Confrontro tra i modelli
 
+### RMSE
+
 ```{r}
 RMSE_mod1 <- sqrt(colMeans(e1^2, na.rm = TRUE))
 RMSE_mod4 <- sqrt(colMeans(e4^2, na.rm = TRUE))
@@ -806,6 +813,32 @@ plot(1:42, RMSE_mod1, type="l", col=1, xlab="horizon", ylab="RMSE", ylim = c(0,7
 lines(1:42, RMSE_mod4, type="l",col=2)
 lines(1:42, RMSE_mod5, type="l",col=3)
 legend("topleft",legend=c("1_UCM","4_UCM","5_UCM"),col=1:4,lty=1)
+```
+
+### MAE
+
+```{r}
+MAE_mod1 <- colMeans(abs(e1), na.rm = TRUE)
+MAE_mod4 <- colMeans(abs(e4), na.rm = TRUE)
+MAE_mod5 <- colMeans(abs(e5), na.rm = TRUE)
+
+plot(1:42, MAE_mod1, type="l", col=1, xlab="horizon", ylab="MAE", ylim = c(0,13000))
+lines(1:42, MAE_mod2, type="l",col=2)
+lines(1:42, MAE_mod3, type="l",col=3)
+legend("topleft",legend=c("1_RandomForest_noregr","2_RandomForest_regr","3_RandomForest_regrDummy"),col=1:3,lty=1)
+```
+
+### MAPE
+
+```{r}
+MAPE_mod1 <- colMeans(abs(e1_percentage), na.rm = TRUE)
+MAPE_mod4 <- colMeans(abs(e4_percentage), na.rm = TRUE)
+MAPE_mod5 <- colMeans(abs(e5_percentage), na.rm = TRUE)
+
+plot(1:42, MAPE_mod1, type="l", col=1, xlab="horizon", ylab="MAPE", ylim = c(0,13000))
+lines(1:42, MAPE_mod2, type="l",col=2)
+lines(1:42, MAPE_mod3, type="l",col=3)
+legend("topleft",legend=c("1_RandomForest_noregr","2_RandomForest_regr","3_RandomForest_regrDummy"),col=1:3,lty=1)
 ```
 
 # Domanda 2
