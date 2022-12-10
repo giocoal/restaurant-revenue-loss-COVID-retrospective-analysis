@@ -72,13 +72,13 @@ data_covid <- as.Date("2020-02-23", format = "%Y-%m-%d")
 # Ristorante 1 pre-COVID
 copy_ristorante1_pre_covid <- copy_ristorante1 %>% filter(copy_ristorante1$data <= data_covid)
 
-write.csv(copy_ristorante1_pre_covid, "Dati ristoranti/pre-covid_R1.csv")
+write.csv(copy_ristorante1_pre_covid, "Dati ristoranti/pre-covid_r1.csv")
 
 # Ristorante 1 pre-COVID
 data_finecovid <- as.Date("2020-05-07", format = "%Y-%m-%d") #DA DECIDERE
 copy_ristorante1_post_covid <- copy_ristorante1 %>% filter(copy_ristorante1$data >= data_finecovid)
 
-write.csv(copy_ristorante1_post_covid, "Dati ristoranti/post-covid_R1.csv")
+write.csv(copy_ristorante1_post_covid, "Dati ristoranti/post-covid_r1.csv")
 
 # Dataset covid per previsioni (tutto il resto del 2020)
 ref_date <- as.Date("2020-12-31", format = "%Y-%m-%d")
