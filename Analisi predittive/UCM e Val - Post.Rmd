@@ -54,14 +54,6 @@ rmse <- function(actual, pred){
 ```
 
 ```{r}
-prova$ColoreCOVID
-```
-
-```{r}
-fastDummies::dummy_cols(prova$ColoreCOVID, remove_first_dummy = TRUE)
-```
-
-```{r}
 prova <- postcovid1[, c(8,14,15, 19)]
 prova$Weekend <- as.integer(as.logical(prova$Weekend))
 prova$Festivo <- as.integer(as.logical(prova$Festivo))
