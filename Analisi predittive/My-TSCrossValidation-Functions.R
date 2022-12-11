@@ -56,6 +56,7 @@ tsCV_UCM <- function(my_xts,  forecastfunction, h = 1, window = NULL,
     #Creo una matrice xts degli errori, con lo stesso numero di righe e indice della serie storica
     #ma con un numero di colonne h e vuota
     e <- xts(matrix(NA, nrow = nrow(my_xts), ncol = h), order.by = index(my_xts))
+    e_percentage <- e
     if (initial >= n) 
         stop("initial period too long")
     # tsp(e) <- tsp(y) # Assegnazione tsp attribute di y alla matrice degli errori
