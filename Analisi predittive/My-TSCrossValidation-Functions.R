@@ -161,7 +161,7 @@ tsCV_RandomForest <- function(my_xts, xreg = NULL,  forecastfunction, h = 1, win
             stop("xreg must be of the same size as y")
 
     } else {
-        # Creo una matrixe xts di NA, che parte dall'ultimo giorno + 1 della nostra serie storica
+        # Creo una matrice xts di NA, che parte dall'ultimo giorno + 1 della nostra serie storica
         na_df <- seq(from = end(my_xts) + 1, 
             to = end(my_xts) + h, 
             by = "day")
