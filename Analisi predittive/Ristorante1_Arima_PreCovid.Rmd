@@ -942,9 +942,14 @@ Effettuo la procedura di *Time-Series Cross Validation* o *Evaluating on a Rolli
     -   **Non-Constant In-Sample -\>** Non impostiamo il parametro `window`, che altrimenti andrebbe a settare un dimensione fissata del training set e quindi una moving window
 
 
-### Confronto tra i modelli
+## Definizione funzione di Time Series Cross-Validation (`tsCV_UCM()`)
 
-**Cross-Validation**
+```{r}
+source("My-TSCrossValidation-Functions.R")
+```
+
+
+## Definizione funzioni dei modelli
 
 ```{r}
 
@@ -999,21 +1004,29 @@ f_mod4 <- function(x, h, xreg, newxreg) {
 }
 
 ```
-
+## Cross-Validation e eventuali processing ad hoc
 
 ```{r}
 # Parametri di cross-validation globali per i primi due modelli
 h = 42 # 6 settimane
-initial = 126 # 3 volte l'orizzonte
+initial = 365 # 3 volte l'orizzonte
+window = NULL
 
 # Stima degli errori di previsione con CV
 
-e1 <- tsCV(y = vendite_r1, forecastfunction = f_mod1, h=h, initial = initial)
-e1 <- tail(e1, n = -initial)
+e_1 <- tsCV_ARIMA(y = vendite_r1, forecastfunction = f_mod1, h=h, initial = initial)
+#e1 <- tail(e1, n = -initial)
+e1 <- e_1$e
+e1_percentage <- e_1$e_percentage
+
+
 
 xreg2 <- dum_day
-e2 <- tsCV(y = vendite_r1, forecastfunction = f_mod2, h=h, xreg=xreg2, initial = initial)
-e2 <- tail(e2, n = -initial)
+e_2 <- tsCV_ARIMA(y = vendite_r1, forecastfunction = f_mod2, h=h, xreg=xreg2, initial = initial)
+#e2 <- tail(e1, n = -initial)
+e2 <- e_2$e
+e2_percentage <- e_2$e_percentage
+
 
 end.time <- Sys.time()
 print(end.time)
@@ -1028,19 +1041,23 @@ print(time.taken)
 # Parametri di cross-validation globali per il terzo e quarto modello
 
 h = 42 # 6 settimane
-initial = 378 #126*3, modelli maggiormente complessi richiedono un training set iniziale più ampio
+initial = 365 #126*3, modelli maggiormente complessi richiedono un training set iniziale più ampio
 
 start.time <- Sys.time()
 print(start.time)
 
 
 xreg3 <- four
-e3 <- tsCV(y = vendite_r1, forecastfunction = f_mod3, h=h, xreg=xreg3, initial = initial)
-e3 <- tail(e3, n = -initial)
+e_3 <- tsCV_ARIMA(y = vendite_r1, forecastfunction = f_mod3, h=h, xreg=xreg3, initial = initial)
+#e3 <- tail(e3, n = -initial)
+e3 <- e_3$e
+e3_percentage <- e_3$e_percentage
 
 xreg4 <- dum_ann
-e4 <- tsCV(y = vendite_r1, forecastfunction = f_mod4, h=h, xreg=xreg4, initial = initial)
-e4 <- tail(e4, n = -initial)
+e_4 <- tsCV_ARIMA(y = vendite_r1, forecastfunction = f_mod4, h=h, xreg=xreg4, initial = initial)
+#e4 <- tail(e4, n = -initial)
+e4 <- e_4$e
+e4_percentage <- e_4$e_percentage
 
 end.time <- Sys.time()
 print(end.time)
@@ -1048,8 +1065,9 @@ time.taken <- end.time - start.time
 print(time.taken)
 ```
 
+## Confrontro tra i modelli
 
-**Accuratezze**
+### RMSE
 
 ```{r}
 RMSE_mod1 <- sqrt(colMeans(e1^2, na.rm = TRUE))
@@ -1077,3 +1095,35 @@ mean(RMSE_mod3)
 mean(RMSE_mod4)
 ```
 
+### MAE
+
+```{r}
+MAE_mod1 <- colMeans(abs(e1), na.rm = TRUE)
+MAE_mod2 <- colMeans(abs(e2), na.rm = TRUE)
+MAE_mod3 <- colMeans(abs(e3), na.rm = TRUE)
+MAE_mod4 <- colMeans(abs(e3), na.rm = TRUE)
+
+plot(1:42, MAE_mod1, type="l", col=1, xlab="horizon", ylab="MAE", ylim = c(0,13000))
+lines(1:42, MAE_mod2, type="l",col=2)
+lines(1:42, MAE_mod3, type="l",col=3)
+lines(1:42, MAE_mod4, type="l",col=4)
+
+legend("topleft",legend=c("1_ARIMA1","2_ARIMA2","3_ARIMA3","4_ARIMA4"),col=1:4,lty=1)
+```
+
+### MAPE
+
+```{r}
+MAPE_mod1 <- colMeans(abs(e1_percentage), na.rm = TRUE)
+MAPE_mod2 <- colMeans(abs(e2_percentage), na.rm = TRUE)
+MAPE_mod3 <- colMeans(abs(e3_percentage), na.rm = TRUE)
+MAPE_mod3 <- colMeans(abs(e4_percentage), na.rm = TRUE)
+
+
+plot(1:42, MAPE_mod1, type="l", col=1, xlab="horizon", ylab="MAPE", ylim = c(0,100))
+lines(1:42, MAPE_mod2, type="l",col=2)
+lines(1:42, MAPE_mod3, type="l",col=3)
+lines(1:42, MAPE_mod4, type="l",col=4)
+
+legend("topleft",legend=c("1_ARIMA1","2_ARIMA2","3_ARIMA3","4_ARIMA4"),col=1:4,lty=1)
+```

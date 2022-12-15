@@ -3,9 +3,11 @@ tsCV_ARIMA <- function(y, forecastfunction, h = 1, window = NULL, xreg = NULL,
     y <- as.ts(y) # Serie storica convertita in oggetto ts
     n <- length(y) # Lunghezza totale serie storica
     e <- ts(matrix(NA_real_, nrow = n, ncol = h)) # Inizializzazione matrice degli errori
+    e_percentage <- e
     if (initial >= n) 
         stop("initial period too long")
     tsp(e) <- tsp(y) # Assegnazione tsp attribute di y alla matrice degli errori
+    tsp(e_percentage) <- tsp(y)
     if (!is.null(xreg)) {
         xreg <- ts(as.matrix(xreg))
         if (NROW(xreg) != length(y)) 
@@ -36,14 +38,15 @@ tsCV_ARIMA <- function(y, forecastfunction, h = 1, window = NULL, xreg = NULL,
         }
         if (!is.element("try-error", class(fc))) {
             e[i, ] <- y[i + seq(h)] - fc$mean[seq(h)]
+            e_percentage[i, ] <- 100*(t(e[i, ])/y[i + seq(h)])
         }
     }
     if (h == 1) {
-        return(e[, 1L])
+        return(list(e = e[, 1L], e_percentage = e_percentage[, 1L]))
     }
     else {
         colnames(e) <- paste("h=", 1:h, sep = "")
-        return(e)
+        return(list(e = e, e_percentage = e_percentage))
     }
 }
 
