@@ -3,9 +3,18 @@ tsCV_ARIMA <- function(y, forecastfunction, h = 1, window = NULL, xreg = NULL,
     y <- as.ts(y) # Serie storica convertita in oggetto ts
     n <- length(y) # Lunghezza totale serie storica
     e <- ts(matrix(NA_real_, nrow = n, ncol = h)) # Inizializzazione matrice degli errori
+    e_percentage <- e
+    y_estimate <- e
+    y_groundtruth <- e
+
     if (initial >= n) 
         stop("initial period too long")
     tsp(e) <- tsp(y) # Assegnazione tsp attribute di y alla matrice degli errori
+    tsp(e_percentage) <- tsp(y)
+    tsp(y_estimate) <- tsp(y)
+    tsp(y_groundtruth) <- tsp(y)
+
+
     if (!is.null(xreg)) {
         xreg <- ts(as.matrix(xreg))
         if (NROW(xreg) != length(y)) 
@@ -35,15 +44,29 @@ tsCV_ARIMA <- function(y, forecastfunction, h = 1, window = NULL, xreg = NULL,
                 silent = TRUE)
         }
         if (!is.element("try-error", class(fc))) {
+            y_groundtruth[i, ] <- y[i + seq(h)]
+            y_estimate[i, ] <- fc$mean[seq(h)]
+
             e[i, ] <- y[i + seq(h)] - fc$mean[seq(h)]
+            e_percentage[i, ] <- 100*(t(e[i, ])/y[i + seq(h)])
         }
     }
     if (h == 1) {
-        return(e[, 1L])
+        return(list(e = e[, 1L], 
+        e_percentage = e_percentage[, 1L]),
+        y_estimate = y_estimate[, 1L],
+        y_groundtruth = y_groundtruth[, 1L])
     }
     else {
         colnames(e) <- paste("h=", 1:h, sep = "")
-        return(e)
+        colnames(e_percentage) <- paste("h=", 1:h, sep = "")
+        colnames(y_estimate) <- paste("h=", 1:h, sep = "")
+        colnames(y_groundtruth) <- paste("h=", 1:h, sep = "")
+
+        return(list(e = e, 
+        e_percentage = e_percentage,
+        y_estimate = y_estimate,
+        y_groundtruth = y_groundtruth))
     }
 }
 
@@ -57,6 +80,9 @@ tsCV_UCM <- function(my_xts,  forecastfunction, h = 1, window = NULL,
     #ma con un numero di colonne h e vuota
     e <- xts(matrix(NA, nrow = nrow(my_xts), ncol = h), order.by = index(my_xts))
     e_percentage <- e
+    y_estimate <- e
+    y_groundtruth <- e
+
     if (initial >= n) 
         stop("initial period too long")
     # tsp(e) <- tsp(y) # Assegnazione tsp attribute di y alla matrice degli errori
@@ -109,16 +135,29 @@ tsCV_UCM <- function(my_xts,  forecastfunction, h = 1, window = NULL,
         # Calcolo degli errori
         y_ground_truth <- my_xts[,1]
         if (!is.element("try-error", class(muhat))) {
+            y_groundtruth[i, ] <- y_ground_truth[i + seq(h)]
+            y_estimate[i, ] <- muhat[i + seq(h)]
+
             e[i, ] <- y_ground_truth[i + seq(h)] - muhat[i + seq(h)]
             e_percentage[i, ] <- 100*(t(e[i, ])/y_ground_truth[i + seq(h)])
         }
     }
     if (h == 1) {
-        return(list(e = e[, 1L], e_percentage = e_percentage[, 1L]))
+        return(list(e = e[, 1L], 
+        e_percentage = e_percentage[, 1L],
+        y_estimate = y_estimate[, 1L],
+        y_groundtruth = y_groundtruth[, 1L]))
     }
     else {
         colnames(e) <- paste("h=", 1:h, sep = "")
-        return(list(e = e, e_percentage = e_percentage))
+        colnames(e_percentage) <- paste("h=", 1:h, sep = "")
+        colnames(y_estimate) <- paste("h=", 1:h, sep = "")
+        colnames(y_groundtruth) <- paste("h=", 1:h, sep = "")
+
+        return(list(e = e, 
+        e_percentage = e_percentage,
+        y_estimate = y_estimate,
+        y_groundtruth = y_groundtruth))
     }   
 }
 
@@ -133,6 +172,8 @@ tsCV_RandomForest <- function(my_xts, xreg = NULL,  forecastfunction, h = 1, win
     #ma con un numero di colonne h e vuota
     e <- xts(matrix(NA, nrow = nrow(my_xts), ncol = h), order.by = index(my_xts))
     e_percentage <- e
+    y_estimate <- e
+    y_groundtruth <- e
     
     if (initial >= n) 
         stop("initial period too long")
@@ -225,17 +266,30 @@ tsCV_RandomForest <- function(my_xts, xreg = NULL,  forecastfunction, h = 1, win
         # Calcolo degli errori
         ## La posizione è i + 14 perchè i prim i 14 dati vanno persi a causa dei ritardi
         if (!is.element("try-error", class(fc))) {
+            y_groundtruth[i, ] <- y_test[seq(h)]
+            y_estimate[i, ] <- fc[seq(h)]
+
             e[i, ] <- y_test[seq(h)] - fc[seq(h)]
             # Trasposta per poter dividere per ogni riga
             e_percentage[i, ] <- 100*(t(e[i, ])/y_test[seq(h)])
         }
     }
     if (h == 1) {
-        return(list(e = e[, 1L], e_percentage = e_percentage[, 1L]))
+        return(list(e = e[, 1L], 
+        e_percentage = e_percentage[, 1L],
+        y_groundtruth = y_groundtruth[, 1L],
+        y_estimate = y_estimate[, 1L]))
     }
     else {
         colnames(e) <- paste("h=", 1:h, sep = "")
-        return(list(e = e, e_percentage = e_percentage))
+        colnames(e_percentage) <- paste("h=", 1:h, sep = "")
+        colnames(y_groundtruth) <- paste("h=", 1:h, sep = "")
+        colnames(y_estimate) <- paste("h=", 1:h, sep = "")
+        
+        return(list(e = e, 
+        e_percentage = e_percentage,
+        y_groundtruth = y_groundtruth,
+        y_estimate = y_estimate))
     }   
 }
 

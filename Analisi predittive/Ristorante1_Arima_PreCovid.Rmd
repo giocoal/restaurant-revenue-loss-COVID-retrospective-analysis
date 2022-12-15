@@ -942,9 +942,14 @@ Effettuo la procedura di *Time-Series Cross Validation* o *Evaluating on a Rolli
     -   **Non-Constant In-Sample -\>** Non impostiamo il parametro `window`, che altrimenti andrebbe a settare un dimensione fissata del training set e quindi una moving window
 
 
-### Confronto tra i modelli
+## Definizione funzione di Time Series Cross-Validation (`tsCV_UCM()`)
 
-**Cross-Validation**
+```{r}
+source("My-TSCrossValidation-Functions.R")
+```
+
+
+## Definizione funzioni dei modelli
 
 ```{r}
 
@@ -999,21 +1004,35 @@ f_mod4 <- function(x, h, xreg, newxreg) {
 }
 
 ```
-
+## Cross-Validation e eventuali processing ad hoc
 
 ```{r}
 # Parametri di cross-validation globali per i primi due modelli
 h = 42 # 6 settimane
 initial = 126 # 3 volte l'orizzonte
+window = NULL
+
+start.time <- Sys.time()
+print(start.time)
 
 # Stima degli errori di previsione con CV
 
-e1 <- tsCV(y = vendite_r1, forecastfunction = f_mod1, h=h, initial = initial)
-e1 <- tail(e1, n = -initial)
+e_1 <- tsCV_ARIMA(y = vendite_r1, forecastfunction = f_mod1, h=h, initial = initial, window = window)
+#e1 <- tail(e1, n = -initial)
+e1 <- e_1$e
+e1_percentage <- e_1$e_percentage
+e1_estimate <- e_1$y_estimate
+e1_groundtruth <- e_1$y_groundtruth
+
 
 xreg2 <- dum_day
-e2 <- tsCV(y = vendite_r1, forecastfunction = f_mod2, h=h, xreg=xreg2, initial = initial)
-e2 <- tail(e2, n = -initial)
+e_2 <- tsCV_ARIMA(y = vendite_r1, forecastfunction = f_mod2, h=h, xreg=xreg2, initial = initial)
+#e2 <- tail(e1, n = -initial)
+e2 <- e_2$e
+e2_percentage <- e_2$e_percentage
+e2_estimate <- e_2$y_estimate
+e2_groundtruth <- e_2$y_groundtruth
+
 
 end.time <- Sys.time()
 print(end.time)
@@ -1028,28 +1047,222 @@ print(time.taken)
 # Parametri di cross-validation globali per il terzo e quarto modello
 
 h = 42 # 6 settimane
-initial = 378 #126*3, modelli maggiormente complessi richiedono un training set iniziale più ampio
+initial = 365 #126*3, modelli maggiormente complessi richiedono un training set iniziale più ampio
+window = NULL
 
 start.time <- Sys.time()
 print(start.time)
 
 
 xreg3 <- four
-e3 <- tsCV(y = vendite_r1, forecastfunction = f_mod3, h=h, xreg=xreg3, initial = initial)
-e3 <- tail(e3, n = -initial)
+e_3 <- tsCV_ARIMA(y = vendite_r1, forecastfunction = f_mod3, h=h, xreg=xreg3, initial = initial)
+#e3 <- tail(e3, n = -initial)
+e3 <- e_3$e
+e3_percentage <- e_3$e_percentage
+e3_estimate <- e_3$y_estimate
+e3_groundtruth <- e_3$y_groundtruth
 
 xreg4 <- dum_ann
-e4 <- tsCV(y = vendite_r1, forecastfunction = f_mod4, h=h, xreg=xreg4, initial = initial)
-e4 <- tail(e4, n = -initial)
+e_4 <- tsCV_ARIMA(y = vendite_r1, forecastfunction = f_mod4, h=h, xreg=xreg4, initial = initial)
+#e4 <- tail(e4, n = -initial)
+e4 <- e_4$e
+e4_percentage <- e_4$e_percentage
+e4_estimate <- e_4$y_estimate
+e4_groundtruth <- e_4$y_groundtruth
 
 end.time <- Sys.time()
 print(end.time)
 time.taken <- end.time - start.time
 print(time.taken)
 ```
+### Errori troncati
+
+Andiamo a tenere solo 1 riga su h della matrice degli errori, simulando quindi un avanzamento di training e test di h osservazioni ogni iterazione.
+
+```{r}
+test <- as.data.frame(e1)
+indices <- seq(1, nrow(test), by = 1)
+test1 <- subset(test, row.names(test) %in% indices)
+
+RMSE_mod1_test <- sqrt(colMeans(test1^2, na.rm = TRUE))
+
+plot(1:42, RMSE_mod1_test, type="l", col=1, xlab="horizon", ylab="RMSE", ylim = c(2500,6000))
+
+```
+Vediamo sui modelli con regressori
+
+```{r}
+test <- as.data.frame(e3)
+indices <- seq(1, nrow(test), by = 7)
+test1 <- subset(test, row.names(test) %in% indices)
+
+RMSE_mod3_test <- sqrt(colMeans(test1^2, na.rm = TRUE))
+
+plot(1:42, RMSE_mod3_test, type="l", col=1, xlab="horizon", ylab="RMSE", ylim = c(2500,6000))
+```
 
 
-**Accuratezze**
+## Analisi degli errori
+
+### 1-step
+
+```{r}
+check1 <- cbind(e1[,"h=1"], e1_estimate[,"h=1"], e1_groundtruth[,"h=1"], c(df$data[2:(nrow(df))], NA), c(df$lordototale[2:(nrow(df))], NA), c(df$Giorno[2:(nrow(df))], NA))
+colnames(check1) <- c("e1", "e1_estimate", "e1_groundtruth", "data", "lordototale", "Giorno")
+# tengo solo righe con errori molto elevati
+check1 <- as_tibble(check1)
+check1[,1] <- as.numeric(unlist(check1[,1]))
+check1 <- filter(check1, abs(e1) > 4000)
+print(nrow(check1))
+View(check1)
+
+check2 <- cbind(e2[,"h=1"], e2_estimate[,"h=1"], e2_groundtruth[,"h=1"], c(df$data[2:(nrow(df))], NA), c(df$lordototale[2:(nrow(df))], NA), c(df$Giorno[2:(nrow(df))], NA))
+colnames(check2) <- c("e2", "e2_estimate", "e2_groundtruth", "data", "lordototale", "Giorno")
+# tengo solo righe con errori molto elevati
+check2 <- as_tibble(check2)
+check2[,1] <- as.numeric(unlist(check2[,1]))
+check2 <- filter(check2, abs(e2) > 4000)
+print(nrow(check2))
+View(check2)
+
+check3 <- cbind(e3[,"h=1"], e3_estimate[,"h=1"], e3_groundtruth[,"h=1"], c(df$data[2:(nrow(df))], NA), c(df$lordototale[2:(nrow(df))], NA), c(df$Giorno[2:(nrow(df))], NA))
+colnames(check3) <- c("e3", "e3_estimate", "e3_groundtruth", "data", "lordototale", "Giorno")
+# tengo solo righe con errori molto elevati
+check3 <- as_tibble(check3)
+check3[,1] <- as.numeric(unlist(check3[,1]))
+check3 <- filter(check3, abs(e3) > 4000)
+print(nrow(check3))
+View(check3)
+
+check4 <- cbind(e4[,"h=1"], e4_estimate[,"h=1"], e4_groundtruth[,"h=1"], c(df$data[2:(nrow(df))], NA), c(df$lordototale[2:(nrow(df))], NA), c(df$Giorno[2:(nrow(df))], NA))
+colnames(check4) <- c("e4", "e4_estimate", "e4_groundtruth", "data", "lordototale", "Giorno")
+# tengo solo righe con errori molto elevati
+check4 <- as_tibble(check4)
+check4[,1] <- as.numeric(unlist(check4[,1]))
+check4 <- filter(check4, abs(e4) > 4000)
+print(nrow(check4))
+View(check4)
+```
+Vediamo se ci sono giorni della settimana particolarmente sbagliati
+
+```{r}
+table(check1$Giorno)
+table(check2$Giorno)
+table(check3$Giorno)
+table(check4$Giorno)
+```
+Vediamo se c'è un giorno dell'anno che tutti i modelli sbagliano
+
+```{r}
+common_values <- Reduce(intersect, list(check1$data, check2$data, check3$data, check4$data))
+common_values
+```
+
+### 7-step
+
+```{r}
+check1 <- cbind(e1[,"h=20"], e1_estimate[,"h=20"], e1_groundtruth[,"h=20"], c(df$data[2:(nrow(df))], NA), c(df$lordototale[2:(nrow(df))], NA), c(df$Giorno[2:(nrow(df))], NA))
+colnames(check1) <- c("e1", "e1_estimate", "e1_groundtruth", "data", "lordototale", "Giorno")
+# tengo solo righe con errori molto elevati
+check1 <- as_tibble(check1)
+check1[,1] <- as.numeric(unlist(check1[,1]))
+check1 <- filter(check1, abs(e1) > 4000)
+print(nrow(check1))
+View(check1)
+
+check2 <- cbind(e2[,"h=20"], e2_estimate[,"h=20"], e2_groundtruth[,"h=20"], c(df$data[2:(nrow(df))], NA), c(df$lordototale[2:(nrow(df))], NA), c(df$Giorno[2:(nrow(df))], NA))
+colnames(check2) <- c("e2", "e2_estimate", "e2_groundtruth", "data", "lordototale", "Giorno")
+# tengo solo righe con errori molto elevati
+check2 <- as_tibble(check2)
+check2[,1] <- as.numeric(unlist(check2[,1]))
+check2 <- filter(check2, abs(e2) > 4000)
+print(nrow(check2))
+View(check2)
+
+check3 <- cbind(e3[,"h=20"], e3_estimate[,"h=20"], e3_groundtruth[,"h=20"], c(df$data[2:(nrow(df))], NA), c(df$lordototale[2:(nrow(df))], NA), c(df$Giorno[2:(nrow(df))], NA))
+colnames(check3) <- c("e3", "e3_estimate", "e3_groundtruth", "data", "lordototale", "Giorno")
+# tengo solo righe con errori molto elevati
+check3 <- as_tibble(check3)
+check3[,1] <- as.numeric(unlist(check3[,1]))
+check3 <- filter(check3, abs(e3) > 4000)
+print(nrow(check3))
+View(check3)
+
+check4 <- cbind(e4[,"h=20"], e4_estimate[,"h=20"], e4_groundtruth[,"h=20"], c(df$data[2:(nrow(df))], NA), c(df$lordototale[2:(nrow(df))], NA), c(df$Giorno[2:(nrow(df))], NA))
+colnames(check4) <- c("e4", "e4_estimate", "e4_groundtruth", "data", "lordototale", "Giorno")
+# tengo solo righe con errori molto elevati
+check4 <- as_tibble(check4)
+check4[,1] <- as.numeric(unlist(check4[,1]))
+check4 <- filter(check4, abs(e4) > 4000)
+print(nrow(check4))
+View(check4)
+```
+```{r}
+table(check1$Giorno)
+table(check2$Giorno)
+table(check3$Giorno)
+table(check4$Giorno)
+```
+```{r}
+common_values <- Reduce(intersect, list(check1$data, check2$data, check3$data, check4$data))
+common_values
+```
+### 30-step
+
+```{r}
+check1 <- cbind(e1[,"h=30"], e1_estimate[,"h=30"], e1_groundtruth[,"h=30"], c(df$data[2:(nrow(df))], NA), c(df$lordototale[2:(nrow(df))], NA), c(df$Giorno[2:(nrow(df))], NA))
+colnames(check1) <- c("e1", "e1_estimate", "e1_groundtruth", "data", "lordototale", "Giorno")
+# tengo solo righe con errori molto elevati
+check1 <- as_tibble(check1)
+check1[,1] <- as.numeric(unlist(check1[,1]))
+check1 <- filter(check1, abs(e1) > 4000)
+print(nrow(check1))
+View(check1)
+
+check2 <- cbind(e2[,"h=30"], e2_estimate[,"h=30"], e2_groundtruth[,"h=30"], c(df$data[2:(nrow(df))], NA), c(df$lordototale[2:(nrow(df))], NA), c(df$Giorno[2:(nrow(df))], NA))
+colnames(check2) <- c("e2", "e2_estimate", "e2_groundtruth", "data", "lordototale", "Giorno")
+# tengo solo righe con errori molto elevati
+check2 <- as_tibble(check2)
+check2[,1] <- as.numeric(unlist(check2[,1]))
+check2 <- filter(check2, abs(e2) > 4000)
+print(nrow(check2))
+View(check2)
+
+check3 <- cbind(e3[,"h=30"], e3_estimate[,"h=30"], e3_groundtruth[,"h=30"], c(df$data[2:(nrow(df))], NA), c(df$lordototale[2:(nrow(df))], NA), c(df$Giorno[2:(nrow(df))], NA))
+colnames(check3) <- c("e3", "e3_estimate", "e3_groundtruth", "data", "lordototale", "Giorno")
+# tengo solo righe con errori molto elevati
+check3 <- as_tibble(check3)
+check3[,1] <- as.numeric(unlist(check3[,1]))
+check3 <- filter(check3, abs(e3) > 4000)
+print(nrow(check3))
+View(check3)
+
+check4 <- cbind(e4[,"h=30"], e4_estimate[,"h=30"], e4_groundtruth[,"h=30"], c(df$data[2:(nrow(df))], NA), c(df$lordototale[2:(nrow(df))], NA), c(df$Giorno[2:(nrow(df))], NA))
+colnames(check4) <- c("e4", "e4_estimate", "e4_groundtruth", "data", "lordototale", "Giorno")
+# tengo solo righe con errori molto elevati
+check4 <- as_tibble(check4)
+check4[,1] <- as.numeric(unlist(check4[,1]))
+check4 <- filter(check4, abs(e4) > 4000)
+print(nrow(check4))
+View(check4)
+```
+Vediamo se ci sono giorni della settimana particolarmente sbagliati
+
+```{r}
+table(check1$Giorno)
+table(check2$Giorno)
+table(check3$Giorno)
+table(check4$Giorno)
+```
+Vediamo se c'è un giorno dell'anno che tutti i modelli sbagliano
+
+```{r}
+common_values <- Reduce(intersect, list(check1$data, check2$data, check3$data, check4$data))
+common_values
+```
+## Confrontro tra i modelli
+
+### RMSE
 
 ```{r}
 RMSE_mod1 <- sqrt(colMeans(e1^2, na.rm = TRUE))
@@ -1068,6 +1281,25 @@ legend("topleft",legend=c("1_ARIMA1","2_ARIMA2","3_ARIMA3","4_ARIMA4"),col=1:4,l
 
 ```
 
+### RMdSE
+
+```{r}
+RMSE_mod1 <- sqrt(colMedians(e1^2, na.rm = TRUE, hasNA = TRUE))
+RMSE_mod2 <- sqrt(colMedians(e2^2, na.rm = TRUE, hasNA = TRUE))
+RMSE_mod3 <- sqrt(colMedians(e3^2, na.rm = TRUE, hasNA = TRUE))
+RMSE_mod4 <- sqrt(colMedians(e4^2, na.rm = TRUE, hasNA = TRUE))
+#RMSE_mod6 <- sqrt(colMeans(e6^2, na.rm = TRUE))
+
+
+# Zoom in
+plot(1:42, RMSE_mod1, type="l", col=1, xlab="horizon", ylab="RMSE", ylim = c(0,3500))
+lines(1:42, RMSE_mod2, type="l",col=2)
+lines(1:42, RMSE_mod3, type="l",col=3)
+lines(1:42, RMSE_mod4, type="l",col=4)
+legend("topleft",legend=c("1_ARIMA1","2_ARIMA2","3_ARIMA3","4_ARIMA4"),col=1:4,lty=1)
+
+```
+
 **RMSE Medi**
 
 ```{r}
@@ -1077,3 +1309,35 @@ mean(RMSE_mod3)
 mean(RMSE_mod4)
 ```
 
+### MAE
+
+```{r}
+MAE_mod1 <- colMeans(abs(e1), na.rm = TRUE)
+MAE_mod2 <- colMeans(abs(e2), na.rm = TRUE)
+MAE_mod3 <- colMeans(abs(e3), na.rm = TRUE)
+MAE_mod4 <- colMeans(abs(e4), na.rm = TRUE)
+
+plot(1:42, MAE_mod1, type="l", col=1, xlab="horizon", ylab="MAE", ylim = c(0,6000))
+lines(1:42, MAE_mod2, type="l",col=2)
+lines(1:42, MAE_mod3, type="l",col=3)
+lines(1:42, MAE_mod4, type="l",col=4)
+
+legend("topleft",legend=c("1_ARIMA1","2_ARIMA2","3_ARIMA3","4_ARIMA4"),col=1:4,lty=1)
+```
+
+### MAPE
+
+```{r}
+MAPE_mod1 <- colMeans(abs(e1_percentage), na.rm = TRUE)
+MAPE_mod2 <- colMeans(abs(e2_percentage), na.rm = TRUE)
+MAPE_mod3 <- colMeans(abs(e3_percentage), na.rm = TRUE)
+MAPE_mod4 <- colMeans(abs(e4_percentage), na.rm = TRUE)
+
+
+plot(1:42, MAPE_mod1, type="l", col=1, xlab="horizon", ylab="MAPE", ylim = c(0,30))
+lines(1:42, MAPE_mod2, type="l",col=2)
+lines(1:42, MAPE_mod3, type="l",col=3)
+lines(1:42, MAPE_mod4, type="l",col=4)
+
+legend("topleft",legend=c("1_ARIMA1","2_ARIMA2","3_ARIMA3","4_ARIMA4"),col=1:4,lty=1)
+```
