@@ -664,6 +664,8 @@ rf_r1 <- xts(r1[, "lordototale"], as.Date(as.character(r1$data), format = "%Y-%m
 e_1 <- tsCV_RandomForest(my_xts = rf_r1[,1], forecastfunction = f_mod1, h=h, initial = initial, window = window)
 e1 <- e_1$e
 e1_percentage <- e_1$e_percentage
+e1_estimate <- e_1$y_estimate
+e1_groundtruth <- e_1$y_groundtruth
 
 # Pre processing modello 2
 
@@ -682,6 +684,8 @@ data <- cbind(rf_r1, yday, wday)
 e_2 <- tsCV_RandomForest(my_xts = data[,1], xreg = data[,-1], forecastfunction = f_mod2, h=h, initial = initial, window = window)
 e2 <- e_2$e
 e2_percentage <- e_2$e_percentage
+e2_estimate <- e_2$y_estimate
+e2_groundtruth <- e_2$y_groundtruth
 
 # Pre processing modello 3
 
@@ -695,6 +699,8 @@ data3 <- cbind(data3, dum_festivi_ts)
 e_3 <- tsCV_RandomForest(my_xts = data3[,1], xreg = data3[,-1], forecastfunction = f_mod3, h=h, initial = initial, window = window)
 e3 <- e_3$e
 e3_percentage <- e_3$e_percentage
+e3_estimate <- e_3$y_estimate
+e3_groundtruth <- e_3$y_groundtruth
 
 end.time <- Sys.time()
 print(end.time)
