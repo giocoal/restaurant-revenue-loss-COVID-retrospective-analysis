@@ -105,7 +105,7 @@ tsCV_UCM <- function(my_xts,  forecastfunction, h = 1, window = NULL,
         # Train e predizioni salvate in muhat
         muhat <- try(suppressWarnings(forecastfunction(subset)), 
             silent = TRUE)
-        muhat <- exp(muhat) # Esponenzio i valori predetti per ottenere i valori di y
+        # muhat <- muhat # Esponenzio i valori predetti per ottenere i valori di y
         # Calcolo degli errori
         y_ground_truth <- my_xts[,1]
         if (!is.element("try-error", class(muhat))) {
