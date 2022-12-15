@@ -155,7 +155,7 @@ mod1_pre <- function(train) {
   muhat <- xts(as.matrix(kfs$muhat),
                 index(train))
   muhat <- as.xts(muhat)
-  return(muhat)
+  return(exp(muhat))
 }
 ```
 
@@ -164,17 +164,17 @@ muhat1_pre <- mod1_pre(train)
 ```
 
 ```{r}
-plot(log(val$lordototale[validation_date:nrow(val),]), lwd=3) # serie storica
+plot(val$lordototale[validation_date:nrow(val),], lwd=3) # serie storica
 lines(muhat1_pre[validation_date:nrow(val),], type = "l", col = "red", lwd=3) # serie predetta [1801:1826,]
 ```
 
 ```{r}
-mape(val$lordototale[validation_date:nrow(val),], exp(muhat1_pre[validation_date:nrow(val),]))
-rmse(val$lordototale[validation_date:nrow(val),], exp(muhat1_pre[validation_date:nrow(val),]))
+mape(val$lordototale[validation_date:nrow(val),], muhat1_pre[validation_date:nrow(val),])
+rmse(val$lordototale[validation_date:nrow(val),], muhat1_pre[validation_date:nrow(val),])
 ```
 
 ```{r}
-plot(val$lordototale - exp(muhat1_pre))
+plot(val$lordototale - muhat1_pre)
 ```
 
 ### Modello 4 (trend + stag7_t + festivo)
@@ -224,7 +224,7 @@ mod4_pre <- function(train) {
   muhat <- xts(as.matrix(kfs$muhat),
                 index(train))
   muhat <- as.xts(muhat)
-  return(muhat)
+  return(exp(muhat))
 }
 ```
 
@@ -233,13 +233,13 @@ muhat4_pre <- mod4_pre(train)
 ```
 
 ```{r}
-plot(log(val$lordototale[validation_date:nrow(val),]), lwd=3) # serie storica
+plot(val$lordototale[validation_date:nrow(val),], lwd=3) # serie storica
 lines(muhat4_pre[validation_date:nrow(val),], type = "l", col = "red", lwd=3) # serie predetta [1801:1826,]
 ```
 
 ```{r}
-mape(val$lordototale[validation_date:nrow(val),], exp(muhat4_pre[validation_date:nrow(val),]))
-rmse(val$lordototale[validation_date:nrow(val),], exp(muhat4_pre[validation_date:nrow(val),]))
+mape(val$lordototale[validation_date:nrow(val),], muhat4_pre[validation_date:nrow(val),])
+rmse(val$lordototale[validation_date:nrow(val),], muhat4_pre[validation_date:nrow(val),])
 ```
 
 ### Modello 5 (trend + stag7_t + fest_precovid)
@@ -291,7 +291,7 @@ mod5_pre <- function(train) {
   muhat <- xts(as.matrix(kfs$muhat),
                 index(train))
   muhat <- as.xts(muhat)
-  return(muhat)
+  return(exp(muhat))
 }
 ```
 
@@ -300,26 +300,21 @@ muhat5_pre <- mod5_pre(train)
 ```
 
 ```{r}
-plot(log(val$lordototale[validation_date:nrow(val),]), lwd=3) # serie storica
+plot(val$lordototale[validation_date:nrow(val),], lwd=3) # serie storica
 lines(muhat5_pre[validation_date:nrow(val),], type = "l", col = "red", lwd=3) # serie predetta [1801:1826,]
 ```
 
 ```{r}
-plot(val$lordototale[validation_date:nrow(val),], lwd=2, ylim=c(9000,40000))
-lines(exp(muhat5_pre[validation_date:nrow(val),]), type = "l", col = "red", lwd=3) # [1801:1826,]
+mape(val$lordototale[validation_date:nrow(val),], muhat5_pre[validation_date:nrow(val),])
+rmse(val$lordototale[validation_date:nrow(val),], muhat5_pre[validation_date:nrow(val),])
 ```
 
 ```{r}
-mape(val$lordototale[validation_date:nrow(val),], exp(muhat5_pre[validation_date:nrow(val),]))
-rmse(val$lordototale[validation_date:nrow(val),], exp(muhat5_pre[validation_date:nrow(val),]))
+summary(val$lordototale - muhat5_pre)
 ```
 
 ```{r}
-summary(val$lordototale - exp(muhat5_pre))
-```
-
-```{r}
-plot(val$lordototale - exp(muhat5_pre))
+plot(val$lordototale - muhat5_pre)
 abline(v=index(val[validation_date])) # non vine plottata
 ```
 
@@ -331,20 +326,20 @@ abline(v=index(val[validation_date])) # non vine plottata
 
 ```{r}
 comp <- data.frame(Modello=c("mod1", "mod4", "mod5"),
-           RMSE=c(rmse(val$lordototale[validation_date:nrow(val),], exp(muhat1_pre[validation_date:nrow(val),])),
-                  rmse(val$lordototale[validation_date:nrow(val),], exp(muhat4_pre[validation_date:nrow(val),])),
-                  rmse(val$lordototale[validation_date:nrow(val),], exp(muhat5_pre[validation_date:nrow(val),]))),
-           MAPE=c(mape(val$lordototale[validation_date:nrow(val),], exp(muhat1_pre[validation_date:nrow(val),])),
-                  mape(val$lordototale[validation_date:nrow(val),], exp(muhat4_pre[validation_date:nrow(val),])),
-                  mape(val$lordototale[validation_date:nrow(val),], exp(muhat5_pre[validation_date:nrow(val),]))))
-comp
+           RMSE=c(rmse(val$lordototale[validation_date:nrow(val),], muhat1_pre[validation_date:nrow(val),]),
+                  rmse(val$lordototale[validation_date:nrow(val),], muhat4_pre[validation_date:nrow(val),]),
+                  rmse(val$lordototale[validation_date:nrow(val),], muhat5_pre[validation_date:nrow(val),])),
+           MAPE=c(mape(val$lordototale[validation_date:nrow(val),], muhat1_pre[validation_date:nrow(val),]),
+                  mape(val$lordototale[validation_date:nrow(val),], muhat4_pre[validation_date:nrow(val),]),
+                  mape(val$lordototale[validation_date:nrow(val),], muhat5_pre[validation_date:nrow(val),])))
+com
 ```
 
 ```{r}
 plot(val$lordototale[validation_date:nrow(val),], lwd=3, ylim=c(9000,40000))
-lines(exp(muhat1_pre[validation_date:nrow(val),]), type = "l", col = "red", lwd=3) # [1801:1826,]
-lines(exp(muhat4_pre[validation_date:nrow(val),]), type = "l", col = "blue", lwd=3) # [1801:1826,]
-lines(exp(muhat5_pre[validation_date:nrow(val),]), type = "l", col = "green", lwd=3) # [1801:1826,]
+lines(muhat1_pre[validation_date:nrow(val),], type = "l", col = "red", lwd=3) # [1801:1826,]
+lines(muhat4_pre[validation_date:nrow(val),], type = "l", col = "blue", lwd=3) # [1801:1826,]
+lines(muhat5_pre[validation_date:nrow(val),], type = "l", col = "green", lwd=3) # [1801:18
 ```
 
 ## Evaluation: Confronto forecasting performance dei modelli
@@ -620,12 +615,19 @@ mod1_post <- function(train) {
   #Inizializzazione delle varianze sulla base di vy
   pars <- log(c(
     logVarEta = vy/10,
-    logVarZeta = vy/1000,
-    logVarOm7 = vy/1000,
+    logVarZeta = vy/100,
+    logVarOm7 = vy/100,
     logVarOm365 = vy/10000,
     logVarEps = vy/10
   ))
-
+  pars <- log(c(
+    logVarEta = vy/10,
+    logVarZeta = vy/100,
+    logVarOm7 = vy/1,
+    logVarOm365 = vy/100,
+    logVarEps = vy/1
+  ))
+  
   # funzione di update
   updt <- function(pars, model){
     model$Q[1,1,1] <- exp(pars[1])
@@ -638,7 +640,7 @@ mod1_post <- function(train) {
   
   # Train - Si allena sui valori passati (quindi quei valori di train non nulli)
   fit <- fitSSM(mod, pars, updt)
-  fit$optim.out
+  #print(fit$optim.out)
   
   # Filtro di karman - Effetua le predizioni - kfs1$muhat contiene una serie storica predetta (anche i dati di train vengono predetti)
   kfs <- KFS(fit$model,
@@ -648,8 +650,11 @@ mod1_post <- function(train) {
   muhat <- xts(as.matrix(kfs$muhat),
                 index(train))
   muhat <- as.xts(muhat)
-  return(muhat)
+
+  return(exp(muhat)-10000)
 }
+
+
 ```
 
 ```{r}
@@ -657,17 +662,17 @@ muhat1_post <- mod1_post(train)
 ```
 
 ```{r}
-plot(log(val$lordototale[validation_date:nrow(val),] + 10000), lwd=3) # serie storica
-lines(muhat1_post[validation_date:nrow(val),], type = "l", col = "red", lwd=3) # serie predetta [1801:1826,]
+plot(val$lordototale[(validation_date):nrow(val),], lwd=3) # serie storica
+lines(muhat1_post[(validation_date):nrow(val),], type = "l", col = "red", lwd=3) # serie predetta [1801:1826,]
 ```
 
 ```{r}
-mape(val$lordototale[validation_date:nrow(val),], exp(muhat1_post[validation_date:nrow(val),]) - 10000)
-rmse(val$lordototale[validation_date:nrow(val),], exp(muhat1_post[validation_date:nrow(val),]) - 10000)
+mape(val$lordototale[validation_date:nrow(val),], muhat1_post[validation_date:nrow(val),])
+rmse(val$lordototale[validation_date:nrow(val),], muhat1_post[validation_date:nrow(val),])
 ```
 
 ```{r}
-plot(val$lordototale - (exp(muhat1_post) - 10000))
+plot(val$lordototale - muhat1_post)
 ```
 
 ### Modello 3 (trend + stag7_t + festivo)
@@ -690,10 +695,9 @@ mod3_post <- function(train) {
   
   #Inizializzazione delle varianze sulla base di vy
   pars <- log(c(
-    logVarEta = vy/10,
-    logVarZeta = vy/1000,
-    logVarOm7 = vy/1000,
-    logVarOm365 = vy/10000,
+    logVarEta = vy/100,
+    logVarZeta = vy/100,
+    logVarOm7 = vy/1,
     logVarEps = vy/10
   ))
   
@@ -701,15 +705,14 @@ mod3_post <- function(train) {
   updt <- function(pars, model){
     model$Q[1,1,1] <- exp(pars[1])
     model$Q[2,2,1] <- exp(pars[2])
-    model$Q[3,3,1] <- exp(pars[3])
-    diag(model$Q[4:8, 4:8, 1]) <- exp(pars[4])
-    model$H[1,1,1] <- exp(pars[5])
+    diag(model$Q[3:8, 3:8, 1]) <- exp(pars[3])
+    model$H[1,1,1] <- exp(pars[4])
     model
   }
   
   # Train - Si allena sui valori passati (quindi quei valori di train non nulli)
   fit <- fitSSM(mod, pars, updt)
-  fit$optim.out
+  #print(fit$optim.out)
   
   # Filtro di karman - Effetua le predizioni - kfs1$muhat contiene una serie storica predetta (anche i dati di train vengono predetti)
   kfs <- KFS(fit$model,
@@ -719,7 +722,7 @@ mod3_post <- function(train) {
   muhat <- xts(as.matrix(kfs$muhat),
                 index(train))
   muhat <- as.xts(muhat)
-  return(muhat)
+  return(exp(muhat)-10000)
 }
 ```
 
@@ -728,13 +731,13 @@ muhat3_post <- mod3_post(train)
 ```
 
 ```{r}
-plot(log(val$lordototale[validation_date:nrow(val),] + 10000), lwd=3) # serie storica
-lines(muhat3_post[validation_date:nrow(val),], type = "l", col = "red", lwd=3) # serie predetta
+plot(val$lordototale[(validation_date-21):nrow(val),], lwd=3) # serie storica
+lines(muhat3_post[(validation_date-21):nrow(val),], type = "l", col = "red", lwd=3) # serie predetta
 ```
 
 ```{r}
-mape(val$lordototale[validation_date:nrow(val),], exp(muhat3_post[validation_date:nrow(val),]) - 10000)
-rmse(val$lordototale[validation_date:nrow(val),], exp(muhat3_post[validation_date:nrow(val),]) - 10000)
+mape(val$lordototale[validation_date:nrow(val),], muhat3_post[validation_date:nrow(val),])
+rmse(val$lordototale[validation_date:nrow(val),], muhat3_post[validation_date:nrow(val),])
 ```
 
 ### Modello 4 (trend + stag7_t + festivo + colori)
@@ -750,17 +753,17 @@ mod4_post <- function(train) {
 
   # Assegna i valori iniziali ai parametri, parte da 0.
   mod$P1inf[] <- 0 # no componenti diffuse
-  mod$a1[1] <- mean(log(train$lordototale[1:50])) # scelta basata sui valori del primo mese
+  mod$a1[1] <- mean(log(train$lordototale[1:200])) # scelta basata sui valori del primo mese
   
-  vy <- var(log(train$lordototale[1:50])) # varianza serie storica (utilizzata sotto per dare un ordine di grandezza)
+  vy <- var(log(train$lordototale[1:200])) # varianza serie storica (utilizzata sotto per dare un ordine di grandezza)
   diag(mod$P1) <- vy*10 # specifichiamo che abbiamo molta incertezza sui valori che abbiamo specificato
   
   #Inizializzazione delle varianze sulla base di vy
   pars <- log(c(
-    logVarEta = vy/10,
-    logVarZeta = vy/1000,
-    logVarOm7 = vy/1000,
-    logVarOm365 = vy/10000,
+    logVarEta = vy/1000,
+    logVarZeta = vy/10,
+    logVarOm7_arm1 = vy,
+    logVarOm7 = vy/100,
     logVarEps = vy/10
   ))
   
@@ -786,7 +789,7 @@ mod4_post <- function(train) {
   muhat <- xts(as.matrix(kfs$muhat),
                 index(train))
   muhat <- as.xts(muhat)
-  return(muhat)
+  return(exp(muhat)-10000)
 }
 ```
 
@@ -795,13 +798,13 @@ muhat4_post <- mod4_post(train)
 ```
 
 ```{r}
-plot(log(val$lordototale[validation_date:nrow(val),] + 10000), lwd=3) # serie storica
+plot(val$lordototale[validation_date:nrow(val),], lwd=3) # serie storica
 lines(muhat4_post[validation_date:nrow(val),], type = "l", col = "red", lwd=3) # serie predetta [1801:1826,]
 ```
 
 ```{r}
-mape(val$lordototale[validation_date:nrow(val),], exp(muhat4_post[validation_date:nrow(val),]) - 10000)
-rmse(val$lordototale[validation_date:nrow(val),], exp(muhat4_post[validation_date:nrow(val),]) - 10000)
+mape(val$lordototale[validation_date:nrow(val),], muhat4_post[validation_date:nrow(val),])
+rmse(val$lordototale[validation_date:nrow(val),], muhat4_post[validation_date:nrow(val),])
 ```
 
 ### Modello 5 (trend + stag7_t + fest_postcovid)
@@ -826,8 +829,8 @@ mod5_post <- function(train) {
   pars <- log(c(
     logVarEta = vy/10,
     logVarZeta = vy/1000,
+    logVarOm7_arm1 = vy/10,
     logVarOm7 = vy/1000,
-    logVarOm365 = vy/10000,
     logVarEps = vy/10
   ))
   
@@ -843,7 +846,7 @@ mod5_post <- function(train) {
   
   # Train - Si allena sui valori passati (quindi quei valori di train non nulli)
   fit <- fitSSM(mod, pars, updt)
-  fit$optim.out
+  #fit$optim.out
   
   # Filtro di karman - Effetua le predizioni - kfs1$muhat contiene una serie storica predetta (anche i dati di train vengono predetti)
   kfs <- KFS(fit$model,
@@ -853,7 +856,7 @@ mod5_post <- function(train) {
   muhat <- xts(as.matrix(kfs$muhat),
                 index(train))
   muhat <- as.xts(muhat)
-  return(muhat)
+  return(exp(muhat)-10000)
 }
 ```
 
@@ -862,26 +865,21 @@ muhat5_post <- mod5_post(train)
 ```
 
 ```{r}
-plot(log(val$lordototale[validation_date:nrow(val),] + 10000), lwd=3) # serie storica
+plot(val$lordototale[validation_date:nrow(val),], lwd=3) # serie storica
 lines(muhat5_post[validation_date:nrow(val),], type = "l", col = "red", lwd=3) # serie predetta [1801:1826,]
 ```
 
 ```{r}
-plot(val$lordototale[validation_date:nrow(val),], lwd=3)
-lines(exp(muhat5_post[validation_date:nrow(val),]) - 10000, type = "l", col = "red", lwd=3) # [1801:1826,]
+mape(val$lordototale[validation_date:nrow(val),], muhat5_post[validation_date:nrow(val),])
+rmse(val$lordototale[validation_date:nrow(val),], muhat5_post[validation_date:nrow(val),])
 ```
 
 ```{r}
-mape(val$lordototale[validation_date:nrow(val),], exp(muhat5_post[validation_date:nrow(val),]) - 10000)
-rmse(val$lordototale[validation_date:nrow(val),], exp(muhat5_post[validation_date:nrow(val),]) - 10000)
+summary(val$lordototale - muhat5_post)
 ```
 
 ```{r}
-summary(val$lordototale - (exp(muhat5_post) - 10000))
-```
-
-```{r}
-plot(val$lordototale - (exp(muhat5_post)) - 10000)
+plot(val$lordototale - muhat5_post)
 abline(v=index(val[validation_date])) # non vine plottata
 ```
 
@@ -893,22 +891,22 @@ abline(v=index(val[validation_date])) # non vine plottata
 
 ```{r}
 comp <- data.frame(Modello=c("mod1", "mod3", "mod4", "mod5"),
-           RMSE=c(rmse(val$lordototale[validation_date:nrow(val),], exp(muhat1_post[validation_date:nrow(val),]) - 10000),
-                  rmse(val$lordototale[validation_date:nrow(val),], exp(muhat3_post[validation_date:nrow(val),]) - 10000),
-                  rmse(val$lordototale[validation_date:nrow(val),], exp(muhat4_post[validation_date:nrow(val),]) - 10000),
-                  rmse(val$lordototale[validation_date:nrow(val),], exp(muhat5_post[validation_date:nrow(val),]) - 10000)),
-           MAPE=c(mape(val$lordototale[validation_date:nrow(val),], exp(muhat1_post[validation_date:nrow(val),]) - 10000),
-                  mape(val$lordototale[validation_date:nrow(val),], exp(muhat3_post[validation_date:nrow(val),]) - 10000),
-                  mape(val$lordototale[validation_date:nrow(val),], exp(muhat4_post[validation_date:nrow(val),]) - 10000),
-                  mape(val$lordototale[validation_date:nrow(val),], exp(muhat5_post[validation_date:nrow(val),]) - 10000)))
+           RMSE=c(rmse(val$lordototale[validation_date:nrow(val),], muhat1_post[validation_date:nrow(val),]),
+                  rmse(val$lordototale[validation_date:nrow(val),], muhat3_post[validation_date:nrow(val),]),
+                  rmse(val$lordototale[validation_date:nrow(val),], muhat4_post[validation_date:nrow(val),]),
+                  rmse(val$lordototale[validation_date:nrow(val),], muhat5_post[validation_date:nrow(val),])),
+           MAPE=c(mape(val$lordototale[validation_date:nrow(val),], muhat1_post[validation_date:nrow(val),]),
+                  mape(val$lordototale[validation_date:nrow(val),], muhat3_post[validation_date:nrow(val),]),
+                  mape(val$lordototale[validation_date:nrow(val),], muhat4_post[validation_date:nrow(val),]),
+                  mape(val$lordototale[validation_date:nrow(val),], muhat5_post[validation_date:nrow(val),])))
 comp
 ```
 
 ```{r}
 plot(val$lordototale[validation_date:nrow(val),], lwd=3, ylim=c(9000,30000))
-lines(exp(muhat1_post[validation_date:nrow(val),]) - 10000, type = "l", col = "red", lwd=3) # [1801:1826,]
-lines(exp(muhat4_post[validation_date:nrow(val),]) - 10000, type = "l", col = "blue", lwd=3) # [1801:1826,]
-lines(exp(muhat5_post[validation_date:nrow(val),]) - 10000, type = "l", col = "green", lwd=3) # [1801:1826,]
+lines(muhat1_post[validation_date:nrow(val),], type = "l", col = "red", lwd=3) # [1801:1826,]
+lines(muhat4_post[validation_date:nrow(val),], type = "l", col = "blue", lwd=3) # [1801:1826,]
+lines(muhat5_post[validation_date:nrow(val),], type = "l", col = "green", lwd=3) # [1801:1826
 ```
 
 ## Evaluation: Confronto forecasting performance dei modelli
@@ -994,8 +992,8 @@ source("My-TSCrossValidation-Functions.R")
 
 ```{r}
 # Parametri di cross-validation globali
-h = 42 # 6 settimane
-initial = 365 # Un anno
+h = 28 # 6 settimane
+initial = 450 # Un anno
 window = NULL # no moving window, si rolling origin
 
 # Calcolo tempo di computazione
@@ -1006,6 +1004,11 @@ print(start.time)
 e_1 <- tsCV_UCM(my_xts = ss, forecastfunction = mod1_post, h=h, initial = initial, window = window)
 e1 <- e_1$e
 e1_percentage <- e_1$e_percentage
+
+# CV su MODELLO 3
+e_3 <- tsCV_UCM(my_xts = ss, forecastfunction = mod3_post, h=h, initial = initial, window = window)
+e3 <- e_3$e
+e3_percentage <- e_3$e_percentage
 
 # CV su MODELLO 4
 e_4 <- tsCV_UCM(my_xts = ss, forecastfunction = mod4_post, h=h, initial = initial, window = window)
@@ -1064,44 +1067,51 @@ class(my_xts_new)
 
 ```{r}
 RMSE_mod1 <- sqrt(colMeans(e1^2, na.rm = TRUE))
+RMSE_mod3 <- sqrt(colMeans(e3^2, na.rm = TRUE))
 RMSE_mod4 <- sqrt(colMeans(e4^2, na.rm = TRUE))
 RMSE_mod5 <- sqrt(colMeans(e5^2, na.rm = TRUE))
 
 # Zoom in
-plot(1:42, RMSE_mod1, type="l", col=1, xlab="horizon", ylab="RMSE", ylim = c(2500,5000))
-lines(1:42, RMSE_mod4, type="l",col=2)
-lines(1:42, RMSE_mod5, type="l",col=3)
-legend("topleft",legend=c("1_UCM","4_UCM","5_UCM"),col=1:4,lty=1)
+plot(1:28, RMSE_mod1, type="l", col=1, xlab="horizon", ylab="RMSE", ylim = c(2500,6000))
+lines(1:28, RMSE_mod3, type="l",col=2)
+lines(1:28, RMSE_mod4, type="l",col=3)
+lines(1:28, RMSE_mod5, type="l",col=4)
+legend("topleft",legend=c("1_UCM", "3_UCM", "4_UCM","5_UCM"),col=1:4,lty=1)
 
 # Zoom out
-plot(1:42, RMSE_mod1, type="l", col=1, xlab="horizon", ylab="RMSE", ylim = c(0,7000))
-lines(1:42, RMSE_mod4, type="l",col=2)
-lines(1:42, RMSE_mod5, type="l",col=3)
-legend("topleft",legend=c("1_UCM","4_UCM","5_UCM"),col=1:4,lty=1)
+plot(1:28, RMSE_mod1, type="l", col=1, xlab="horizon", ylab="RMSE", ylim = c(0,7000))
+lines(1:28, RMSE_mod3, type="l",col=2)
+lines(1:28, RMSE_mod4, type="l",col=3)
+lines(1:28, RMSE_mod5, type="l",col=4)
+#legend("topleft",legend=c("1_UCM", "3_UCM", "4_UCM","5_UCM"),col=1:4,lty=1)
 ```
 
 ### MAE
 
 ```{r}
 MAE_mod1 <- colMeans(abs(e1), na.rm = TRUE)
+MAE_mod3 <- colMeans(abs(e3), na.rm = TRUE)
 MAE_mod4 <- colMeans(abs(e4), na.rm = TRUE)
 MAE_mod5 <- colMeans(abs(e5), na.rm = TRUE)
 
-plot(1:42, MAE_mod1, type="l", col=1, xlab="horizon", ylab="MAE", ylim = c(0,13000))
-lines(1:42, MAE_mod2, type="l",col=2)
-lines(1:42, MAE_mod3, type="l",col=3)
-legend("topleft",legend=c("1_RandomForest_noregr","2_RandomForest_regr","3_RandomForest_regrDummy"),col=1:3,lty=1)
+plot(1:28, MAE_mod1, type="l", col=1, xlab="horizon", ylab="MAE", ylim = c(0,4000))
+lines(1:28, MAE_mod3, type="l",col=2)
+lines(1:28, MAE_mod4, type="l",col=3)
+lines(1:28, MAE_mod5, type="l",col=4)
+legend("topleft",legend=c("1_UCM", "3_UCM", "4_UCM","5_UCM"),col=1:4,lty=1)
 ```
 
 ### MAPE
 
 ```{r}
 MAPE_mod1 <- colMeans(abs(e1_percentage), na.rm = TRUE)
+MAPE_mod3 <- colMeans(abs(e3_percentage), na.rm = TRUE)
 MAPE_mod4 <- colMeans(abs(e4_percentage), na.rm = TRUE)
 MAPE_mod5 <- colMeans(abs(e5_percentage), na.rm = TRUE)
 
-plot(1:42, MAPE_mod1, type="l", col=1, xlab="horizon", ylab="MAPE", ylim = c(0,13000))
-lines(1:42, MAPE_mod2, type="l",col=2)
-lines(1:42, MAPE_mod3, type="l",col=3)
-legend("topleft",legend=c("1_RandomForest_noregr","2_RandomForest_regr","3_RandomForest_regrDummy"),col=1:3,lty=1)
+plot(1:28, MAPE_mod1, type="l", col=1, xlab="horizon", ylab="MAPE", ylim = c(0,13000))
+lines(1:28, MAPE_mod3, type="l",col=2)
+lines(1:28, MAPE_mod4, type="l",col=3)
+lines(1:28, MAPE_mod5, type="l",col=4)
+legend("topleft",legend=c("1_UCM", "3_UCM", "4_UCM","5_UCM"),col=1:4,lty=1)
 ```
