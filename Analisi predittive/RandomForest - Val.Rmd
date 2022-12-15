@@ -920,6 +920,12 @@ r1_post2$Pioggia[r1_post2$Pioggia=="True"] <- 1
 
 r1_post2$ColoreCOVID[r1_post2$ColoreCOVID == ""] <- "nessuno"
 r1_post2 <- fastDummies::dummy_cols(r1_post2, select_columns = "ColoreCOVID", remove_most_frequent_dummy = TRUE, remove_selected_columns = TRUE)
+
+# Dummy chiusura
+# r1_post2$lordototale <- as.numeric(r1_post2$lordototale) # Converto a numeric per facilitare la creazione della dummy
+# r1_post2 <- r1_post2 %>% 
+  # mutate(Chiuso = if_else(r1_post2$lordototale == 0, 1, 0)) 
+
 r1_post2 <- as.xts(r1_post2[-1], as.Date(r1_post2$index)) # r1_post2[-1] per rimuovere colonna index
 ```
 
@@ -946,7 +952,7 @@ y2 <- X2[, 1]
 # Attacco la matrice dei ritardi agli altri regressori
 
 X2 <- cbind(X2[, -1], r1_post2[-(1:14), c("Festivo","Pioggia","yday","wday","ColoreCOVID_arancione","ColoreCOVID_giallo","ColoreCOVID_nessuno",
-                                          "ColoreCOVID_rosso")])
+                                          "ColoreCOVID_rosso")]) # ,"Chiuso" nel caso si aggiunga regressore
 
 # Split training-test
 
@@ -979,7 +985,6 @@ dum_festivi_ts <- xts(fest_post[, 2:18], as.Date(as.character(fest_post$date), f
 # Tengo solo le dummy fino alla data contenuta nei dati
 dum_festivi_ts <- window(dum_festivi_ts, start = "2020-05-07", end = "2022-04-28")
 ```
-
 
 ```{r}
 r1_post3 <- subset(r1_post2, select = -c(2))
