@@ -786,8 +786,18 @@ Salvataggio
 matrices <- list(e1 = e1, e1_percentage = e1_percentage, e1_estimate = e1_estimate, e1_groundtruth = e1_groundtruth, e2 = e2, e2_percentage = e2_percentage, e2_estimate = e2_estimate, e2_groundtruth = e2_groundtruth, e3 = e3, e3_percentage = e3_percentage, e3_estimate = e3_estimate, e3_groundtruth = e3_groundtruth)
 
 for (i in 1:length(matrices)) {
-  write.csv(matrices[[i]], paste0("./Errors/RandomForest/RandomForest_PreCovid_", names(matrices)[i], ".csv"))
+  write.csv(data.frame(date=index(matrices[[i]]), coredata(matrices[[i]])),
+            paste0("./Errors/RandomForest/RandomForest_PreCovid_", names(matrices)[i], ".csv"))
 }
+
+```
+
+```{r}
+h=74
+y_test <- read.csv("./Errors/RandomForest/RandomForest_PreCovid_e1.csv")
+y_test$date  <- parse_date(y_test$date, "%Y-%m-%d", locale = locale("it"))
+y_test <- xts(y_test[, c(-1,-2)], as.Date(as.character(y_test$date), format = "%Y-%m-%d"))
+colnames(y_test) <- paste("h=", 1:h, sep = "")
 
 ```
 

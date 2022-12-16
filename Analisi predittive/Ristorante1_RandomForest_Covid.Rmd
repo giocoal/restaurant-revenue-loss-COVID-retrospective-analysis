@@ -403,6 +403,8 @@ rf_r1 <- xts(postcovid1[, "lordototale"], as.Date(as.character(postcovid1$data),
 e_1 <- tsCV_RandomForest(my_xts = rf_r1[,1], forecastfunction = f_mod1, h=h, initial = initial, window = window)
 e1 <- e_1$e
 e1_percentage <- e_1$e_percentage
+e1_groundtruth <- e_1$e_groundtruth
+e1_estimate <- e_1$e_estimate
 
 # Pre processing modello 2
 
@@ -426,6 +428,8 @@ r1_post2 <- cbind(r1_post2, yday, wday)
 e_2 <- tsCV_RandomForest(my_xts = r1_post2[,1], xreg = r1_post2[,-1], forecastfunction = f_mod2, h=h, initial = initial, window = window)
 e2 <- e_2$e
 e2_percentage <- e_2$e_percentage
+e2_groundtruth <- e_2$e_groundtruth
+e2_estimate <- e_2$e_estimate
 
 # Pre processing modello 3
 
@@ -439,11 +443,25 @@ r1_post3 <- cbind(r1_post3, dum_festivi_ts)
 e_3 <- tsCV_RandomForest(my_xts = r1_post3[,1], xreg = r1_post3[,-1], forecastfunction = f_mod3, h=h, initial = initial, window = window)
 e3 <- e_3$e
 e3_percentage <- e_3$e_percentage
+e3_groundtruth <- e_3$e_groundtruth
+e3_estimate <- e_3$e_estimate
 
 end.time <- Sys.time()
 print(end.time)
 time.taken <- end.time - start.time
 print(time.taken)
+```
+
+Salvataggio
+
+```{r}
+matrices <- list(e1 = e1, e1_percentage = e1_percentage, e1_estimate = e1_estimate, e1_groundtruth = e1_groundtruth, e3 = e3, e3_percentage = e3_percentage, e3_estimate = e3_estimate, e3_groundtruth = e3_groundtruth, e2 = e2, e2_percentage = e2_percentage, e2_estimate = e2_estimate, e2_groundtruth = e2_groundtruth)
+
+for (i in 1:length(matrices)) {
+  write.csv(data.frame(date=index(matrices[[i]]), coredata(matrices[[i]])),
+            paste0("./Errors/RandomForest/RandomForest_Covid_", names(matrices)[i], ".csv"))
+}
+
 ```
 
 ```{r}

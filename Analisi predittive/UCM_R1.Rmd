@@ -416,6 +416,8 @@ a Rolling Forecasting Origin* al fine di:
 La funzione che ho definito è nello script
 `My-TSCrossValidation-Functions.R`
 
+_**Prima si eseguire questa parte del notebook eseguire le celle sopra.**_
+
 ```{r}
 source("My-TSCrossValidation-Functions.R")
 ```
@@ -424,7 +426,7 @@ source("My-TSCrossValidation-Functions.R")
 
 ```{r}
 # Parametri di cross-validation globali
-h = 42 # 6 settimane
+h = 74 # 6 settimane
 initial = 365 # Un anno
 window = NULL # no moving window, si rolling origin
 
@@ -457,6 +459,17 @@ end.time <- Sys.time()
 print(end.time)
 time.taken <- end.time - start.time
 print(time.taken)
+```
+Salvataggio
+
+```{r}
+matrices <- list(e1 = e1, e1_percentage = e1_percentage, e1_estimate = e1_estimate, e1_groundtruth = e1_groundtruth, e4 = e4, e4_percentage = e4_percentage, e4_estimate = e4_estimate, e4_groundtruth = e4_groundtruth, e5 = e5, e5_percentage = e5_percentage, e5_estimate = e5_estimate, e5_groundtruth = e5_groundtruth)
+
+for (i in 1:length(matrices)) {
+  write.csv(data.frame(date=index(matrices[[i]]), coredata(matrices[[i]])),
+            paste0("./Errors/UCM/UCM_PreCovid_", names(matrices)[i], ".csv"))
+}
+
 ```
 
 #### Alcuni test
@@ -1159,7 +1172,7 @@ source("My-TSCrossValidation-Functions.R")
 
 ```{r}
 # Parametri di cross-validation globali
-h = 28 # 6 settimane
+h = 56 # 8 settimane
 initial = 450 # Un anno
 window = NULL # no moving window, si rolling origin
 
@@ -1171,21 +1184,30 @@ print(start.time)
 e_1 <- tsCV_UCM(my_xts = ss, forecastfunction = mod1_post, h=h, initial = initial, window = window)
 e1 <- e_1$e
 e1_percentage <- e_1$e_percentage
+e1_groundtruth <- e_1$e_groundtruth
+e1_estimate <- e_1$e_estimate
+
 
 # CV su MODELLO 3
 e_3 <- tsCV_UCM(my_xts = ss, forecastfunction = mod3_post, h=h, initial = initial, window = window)
 e3 <- e_3$e
 e3_percentage <- e_3$e_percentage
+e3_groundtruth <- e_3$e_groundtruth
+e3_estimate <- e_3$e_estimate
 
 # CV su MODELLO 4
 e_4 <- tsCV_UCM(my_xts = ss, forecastfunction = mod4_post, h=h, initial = initial, window = window)
 e4 <- e_4$e
 e4_percentage <- e_4$e_percentage
+e4_groundtruth <- e_4$e_groundtruth
+e4_estimate <- e_4$e_estimate
 
 # CV su MODELLO 5
 e_5 <- tsCV_UCM(my_xts = ss, forecastfunction = mod5_post, h=h, initial = initial, window = window)
 e5 <- e_5$e
 e5_percentage <- e_5$e_percentage
+e5_groundtruth <- e_5$e_groundtruth
+e5_estimate <- e_5$e_estimate
 
 end.time <- Sys.time()
 print(end.time)
@@ -1193,6 +1215,17 @@ time.taken <- end.time - start.time
 print(time.taken)
 ```
 
+Salvataggio
+
+```{r}
+matrices <- list(e1 = e1, e1_percentage = e1_percentage, e1_estimate = e1_estimate, e1_groundtruth = e1_groundtruth, e3 = e3, e3_percentage = e3_percentage, e3_estimate = e3_estimate, e3_groundtruth = e3_groundtruth, e4 = e4, e4_percentage = e4_percentage, e4_estimate = e4_estimate, e4_groundtruth = e4_groundtruth, e5 = e5, e5_percentage = e5_percentage, e5_estimate = e5_estimate, e5_groundtruth = e5_groundtruth)
+
+for (i in 1:length(matrices)) {
+  write.csv(data.frame(date=index(matrices[[i]]), coredata(matrices[[i]])),
+            paste0("./Errors/UCM/UCM_Covid_", names(matrices)[i], ".csv"))
+}
+
+```
 #### Alcuni test
 
 ```{r}
@@ -1239,17 +1272,17 @@ RMSE_mod4 <- sqrt(colMeans(e4^2, na.rm = TRUE))
 RMSE_mod5 <- sqrt(colMeans(e5^2, na.rm = TRUE))
 
 # Zoom in
-plot(1:28, RMSE_mod1, type="l", col=1, xlab="horizon", ylab="RMSE", ylim = c(2500,6000))
-lines(1:28, RMSE_mod3, type="l",col=2)
-lines(1:28, RMSE_mod4, type="l",col=3)
-lines(1:28, RMSE_mod5, type="l",col=4)
+plot(1:56, RMSE_mod1, type="l", col=1, xlab="horizon", ylab="RMSE", ylim = c(2500,6000))
+lines(1:56, RMSE_mod3, type="l",col=2)
+lines(1:56, RMSE_mod4, type="l",col=3)
+lines(1:56, RMSE_mod5, type="l",col=4)
 legend("topleft",legend=c("1_UCM", "3_UCM", "4_UCM","5_UCM"),col=1:4,lty=1)
 
 # Zoom out
-plot(1:28, RMSE_mod1, type="l", col=1, xlab="horizon", ylab="RMSE", ylim = c(0,7000))
-lines(1:28, RMSE_mod3, type="l",col=2)
-lines(1:28, RMSE_mod4, type="l",col=3)
-lines(1:28, RMSE_mod5, type="l",col=4)
+plot(1:56, RMSE_mod1, type="l", col=1, xlab="horizon", ylab="RMSE", ylim = c(0,7000))
+lines(1:56, RMSE_mod3, type="l",col=2)
+lines(1:56, RMSE_mod4, type="l",col=3)
+lines(1:56, RMSE_mod5, type="l",col=4)
 #legend("topleft",legend=c("1_UCM", "3_UCM", "4_UCM","5_UCM"),col=1:4,lty=1)
 ```
 
@@ -1261,10 +1294,10 @@ MAE_mod3 <- colMeans(abs(e3), na.rm = TRUE)
 MAE_mod4 <- colMeans(abs(e4), na.rm = TRUE)
 MAE_mod5 <- colMeans(abs(e5), na.rm = TRUE)
 
-plot(1:28, MAE_mod1, type="l", col=1, xlab="horizon", ylab="MAE", ylim = c(0,4000))
-lines(1:28, MAE_mod3, type="l",col=2)
-lines(1:28, MAE_mod4, type="l",col=3)
-lines(1:28, MAE_mod5, type="l",col=4)
+plot(1:56, MAE_mod1, type="l", col=1, xlab="horizon", ylab="MAE", ylim = c(0,4000))
+lines(1:56, MAE_mod3, type="l",col=2)
+lines(1:56, MAE_mod4, type="l",col=3)
+lines(1:56, MAE_mod5, type="l",col=4)
 legend("topleft",legend=c("1_UCM", "3_UCM", "4_UCM","5_UCM"),col=1:4,lty=1)
 ```
 
@@ -1276,9 +1309,9 @@ MAPE_mod3 <- colMeans(abs(e3_percentage), na.rm = TRUE)
 MAPE_mod4 <- colMeans(abs(e4_percentage), na.rm = TRUE)
 MAPE_mod5 <- colMeans(abs(e5_percentage), na.rm = TRUE)
 
-plot(1:28, MAPE_mod1, type="l", col=1, xlab="horizon", ylab="MAPE", ylim = c(0,13000))
-lines(1:28, MAPE_mod3, type="l",col=2)
-lines(1:28, MAPE_mod4, type="l",col=3)
-lines(1:28, MAPE_mod5, type="l",col=4)
+plot(1:56, MAPE_mod1, type="l", col=1, xlab="horizon", ylab="MAPE", ylim = c(0,13000))
+lines(1:56, MAPE_mod3, type="l",col=2)
+lines(1:56, MAPE_mod4, type="l",col=3)
+lines(1:56, MAPE_mod5, type="l",col=4)
 legend("topleft",legend=c("1_UCM", "3_UCM", "4_UCM","5_UCM"),col=1:4,lty=1)
 ```
