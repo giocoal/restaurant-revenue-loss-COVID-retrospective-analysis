@@ -903,6 +903,8 @@ test_eval
 
 # Evaluation: Confronto forecasting performance dei modelli
 
+Prima si eseguire questa parte del notebook eseguire le celle sopra.
+
 ## Scelta misura di *forecasting accuracy*
 
 Al fine di confrontare i diversi modelli definiti precedentemente è importante valutare le performance in termini forecasting accuracy. Prima di definire la procedura di calcolo della forecasting accuracy è importante selezionare la propria misura di accuratezza.
@@ -1041,8 +1043,6 @@ print(time.taken)
 
 ```
 
-
-
 ```{r}
 # Parametri di cross-validation globali per il terzo e quarto modello
 
@@ -1075,6 +1075,9 @@ print(end.time)
 time.taken <- end.time - start.time
 print(time.taken)
 ```
+
+## Analisi degli errori
+
 ### Errori troncati
 
 Andiamo a tenere solo 1 riga su h della matrice degli errori, simulando quindi un avanzamento di training e test di h osservazioni ogni iterazione.
@@ -1101,10 +1104,9 @@ RMSE_mod3_test <- sqrt(colMeans(test1^2, na.rm = TRUE))
 plot(1:42, RMSE_mod3_test, type="l", col=1, xlab="horizon", ylab="RMSE", ylim = c(2500,6000))
 ```
 
+### Studio specifico degli errori 
 
-## Analisi degli errori
-
-### 1-step
+#### 1-step
 
 ```{r}
 check1 <- cbind(e1[,"h=1"], e1_estimate[,"h=1"], e1_groundtruth[,"h=1"], c(df$data[2:(nrow(df))], NA), c(df$lordototale[2:(nrow(df))], NA), c(df$Giorno[2:(nrow(df))], NA))
@@ -1158,7 +1160,7 @@ common_values <- Reduce(intersect, list(check1$data, check2$data, check3$data, c
 common_values
 ```
 
-### 7-step
+#### 7-step
 
 ```{r}
 check1 <- cbind(e1[,"h=20"], e1_estimate[,"h=20"], e1_groundtruth[,"h=20"], c(df$data[2:(nrow(df))], NA), c(df$lordototale[2:(nrow(df))], NA), c(df$Giorno[2:(nrow(df))], NA))
@@ -1207,7 +1209,7 @@ table(check4$Giorno)
 common_values <- Reduce(intersect, list(check1$data, check2$data, check3$data, check4$data))
 common_values
 ```
-### 30-step
+#### 30-step
 
 ```{r}
 check1 <- cbind(e1[,"h=30"], e1_estimate[,"h=30"], e1_groundtruth[,"h=30"], c(df$data[2:(nrow(df))], NA), c(df$lordototale[2:(nrow(df))], NA), c(df$Giorno[2:(nrow(df))], NA))

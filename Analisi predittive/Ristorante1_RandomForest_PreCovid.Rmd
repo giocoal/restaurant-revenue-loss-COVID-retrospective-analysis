@@ -951,14 +951,14 @@ legend("topleft",legend=c("1_RandomForest_noregr","2_RandomForest_regr","3_Rando
 ```{r}
 library(robustbase)
 
-RMSE_mod1 <- sqrt(colMedians(e1^2, na.rm = TRUE, hasNA = TRUE))
-RMSE_mod2 <- sqrt(colMedians(e2^2, na.rm = TRUE, hasNA = TRUE))
-RMSE_mod3 <- sqrt(colMedians(e3^2, na.rm = TRUE, hasNA = TRUE))
+RMdSE_mod1 <- sqrt(colMedians(e1^2, na.rm = TRUE, hasNA = TRUE))
+RMdSE_mod2 <- sqrt(colMedians(e2^2, na.rm = TRUE, hasNA = TRUE))
+RMdSE_mod3 <- sqrt(colMedians(e3^2, na.rm = TRUE, hasNA = TRUE))
 
 # Zoom in
-plot(1:42, RMSE_mod1, type="l", col=1, xlab="horizon", ylab="RMdSE", ylim = c(0,5000))
-lines(1:42, RMSE_mod2, type="l",col=2)
-lines(1:42, RMSE_mod3, type="l",col=3)
+plot(1:42, RMdSE_mod1, type="l", col=1, xlab="horizon", ylab="RMdSE", ylim = c(0,5000))
+lines(1:42, RMdSE_mod2, type="l",col=2)
+lines(1:42, RMdSE_mod3, type="l",col=3)
 legend("topleft",legend=c("1_RandomForest_noregr","2_RandomForest_regr","3_RandomForest_regr_DUmmy"),col=1:3,lty=1)
 
 ```
