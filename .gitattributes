@@ -1,2 +1,5 @@
 * linguist-vendored
-*.Rmd *.ipynb *.R *.py linguist-vendored=false
+*.Rmd linguist-vendored=false
+*.ipynb linguist-vendored=false
+*.R linguist-vendored=false
+*.py linguist-vendored=false
