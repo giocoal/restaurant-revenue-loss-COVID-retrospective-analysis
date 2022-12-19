@@ -60,7 +60,7 @@ knit_hooks$set(source = function(x, options){
 
 # Setting & Function
 
-```{r}
+```{r include=FALSE}
 set.seed(100)
 
 # Setting librerie utili
@@ -77,10 +77,6 @@ if (any(installed_packages == FALSE)) {
 # Packages loading
 invisible(lapply(packages, library, character.only = TRUE))
 
-
-# Setting working directory
-# working_dir = "C:/Users/marco/OneDrive/UNIMIB_DataScience/99-PROJECTS/DataScienceLab2022/Dati ristoranti"
-# setwd(working_dir)
 
 # MAPE 
 mape <- function(actual,pred){
@@ -112,43 +108,36 @@ err_plot <- function(actual, pred){
 
 ## Load Data & Manipulation
 
-Consideriamo ora i dati riguardanti il **periodo Covid**.
 
--   Creo un dataframe contenente i regressori che useremo poi per modellare:
-
-    -   Stagionalità
-
-    -   Periodo Covid
-
-        -   Colori Regioni
-
-        -   Vaccini
-
-        -   ...
+Periodo considerato: dal **07/05/2020** (giorno di riapertura post 1° lockdown)
 
 ```{r}
-r1 <- read.csv("C:\\Users\\marco\\OneDrive\\UNIMIB_DataScience\\99-PROJECTS\\DataScienceLab2022\\Dati ristoranti\\periodo-covid_r1.csv")
-head(r1)
+df <- read.csv("..\\Dati ristoranti\\post-covid_r1.csv")
+head(df)
 ```
 
-Periodo considerato: dal **07/05/2020** (giorno di riapertura post 1° lockdown. Tolgo le variabili ritenute non di interesse
+Considero solo le variabili d'interesse
 
 ```{r}
-r1$data  <- parse_date(r1$data, "%Y-%m-%d", locale = locale("it"))
-r1 <- subset(r1, 
-             r1$data > "2020-05-07", 
-             select = c("data", "lordototale", "Giorno", "Precipitazioni.mm.", "ColoreCOVID", "Dose1", "Dose2", "DoseUnica", "Booster1", "Booster3Dosi", "Booster2", "GASOLIO_RISCALDAMENTO.LITRO"))
+df$data  <- parse_date(df$data, "%Y-%m-%d", locale = locale("it"))
+df <- subset(df,
+             select = c("data", "lordototale", "Season", "Giorno","Weekend", "Festivo", "Pioggia", "ColoreCOVID", "Dose1", "Dose2", "DoseUnica", "Booster1", "Booster3Dosi", "Booster2", "BENZINA.LITRO", "GASOLIO_AUTO.LITRO", "GPL.LITRO","GASOLIO_RISCALDAMENTO.LITRO"))
 
+```
+
+
+```{r}
+# Controllo che non ci siano na
+xreg[is.na(xreg)==TRUE,] # Non ci sono Nan
 ```
 
 ```{r}
 # Creo dataframe contenente le sole variabili esplicative
-
-xreg<- r1[, c("data", "Giorno", "Precipitazioni.mm.", "ColoreCOVID", "Dose1", "Dose2", "DoseUnica", "Booster1", "Booster3Dosi", "Booster2", "GASOLIO_RISCALDAMENTO.LITRO")]
+xreg<- df[,-2]
 ```
 
 ```{r}
-xreg$Precipitazioni.mm.[is.na(xreg$Precipitazioni.mm.)] <- 0
+xreg$Pioggia[xreg$Pioggia ==""] <- "False" 
 xreg$ColoreCOVID[xreg$ColoreCOVID==""] <- "NoColore"
 xreg$Dose1[is.na(xreg$Dose1)] <- 0
 xreg$Dose2[is.na(xreg$Dose2)] <- 0
@@ -158,9 +147,27 @@ xreg$Booster2[is.na(xreg$Booster2)] <- 0
 xreg$Booster3Dosi[is.na(xreg$Booster3Dosi)] <- 0
 ```
 
+
+
+```{r}
+vendite_r1 <- df[,2]
+vendite_r1[is.na(vendite_r1)] # Non ci sono NaN
+vendite_r1[vendite_r1 == 0] # 9 valori a zero, probabilmente chiusure oppure mancanza di registrazioni degli incassi 
+```
+
+```{r}
+vendite_r1 <- msts(vendite_r1, seasonal.periods=c(7,365.25), ts.frequency = 7)
+plot(vendite_r1)
+```
+
+```{r}
+vendite_r1_dec <- mstl(vendite_r1) 
+
+autoplot(vendite_r1_dec)
+```
+
 ## Salvataggio errori
 
-Ei remo, lascio qui questo piccolo script che dovresti runnare per favore quando fai cross-validation, nel momento dopo l'uttilizzo delle funzioni di cross validation e generazione degli errori
 
 ```{r}
 matrices <- list(e1 = e1, e1_percentage = e1_percentage, e1_estimate = e1_estimate, e1_groundtruth = e1_groundtruth, e3 = e3, e3_percentage = e3_percentage, e3_estimate = e3_estimate, e3_groundtruth = e3_groundtruth, e2 = e2, e2_percentage = e2_percentage, e2_estimate = e2_estimate, e2_groundtruth = e2_groundtruth)
