@@ -291,6 +291,7 @@ dum_day_df <- dummy_cols(dum_day_df, select_columns = c("Giorno"),
 dum_day_df <- subset(dum_day_df, select = -c(data,Giorno_Monday))
 dum_day_df
 ```
+
 ```{r}
 # La funzione Arima vuole in input una matrice per i regressori
 dum_day <- as.matrix(dum_day_df)
@@ -421,7 +422,7 @@ tsdisplay(diff(train, 7))
 
 -   Componente AR non stagionale di ordine 3
 
--   Costante inclusa
+-   Costante non inclusa
 
 ```{r}
 mod1 <- Arima(y = train,
@@ -477,6 +478,7 @@ checkresiduals(mod1_auto, test = "LB", lag = 25, plot = FALSE)
 ```{r}
 pars_test(mod1_auto$coef, mod1_auto$var.coef)
 ```
+
 ```{r}
 # Fit prime 10 settimane
 plot(train[1:70], 
