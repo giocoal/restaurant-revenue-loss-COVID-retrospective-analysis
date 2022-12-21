@@ -498,7 +498,9 @@ class(my_xts_new)
 
 #### Errori troncati
 
-Andiamo a tenere solo 1 riga su h della matrice degli errori, simulando quindi un avanzamento di training e test di h osservazioni ogni iterazione.
+Andiamo a tenere solo 1 riga su h della matrice degli errori, simulando
+quindi un avanzamento di training e test di h osservazioni ogni
+iterazione.
 
 ```{r}
 test <- as.data.frame(e1)
@@ -510,6 +512,7 @@ RMSE_mod1_test <- sqrt(colMeans(test1^2, na.rm = TRUE))
 plot(1:42, RMSE_mod1_test, type="l", col=1, xlab="horizon", ylab="RMSE", ylim = c(2500,6000))
 
 ```
+
 Vediamo sui modelli con regressori
 
 ```{r}
@@ -522,7 +525,7 @@ RMSE_mod4_test <- sqrt(colMeans(test1^2, na.rm = TRUE))
 plot(1:42, RMSE_mod3_test, type="l", col=1, xlab="horizon", ylab="RMSE", ylim = c(0,10000))
 ```
 
-#### Studio specifico degli errori 
+#### Studio specifico degli errori
 
 ##### 1-step
 
@@ -558,6 +561,7 @@ check5 <- xts(check5, order.by = index(ss))
 View(check5)
 
 ```
+
 Vediamo se ci sono giorni della settimana particolarmente sbagliati
 
 ```{r}
@@ -565,6 +569,7 @@ Vediamo se ci sono giorni della settimana particolarmente sbagliati
 #table(check2$wday)
 #table(check3$wday)
 ```
+
 Vediamo se c'è un giorno dell'anno che tutti i modelli sbagliano
 
 ```{r}
@@ -605,6 +610,7 @@ print(nrow(check5))
 check5 <- xts(check5, order.by = index(ss))
 View(check5)
 ```
+
 ##### 21-step
 
 ```{r}
