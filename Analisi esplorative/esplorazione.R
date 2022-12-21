@@ -538,7 +538,7 @@ p + labs(x = "data", y='lordototale')
 
 # Serie storica per ristorante (PRE-COVID)
 
-ristoranti_ts_covid <- ristoranti_ts[which(ristoranti_ts$weeks>'2020-02-22'),]
+ristoranti_ts_covid <- ristoranti_ts[which(ristoranti_ts$weeks>'2020-05-01'),]
 
 p <- ggplot(ristoranti_ts_covid,                           
        aes(x = weeks,

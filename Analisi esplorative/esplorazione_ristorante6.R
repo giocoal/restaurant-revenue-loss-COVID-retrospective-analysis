@@ -408,6 +408,12 @@ print(
 
 ### Stagionalit? considerando tutti gli anni
 
+
+vendite6_sett_avg <- as.numeric(vendite6_sett_avg)
+initial <- rep(NA, 36)
+vendite6_sett_avg <- c(initial, vendite6_sett_avg)
+vendite6_sett_avg <- ts(vendite6_sett_avg, start = decimal_date(as.Date("2018-01-01")), frequency=52)
+
 print(
   ggseasonplot(vendite6_sett_avg, year.labels=TRUE, year.labels.left=TRUE) +
     ylab("euro") +
