@@ -234,6 +234,11 @@ print(
     ylab("Vendite")
 )
 
+plot(vendite1_day, xlab = "Anno", ylab = "Vendite", main = "Vendite giornaliere")
+grid(col = "lightgray", lty = "dotted",
+     lwd = par("lwd"), equilogs = TRUE)
+abline(v=c(2019, 2020, 2021, 2022), col = "darkgrey", lty=2)
+
 # Vendite settimanali medie
 # Per comodit? utilizzo il dataset completo perch? il 01-01-2018 ? un luned?.
 # Poi toglier? i dati delle prime 35 settimane perch? sono aggregati mensilmente
@@ -267,6 +272,13 @@ print(
     xlab("Anno") +
     ylab("Vendite")
 )
+
+plot(vendite1_sett_avg, xlab = "Anno", ylab = "Vendite", main = "Vendite settimanali e mensili")
+grid(col = "lightgray", lty = "dotted",
+     lwd = par("lwd"), equilogs = TRUE)
+lines(vendite1_mens_avg, col = "red")
+abline(v=c(2019, 2020, 2021, 2022), col = "darkgrey", lty=2)
+legend("topright", c("media settimanale", "media mensile"), lty = 1, col = 1:2)
 
 ### Vendite giornaliere/settimanali/mensili periodo pre-COVID
 # Prendo come data di riferimeno quella in cui sono iniziate le chiusure in Italia
@@ -418,9 +430,14 @@ print(
 
 print(
   ggseasonplot(vendite1_sett_avg, year.labels=TRUE, year.labels.left=TRUE) +
-    ylab("euro") +
-    ggtitle("Seasonal plot Ristorante 1: vendite settimanali")
+    ylab("Vendite") +
+    ggtitle("Seasonal plot: vendite settimanali")
 )
+
+vendite1_sett_avg <- as.numeric(vendite1_sett_avg)
+initial <- rep(NA, 36)
+vendite1_sett_avg <- c(initial, vendite1_sett_avg)
+vendite1_sett_avg <- ts(vendite1_sett_avg, start = decimal_date(as.Date("2018-01-01")), frequency=52)
 
 # Nel grafico precedente c'? un problema sull'anno 2018, che dovrebbe partire dalla
 # settimana 36 ma per qualche motivo "interpola" a partire dalla settimana 1. 
