@@ -291,6 +291,7 @@ dum_day_df <- dummy_cols(dum_day_df, select_columns = c("Giorno"),
 dum_day_df <- subset(dum_day_df, select = -c(data,Giorno_Monday))
 dum_day_df
 ```
+
 ```{r}
 # La funzione Arima vuole in input una matrice per i regressori
 dum_day <- as.matrix(dum_day_df)
@@ -421,7 +422,7 @@ tsdisplay(diff(train, 7))
 
 -   Componente AR non stagionale di ordine 3
 
--   Costante inclusa
+-   Costante non inclusa
 
 ```{r}
 mod1 <- Arima(y = train,
@@ -477,6 +478,7 @@ checkresiduals(mod1_auto, test = "LB", lag = 25, plot = FALSE)
 ```{r}
 pars_test(mod1_auto$coef, mod1_auto$var.coef)
 ```
+
 ```{r}
 # Fit prime 10 settimane
 plot(train[1:70], 
@@ -903,8 +905,6 @@ test_eval
 
 # Evaluation: Confronto forecasting performance dei modelli
 
-Prima si eseguire questa parte del notebook eseguire le celle sopra.
-
 ## Scelta misura di *forecasting accuracy*
 
 Al fine di confrontare i diversi modelli definiti precedentemente è importante valutare le performance in termini forecasting accuracy. Prima di definire la procedura di calcolo della forecasting accuracy è importante selezionare la propria misura di accuratezza.
@@ -944,7 +944,10 @@ Effettuo la procedura di *Time-Series Cross Validation* o *Evaluating on a Rolli
     -   **Non-Constant In-Sample -\>** Non impostiamo il parametro `window`, che altrimenti andrebbe a settare un dimensione fissata del training set e quindi una moving window
 
 
-## Definizione funzione di Time Series Cross-Validation (`tsCV_UCM()`)
+## Definizione funzione di Time Series Cross-Validation (`tsCV_ARIMA()`)
+
+_**Prima si eseguire questa parte del notebook eseguire le celle sopra.**_
+
 
 ```{r}
 source("My-TSCrossValidation-Functions.R")
@@ -1010,7 +1013,7 @@ f_mod4 <- function(x, h, xreg, newxreg) {
 
 ```{r}
 # Parametri di cross-validation globali per i primi due modelli
-h = 42 # 6 settimane
+h = 74 # 6 settimane
 initial = 126 # 3 volte l'orizzonte
 window = NULL
 
@@ -1046,7 +1049,7 @@ print(time.taken)
 ```{r}
 # Parametri di cross-validation globali per il terzo e quarto modello
 
-h = 42 # 6 settimane
+h = 74 # 6 settimane
 initial = 365 #126*3, modelli maggiormente complessi richiedono un training set iniziale più ampio
 window = NULL
 
@@ -1074,6 +1077,20 @@ end.time <- Sys.time()
 print(end.time)
 time.taken <- end.time - start.time
 print(time.taken)
+```
+Salvataggio
+
+
+```{r}
+matrices <- list(e1 = e1, e1_percentage = e1_percentage, e1_estimate = e1_estimate, e1_groundtruth = e1_groundtruth, e2 = e2, e2_percentage = e2_percentage, e2_estimate = e2_estimate, e2_groundtruth = e2_groundtruth, e3 = e3, e3_percentage = e3_percentage, e3_estimate = e3_estimate, e3_groundtruth = e3_groundtruth, e4 = e4, e4_percentage = e4_percentage, e4_estimate = e4_estimate, e4_groundtruth = e4_groundtruth)
+
+for (i in 1:length(matrices)) {
+  # Aggiungo la colonna date
+  df_temp <- xts(matrices[[i]], as.Date(as.character(df$data), format = "%Y-%m-%d"))
+  write.csv(data.frame(date=index(df_temp), coredata(df_temp)),
+            paste0("./Errors/ARIMA/ARIMA_PreCovid_", names(matrices)[i], ".csv"))
+}
+
 ```
 
 ## Analisi degli errori

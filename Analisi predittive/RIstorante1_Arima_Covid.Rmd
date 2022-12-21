@@ -60,13 +60,13 @@ knit_hooks$set(source = function(x, options){
 
 # Setting & Function
 
-```{r}
+```{r include=FALSE}
 set.seed(100)
 
 # Setting librerie utili
 # Package names
 packages <- c("readxl",  "readr", "forecast", "dplyr", "ggplot2",
-              "lubridate", "KFAS", "tseries", "xts", "fastDummies") 
+              "lubridate", "KFAS", "tseries", "xts", "fastDummies", "TSstudio") 
 
 # Install packages if not yet installed
 installed_packages <- packages %in% rownames(installed.packages())
@@ -78,14 +78,16 @@ if (any(installed_packages == FALSE)) {
 invisible(lapply(packages, library, character.only = TRUE))
 
 
-# Setting working directory
-# working_dir = "C:/Users/marco/OneDrive/UNIMIB_DataScience/99-PROJECTS/DataScienceLab2022/Dati ristoranti"
-# setwd(working_dir)
-
 # MAPE 
 mape <- function(actual,pred){
   mape <- mean(abs((actual - pred)/actual))*100
   return (mape)
+}
+
+#MAE
+mae <- function(actual,pred){
+  mae <- mean(abs((actual - pred)))
+  return (mae)
 }
 
 #MSE
@@ -112,43 +114,30 @@ err_plot <- function(actual, pred){
 
 ## Load Data & Manipulation
 
-Consideriamo ora i dati riguardanti il **periodo Covid**.
-
--   Creo un dataframe contenente i regressori che useremo poi per modellare:
-
-    -   Stagionalità
-
-    -   Periodo Covid
-
-        -   Colori Regioni
-
-        -   Vaccini
-
-        -   ...
+Periodo considerato: dal **07/05/2020** (giorno di riapertura post 1° lockdown)
 
 ```{r}
-r1 <- read.csv("C:\\Users\\marco\\OneDrive\\UNIMIB_DataScience\\99-PROJECTS\\DataScienceLab2022\\Dati ristoranti\\periodo-covid_r1.csv")
-head(r1)
+df <- read.csv("..\\Dati ristoranti\\post-covid_r1.csv")
+head(df)
 ```
 
-Periodo considerato: dal **07/05/2020** (giorno di riapertura post 1° lockdown. Tolgo le variabili ritenute non di interesse
+Considero solo le variabili d'interesse
 
 ```{r}
-r1$data  <- parse_date(r1$data, "%Y-%m-%d", locale = locale("it"))
-r1 <- subset(r1, 
-             r1$data > "2020-05-07", 
-             select = c("data", "lordototale", "Giorno", "Precipitazioni.mm.", "ColoreCOVID", "Dose1", "Dose2", "DoseUnica", "Booster1", "Booster3Dosi", "Booster2", "GASOLIO_RISCALDAMENTO.LITRO"))
+df$data  <- parse_date(df$data, "%Y-%m-%d", locale = locale("it"))
+df <- subset(df,
+             select = c("data", "lordototale", "Season", "Giorno","Weekend", "Festivo", "Pioggia", "ColoreCOVID", "Dose1", "Dose2", "DoseUnica", "Booster1", "Booster3Dosi", "Booster2", "BENZINA.LITRO", "GASOLIO_AUTO.LITRO", "GPL.LITRO","GASOLIO_RISCALDAMENTO.LITRO"))
 
 ```
 
 ```{r}
 # Creo dataframe contenente le sole variabili esplicative
-
-xreg<- r1[, c("data", "Giorno", "Precipitazioni.mm.", "ColoreCOVID", "Dose1", "Dose2", "DoseUnica", "Booster1", "Booster3Dosi", "Booster2", "GASOLIO_RISCALDAMENTO.LITRO")]
+xreg<- df[,-2]
 ```
 
 ```{r}
-xreg$Precipitazioni.mm.[is.na(xreg$Precipitazioni.mm.)] <- 0
+# Sistemo le varie variabili
+xreg$Pioggia[xreg$Pioggia ==""] <- "False" 
 xreg$ColoreCOVID[xreg$ColoreCOVID==""] <- "NoColore"
 xreg$Dose1[is.na(xreg$Dose1)] <- 0
 xreg$Dose2[is.na(xreg$Dose2)] <- 0
@@ -156,4 +145,697 @@ xreg$DoseUnica[is.na(xreg$DoseUnica)] <- 0
 xreg$Booster1[is.na(xreg$Booster1)] <- 0
 xreg$Booster2[is.na(xreg$Booster2)] <- 0
 xreg$Booster3Dosi[is.na(xreg$Booster3Dosi)] <- 0
+```
+
+```{r}
+# Controllo che non ci siano na
+xreg[is.na(xreg)==TRUE,] # Non ci sono Nan
+```
+
+```{r}
+vendite_r1 <- df[,2]
+vendite_r1[is.na(vendite_r1)] # Non ci sono NaN
+ 
+```
+
+```{r}
+# Valori pari a zero
+vendite_r1[vendite_r1 == 0] 
+# 9 valori a zero, probabilmente chiusure oppure mancanza di registrazioni degli incassi (inverosimile che il risotante abbia effettivamente incassato zero, ASSUNZIONE!!)
+df$data[df$lordototale == 0 ] # Acuni giorni sono festività, altri invece no. 
+```
+
+```{r}
+# Nella serie storica pre-covid tali dati sono stati regsitrati, il che equivale al fatto che il ristorante era aperto. Per non distorcere troppo le previsioni, e considerando che i valori mancanti sono comunque pochi, viene deciso di imputare tali valori mancanti
+```
+
+```{r}
+#La libreria inputTS gestisce ovviamente i NaN e non i valori uguali a zero
+vendite_r1[vendite_r1 == 0] <- NaN
+```
+
+```{r}
+# Trasformo in ts
+vendite_r1 <- msts(vendite_r1, seasonal.periods=c(7,365.25), ts.frequency = 7)
+plot(vendite_r1)
+```
+
+## Imputazione dei valori mancanti
+
+```{r}
+library(imputeTS)
+```
+
+```{r}
+ggplot_na_distribution(vendite_r1)
+statsNA(vendite_r1)
+```
+
+```{r}
+# Imputazione tramite algoritmo di Kalman
+vendite_r1_nona <- na_kalman(vendite_r1)
+ggplot_na_imputations(vendite_r1, vendite_r1_nona)
+
+vendite_r1 <- na_kalman(vendite_r1)
+```
+
+```{r}
+vendite_r1_dec <- mstl(vendite_r1) 
+autoplot(vendite_r1_dec)
+```
+
+Si nota come l'andamento della serie storica sia molto irregolare. Questo è dovuto al fatto che i dati sono influenzati dall'andamento della pandemia. In paeticolare si notano dei trend crescenti e decrescenti successivi, causati dall'introduzione del colore delle regioni, che a seconda dell'andamento dei contagi imponenvano delle restrizioni sulle attività commerciali.
+
+```{r}
+plot(vendite_r1, main="Trend Vendite giornaliere", xlab ="Time", ylab="Fatturato")
+lines(vendite_r1_dec[,2], col="blue", lwd=2)
+```
+
+## Stazionarietà della serie storica
+
+La serie storica è ovviamente non stazionaria, per i seguenti motivi:
+
+-   Presenza di stagionalità (non stazionarietà stagionale)
+-   Presenza di un trend (osservazioni sistematicamente sopra o sotto la media)
+-   Possibile non stazionarietà in varianza (se guardiamo il grafico della decomposizione, la parte stagionale risulta avere un andamento in varianza non constante)
+
+```{r}
+ndiffs(vendite_r1)
+nsdiffs(vendite_r1)
+```
+
+```{r}
+nsdiffs(diff(vendite_r1))
+```
+
+```{r}
+kpss.test(vendite_r1)
+```
+
+```{r}
+vendite_r1_diff7 <- diff(vendite_r1,7)
+autoplot(vendite_r1_diff7)
+tsdisplay(vendite_r1_diff7)
+```
+
+```{r}
+ndiffs(vendite_r1_diff7)
+```
+
+I vari test effettuati ci indichiano una chiara non stazionarietà della serie storica. In particolare notiamo come si probabilmente necessaria sia una differenziazione non stagionale che una stagionale.
+
+Proviamo a vedere se una trasformazione dei dati per stabilizzare la varianza possa portare a non dover applicare due differenziazioni
+
+```{r}
+BoxCox.lambda(vendite_r1)
+```
+
+Abbiamo un valore negativo non molto lontano da zero, il che ci può far pensare che una trasformazione logaritmica possa migliorare la situazione
+
+```{r}
+plot(log(vendite_r1))
+```
+
+```{r}
+autoplot(mstl(log(vendite_r1)))
+```
+
+```{r}
+ndiffs(log(vendite_r1))
+nsdiffs(log(vendite_r1))
+```
+
+Permane ancora una non stazionarietà sia stagionale che non stagionale. Andremo successivamente a valutare quali differenziazioni considerare.
+
+## Variabili stagionali
+
+```{r}
+dum_day_df <- df[, c("data", "Giorno")]
+dum_day_df[,"Giorno"] <- as.factor(dum_day_df$Giorno)
+dum_day_df <- dummy_cols(dum_day_df, select_columns = c("Giorno"), 
+                      # remove_first_dummy = TRUE, 
+                      remove_selected_columns = TRUE)
+dum_day_df <- subset(dum_day_df, select = -c(data,Giorno_Monday))
+dum_day_df
+
+# La funzione Arima vuole in input una matrice per i regressori
+dum_day <- as.matrix(dum_day_df)
+```
+
+```{r}
+#dummy annuali
+dum_ann_df <- read_xlsx("..\\Dati aggiuntivi\\fest_postcovid.xlsx", col_types = NULL)
+dum_ann_df <- subset(dum_ann_df, date < "2022-05-01", select = -date)
+
+dum_ann_df <- as.data.frame(lapply(dum_ann_df, as.integer)) # Trasformo tutte le colonne in interi e ri-trasformo in dataframe
+head(dum_ann_df)
+
+# La funzione Arima vuole in input una matrice per i regressori
+dum_ann <- as.matrix(dum_ann_df)
+```
+
+```{r}
+# Unisco tutto in un unico dataframe tutti le dummy stagionali e altri vari regressori
+
+xreg <- cbind(dum_ann_df, dum_day_df, subset(xreg, select = -c(data, Giorno, Weekend, Festivo)))
+
+# Rinonimo alcune colonne
+colnames(xreg)[36] = "Riscaldamento" 
+colnames(xreg)[35] = "Gpl"
+colnames(xreg)[34] = "Gasolio"
+colnames(xreg)[33] = "Benzina"
+colnames(xreg)[25] = "Pioggia_True"
+colnames(xreg)[36] = "Riscaldamento"
+
+# Variabile dummy Pioggia
+xreg$Pioggia_True[xreg$Pioggia_True == "True"] <- 1 # Trasformo in dummy
+xreg$Pioggia_True[xreg$Pioggia_True == "False"] <- 0
+xreg$Pioggia_True <- as.integer(xreg$Pioggia_True) # Trasformo in integer7
+
+#Creo variabili Dummy per il colore della regione
+# Per il periodo pre-Colori imposto colore a bianco
+xreg$ColoreCOVID[xreg$ColoreCOVID == "NoColore"] <- "bianco"
+
+
+xreg[,"ColoreCOVID"] <- as.factor(xreg$ColoreCOVID)
+xreg <- dummy_cols(xreg, select_columns = c("ColoreCOVID"), 
+                      remove_most_frequent_dummy = TRUE, #tolgo dummy zona bianca
+                      remove_selected_columns = TRUE) #inplace
+```
+
+```{r}
+# Termini di Fourier per modellare stagionalità
+
+four <- fourier(vendite_r1, K=c(3,0))
+four <- as.matrix((four))
+
+```
+
+## Costruzione dataset per le previsioni
+
+```{r}
+# Fourier
+four_predict <- fourier(vendite_r1, K=c(3,15), h=60)
+four_predict <- as.matrix(four_predict)
+
+# Dummy annuali
+dum_ann_df_predict <- read_xlsx("..\\Dati aggiuntivi\\fest_postcovid.xlsx", col_types = NULL)
+dum_ann_df_predict <- subset(dum_ann_df_predict, date > "2022-04-30" & date < "2022-07-01" , select = -date)
+
+# Dummy settimanali
+dum_day_predict <-  read_xlsx("..\\Dati aggiuntivi\\dum_day_predict.xlsx", col_types = NULL)
+
+dum_day_predict[,"Giorno"] <- as.factor(dum_day_predict$Giorno)
+dum_day_predict <- dummy_cols(dum_day_predict, select_columns = c("Giorno"),
+                      remove_selected_columns = TRUE)
+dum_day_predict <- subset(dum_day_predict, select = -c(Data,Giorno_Lunedì))
+dum_day_predict
+```
+
+# Stima modelli
+
+## Partizionamento dei datasets
+
+```{r}
+# Divsione training-test serie storica
+split_vendite <- ts_split(vendite_r1, sample.out =round(length(vendite_r1)*0.2))
+train <- split_vendite$train
+test <- split_vendite$test
+
+# Controllo le dimensioni di training e test
+length(train)
+length(test)
+```
+
+```{r}
+# Divisione training-test matrice dummy giornaliere
+
+train_date <- nrow(dum_day) *0.8
+train_dumday<- dum_day[1:train_date,]
+test_dumday <- dum_day[-c(1:train_date),]
+
+# Controllo le dimensioni di training e test
+length(train_dumday[,1])
+length(test_dumday[,1])
+```
+
+```{r}
+# Divisione training-test dummy annuali
+
+train_date <- nrow(dum_ann) *0.8
+train_dumann<- dum_ann[1:train_date,]
+test_dumann <- dum_ann[-c(1:train_date),]
+
+# Controllo le dimensioni di training e test
+length(train_dumday[,1])
+length(test_dumday[,1])
+```
+
+```{r}
+# Divisione training-test termini di Fourier
+
+train_date <- nrow(four) *0.8
+train_four<- four[1:train_date,]
+test_four <- four[-c(1:train_date),]
+
+# Controllo le dimensioni di training e test
+length(train_four[,1])
+length(test_four[,1])
+```
+
+```{r}
+# Divsione training-test dataframe xreg
+
+train_date <- nrow(xreg) *0.8
+train_xreg<- xreg[1:train_date,]
+test_xreg <- xreg[-c(1:train_date),]
+
+# Controllo le dimensioni di training e test
+length(train_xreg[,1])
+length(test_xreg[,1])
+
+```
+
+
+```{r}
+tsdisplay(vendite_r1)
+```
+
+```{r}
+tsdisplay(diff(vendite_r1,7))
+```
+
+```{r}
+tsdisplay(log(vendite_r1))
+```
+
+## Modello 1
+
+-   Differenza stagionale di ordine 1
+
+-   Componente AR stagionale di ordine 1 :
+
+-   Componente MA stagionale di ordine 1 :
+
+-   Differenza non stagionale di ordine 1
+
+-   Componente MA non stagionale di ordine 1
+
+-   Componente AR non stagionale di ordine 2
+
+-   Costante non inclusa
+
+```{r}
+mod1 <- Arima(y = train,
+              order = c(2, 1, 1),
+              list(order = c(1, 1, 1)),
+              include.constant = FALSE,
+              lambda = "auto"
+              )
+```
+
+### Diagnostica:
+
+```{r}
+summary(mod1)
+```
+
+```{r}
+tsdisplay(mod1$residuals) 
+```
+
+```{r}
+checkresiduals(mod1, test = FALSE)
+```
+
+```{r}
+checkresiduals(mod1, test = "LB", lag = 25, plot = FALSE)
+```
+
+```{r}
+pars_test(mod1$coef, mod1$var.coef)
+```
+
+```{r}
+mod1_auto <- auto.arima(train, lambda = "auto", stepwise = FALSE, approximation = FALSE) # Minimizza AIC
+```
+
+```{r}
+summary(mod1_auto)
+```
+
+```{r}
+tsdisplay(mod1_auto$residuals) 
+```
+
+```{r}
+checkresiduals(mod1_auto, test = FALSE)
+```
+
+```{r}
+checkresiduals(mod1_auto, test = "LB", lag = 25, plot = FALSE)
+```
+
+```{r}
+pars_test(mod1_auto$coef, mod1_auto$var.coef)
+```
+
+```{r}
+# Fit prime 10 settimane mod1
+plot(train[1:70], 
+     col = "blue", lwd=0.5, 
+     main = "Fitted Values", type = "l")
+lines(mod1$fitted[1:70], col="red", lwd=3)
+```
+
+```{r}
+# Fit prime 10 settimane mod1_auto
+plot(train[1:70], 
+     col = "blue", lwd=0.5, 
+     main = "Fitted Values", type = "l")
+lines(mod1_auto$fitted[1:70], col="red", lwd=3)
+```
+
+Il *mod1_auto* presenta delle caratteristiche leggermente migliori rispetto a *mod1*.
+
+### Previsioni
+
+```{r}
+pred_mod1 <- forecast(mod1_auto, h = length(test), 
+                      level = 95)
+```
+
+```{r}
+autoplot(pred_mod1)
+```
+
+```{r}
+plot(test, 
+     col = "blue", lwd=0.5, 
+     ylim = c(min(pred_mod1$lower), max(pred_mod1$upper)), main = "Predictions")
+lines(pred_mod1$mean, col="red", lwd=3)
+
+```
+
+```{r}
+mape(test, pred_mod1$mean)
+```
+
+```{r}
+mae(test, pred_mod1$mean)
+```
+
+```{r}
+rmse(test, pred_mod1$mean)
+```
+
+```{r}
+# err_plot(test, pred_mod1$mean)
+```
+
+## Modello2
+
+Includiamo le dummy giornaliere
+
+```{r}
+mod2 <- Arima(y = train,
+              order = c(1, 1, 3),
+              list(order = c(1, 0, 0)),
+              include.constant = FALSE,
+              xreg = train_dumday,
+              lambda = "auto"
+              )
+```
+
+```{r}
+summary(mod2)
+```
+
+```{r}
+tsdisplay(mod2$residuals) 
+```
+
+```{r}
+checkresiduals(mod2, test = FALSE)
+```
+
+```{r}
+checkresiduals(mod2, test = "LB", lag = 25, plot = FALSE)
+```
+
+```{r}
+pars_test(mod2$coef, mod2$var.coef)
+```
+
+```{r}
+mod2_auto <- auto.arima(train, xreg = train_dumday, lambda = "auto", stepwise = FALSE, approximation = FALSE)
+```
+
+```{r}
+summary(mod2_auto) # Stesso modello di quello identificato sopra, consideriamo mod2
+```
+
+```{r}
+# Fit prime 10 settimane
+plot(train[1:70], 
+     col = "blue", lwd=0.5, 
+     main = "Fitted Values", type = "l")
+lines(mod2$fitted[1:70], col="red", lwd=3)
+```
+
+### Previsioni
+
+```{r}
+pred_mod2 <- forecast(mod2, h = length(test), 
+                      level = 95,
+                      xreg = test_dumday)
+```
+
+```{r}
+autoplot(pred_mod2)
+```
+
+```{r}
+plot(test, 
+     col = "blue", lwd=0.5, 
+     ylim = c(min(pred_mod2$lower), max(pred_mod2$upper)), main = "Predictions")
+lines(pred_mod2$mean, col="red", lwd=3)
+```
+
+```{r}
+mape(test, pred_mod2$mean)
+```
+
+```{r}
+mae(test, pred_mod2$mean)
+```
+
+```{r}
+rmse(test, pred_mod2$mean)
+```
+
+```{r}
+# err_plot(test, pred_mod1$mean)
+```
+
+## Modello 3
+
+Come regressori vengono usati i termini di fourier: 3 armoniche per la stagionalità settimanale
+```{r}
+mod3 <- Arima(y = train,
+              order = c(1, 1, 2),
+              list(order = c(1, 0, 1)),
+              include.constant = TRUE,
+              xreg = train_four,
+              lambda = "auto"
+              )
+```
+
+```{r}
+summary(mod3)
+```
+
+```{r}
+tsdisplay(mod3$residuals) 
+```
+
+```{r}
+checkresiduals(mod3, test = FALSE)
+```
+
+```{r}
+checkresiduals(mod3, test = "LB", lag = 25, plot = FALSE)
+```
+
+```{r}
+pars_test(mod3$coef, mod3$var.coef)
+```
+
+```{r}
+mod3_auto <- auto.arima(train, xreg = train_four, lambda = "auto", stepwise = FALSE)
+```
+
+```{r}
+summary(mod3_auto)
+```
+
+```{r}
+tsdisplay(mod3_auto$residuals) 
+```
+
+```{r}
+checkresiduals(mod3_auto, test = FALSE)
+```
+
+```{r}
+checkresiduals(mod3_auto, test = "LB", lag = 25, plot = FALSE)
+```
+
+```{r}
+pars_test(mod3_auto$coef, mod3_auto$var.coef)
+```
+
+```{r}
+# Fit prime 10 settimane
+plot(train[1:70], 
+     col = "blue", lwd=0.5, 
+     main = "Fitted Values", type = "l")
+lines(mod3$fitted[1:70], col="red", lwd=3)
+```
+
+Scelgo il modello *mod3* in quanto presenta caratteristiche migliori per quanto riguarda errori di previsioni e residui, anche se risulta essere meno parsimonioso
+
+```{r}
+pred_mod3 <- forecast(mod3, h = length(test), 
+                      level = 95,
+                      xreg = test_four
+                      )
+```
+
+```{r}
+autoplot(pred_mod3)
+```
+
+```{r}
+plot(test, 
+     col = "blue", lwd=0.5, 
+     ylim = c(min(pred_mod3$lower), max(pred_mod3$upper)), main = "Predictions")
+lines(pred_mod3$mean, col="red", lwd=3)
+```
+
+```{r}
+mape(test, pred_mod3$mean)
+```
+
+```{r}
+mae(test, pred_mod3$mean)
+```
+
+```{r}
+rmse(test, pred_mod3$mean)
+```
+
+```{r}
+# err_plot(test, pred_mod1$mean)
+```
+
+## Modello 4
+
+Regressori considerati:
+
+-   Termini di fourier per modellare la stagionalità
+
+-   Variabili relative al COVID (zone, vaccini)
+
+-   Altre variabili (i.e. Costo riscaldamento)
+
+```{r}
+# Costruzione della matrice dei regressori per il modello 4
+
+xreg_mod4_train <- cbind(train_four, subset(train_xreg, select = c("Pioggia_True", "Benzina", "Gasolio", "ColoreCOVID_arancione", "ColoreCOVID_giallo", "ColoreCOVID_rosso")))
+xreg_mod4_train <- as.matrix(xreg_mod4_train)
+xreg_mod4_test <- cbind(test_four, subset(test_xreg, select = c("Pioggia_True", "Benzina", "Gasolio", "ColoreCOVID_arancione", "ColoreCOVID_giallo", "ColoreCOVID_rosso")))
+xreg_mod4_test <- as.matrix(xreg_mod4_test)
+```
+
+
+```{r}
+mod4 <- Arima(y = train,
+              order = c(2, 1, 3),
+              list(order = c(1, 0, 0)),
+              include.constant = FALSE,
+              xreg = xreg_mod4_train,
+              lambda = "auto"
+              )
+```
+
+```{r}
+summary(mod4)
+```
+
+```{r}
+tsdisplay(mod4$residuals) 
+```
+
+```{r}
+checkresiduals(mod4, test = FALSE)
+```
+
+```{r}
+checkresiduals(mod4, test = "LB", lag = 25, plot = FALSE)
+```
+
+```{r}
+pars_test(mod4$coef, mod4$var.coef)
+```
+```{r}
+# Fit prime 10 settimane
+plot(train[1:70], 
+     col = "blue", lwd=0.5, 
+     main = "Fitted Values", type = "l")
+lines(mod4$fitted[1:70], col="red", lwd=3)
+```
+```{r}
+pred_mod4 <- forecast(mod4, h = length(xreg_mod4_test), 
+                      level = 95,
+                      xreg = xreg_mod4_test
+                      )
+```
+
+```{r}
+autoplot(pred_mod4)
+```
+
+```{r}
+plot(test, 
+     col = "blue", lwd=0.5, 
+     # ylim = c(min(pred_mod4$lower), max(pred_mod4$upper)), 
+     main = "Predictions")
+lines(pred_mod4$mean, col="red", lwd=3)
+```
+
+```{r}
+mape(test, pred_mod4$mean)
+```
+
+```{r}
+mae(test, pred_mod4$mean)
+```
+
+```{r}
+rmse(test, pred_mod4$mean)
+```
+
+## Salvataggio errori
+
+```{r}
+matrices <- list(e1 = e1, e1_percentage = e1_percentage, e1_estimate = e1_estimate, e1_groundtruth = e1_groundtruth, e3 = e3, e3_percentage = e3_percentage, e3_estimate = e3_estimate, e3_groundtruth = e3_groundtruth, e2 = e2, e2_percentage = e2_percentage, e2_estimate = e2_estimate, e2_groundtruth = e2_groundtruth)
+
+for (i in 1:length(matrices)) {
+  # Aggiungo la colonna date
+  df_temp <- xts(matrices[[i]], as.Date(as.character(df$data), format = "%Y-%m-%d"))
+  write.csv(data.frame(date=index(df_temp), coredata(df_temp)),
+            paste0("./Errors/ARIMA/ARIMA_Covid_", names(matrices)[i], ".csv"))
+}
+
 ```

@@ -1,0 +1,175 @@
+---
+title: "TSCrossValidation-Summary"
+author: "Carbone Giorgio"
+date: "2022-12-16"
+output:
+  prettydoc::html_pretty:
+    df_print: paged
+    highlight: vignette
+    theme: architect
+    toc: yes
+    toc_depth: 5
+  beamer_presentation:
+    colortheme: lily
+    fig_caption: no
+    fig_height: 6
+    fig_width: 7
+    fonttheme: structurebold
+    theme: Hannover
+    toc: yes
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: '5'
+  pdf_document:
+    toc: yes
+    toc_depth: 5
+  slidy_presentation:
+    highlight: default
+  ioslides_presentation:
+    css:
+    - css/fonts.css
+    - css/custom.css
+    - css/title-slide.css
+    - css/slide-background.css
+    includes:
+      before_body: html/TimeSeriesAnalysis.html
+    toc: yes
+    transition: default
+    widescreen: yes
+course: Progetto Data Science Lab
+---
+
+# Setup
+
+```{r}
+# Clean Workspace
+rm(list=ls())
+```
+
+```{r setup, include=FALSE}
+# Use 'verbatim = TRUE' as chunk option to show chunk code as is
+require(knitr)
+hook_source_def = knit_hooks$get('source')
+knit_hooks$set(source = function(x, options){
+  if (!is.null(options$verbatim) && options$verbatim){
+    opts = gsub(",\\s*verbatim\\s*=\\s*TRUE\\s*", "", options$params.src)
+    bef = sprintf('\n\n    ```{r %s}\n', opts, "\n")
+    stringr::str_c(bef, paste(knitr:::indent_block(x, "    "), collapse = '\n'), "\n    ```\n")
+  } else {
+     hook_source_def(x, options)
+  }
+})
+```
+
+## Loading Libraries
+
+```{r include=FALSE}
+set.seed(100)
+
+# Setting librerie utili
+# Package names
+packages <- c("readxl",  "readr", "forecast", "dplyr", "ggplot2",
+              "lubridate", "KFAS", "tseries", "xts", "fastDummies", "TSstudio", "utils") 
+
+# Install packages if not yet installed
+installed_packages <- packages %in% rownames(installed.packages())
+if (any(installed_packages == FALSE)) {
+  install.packages(packages[!installed_packages])
+}
+
+# Packages loading
+invisible(lapply(packages, library, character.only = TRUE))
+```
+
+# Pre Covid
+
+## Load Errors
+
+```{r}
+h = 74
+folder_path <- "./Errors"
+# Lista dei tipi di modelli
+items <- list.files(folder_path, recursive = FALSE, full.names = TRUE)
+
+for (dir in items) {
+  csv_files <- list.files(path = dir, pattern = "*.csv", full.names = TRUE)
+  filtered_csv_files <- csv_files %>% grep("PreCovid_e[0-9]+\\.csv$", ., value = TRUE)
+  for (f in filtered_csv_files) {
+    df <- read_csv(f)
+    
+    df <- read.csv("./Errors/ARIMA/ARIMA_PreCovid_e1.csv")
+    df$date  <- parse_date(df$date, "%Y-%m-%d", locale = locale("it"))
+    df <- xts(df[, c(-1,-2)], as.Date(as.character(df$date), format = "%Y-%m-%d"))
+    colnames(df) <- paste("h=", 1:h, sep = "")
+    
+    
+    var_name <- gsub("\\.csv$", "", basename(f))
+    assign(var_name, df)
+  }
+}
+```
+
+## ARIMA
+
+### RMSE
+
+```{r}
+RMSE_mod1 <- sqrt(colMeans(e1^2, na.rm = TRUE))
+RMSE_mod2 <- sqrt(colMeans(e2^2, na.rm = TRUE))
+RMSE_mod3 <- sqrt(colMeans(e3^2, na.rm = TRUE))
+
+# Zoom in
+#plot(1:42, RMSE_mod1, type="l", col=1, xlab="horizon", ylab="RMSE", ylim = c(2500,5000))
+#lines(1:42, RMSE_mod2, type="l",col=2)
+#lines(1:42, RMSE_mod3, type="l",col=3)
+#legend("topleft",legend=c("1_RandomForest_noregr","2_RandomForest_regr","3_RandomForest_regr"),col=1:3,lty=1)
+
+# Zoom out
+plot(1:42, RMSE_mod1, type="l", col=1, xlab="horizon", ylab="RMSE", ylim = c(0,13000))
+lines(1:42, RMSE_mod2, type="l",col=2)
+lines(1:42, RMSE_mod3, type="l",col=3)
+legend("topleft",legend=c("1_RandomForest_noregr","2_RandomForest_regr","3_RandomForest_regr_DUmmy"),col=1:3,lty=1)
+```
+
+### RMdSE
+
+```{r}
+library(robustbase)
+
+RMdSE_mod1 <- sqrt(colMedians(e1^2, na.rm = TRUE, hasNA = TRUE))
+RMdSE_mod2 <- sqrt(colMedians(e2^2, na.rm = TRUE, hasNA = TRUE))
+RMdSE_mod3 <- sqrt(colMedians(e3^2, na.rm = TRUE, hasNA = TRUE))
+
+# Zoom in
+plot(1:42, RMdSE_mod1, type="l", col=1, xlab="horizon", ylab="RMdSE", ylim = c(0,5000))
+lines(1:42, RMdSE_mod2, type="l",col=2)
+lines(1:42, RMdSE_mod3, type="l",col=3)
+legend("topleft",legend=c("1_RandomForest_noregr","2_RandomForest_regr","3_RandomForest_regr_DUmmy"),col=1:3,lty=1)
+
+```
+
+### MAE
+
+```{r}
+MAE_mod1 <- colMeans(abs(e1), na.rm = TRUE)
+MAE_mod2 <- colMeans(abs(e2), na.rm = TRUE)
+MAE_mod3 <- colMeans(abs(e3), na.rm = TRUE)
+
+plot(1:42, MAE_mod1, type="l", col=1, xlab="horizon", ylab="MAE", ylim = c(0,13000))
+lines(1:42, MAE_mod2, type="l",col=2)
+lines(1:42, MAE_mod3, type="l",col=3)
+legend("topleft",legend=c("1_RandomForest_noregr","2_RandomForest_regr","3_RandomForest_regrDummy"),col=1:3,lty=1)
+```
+### MAPE
+
+```{r}
+MAPE_mod1 <- colMeans(abs(e1_percentage), na.rm = TRUE)
+MAPE_mod2 <- colMeans(abs(e2_percentage), na.rm = TRUE)
+MAPE_mod3 <- colMeans(abs(e3_percentage), na.rm = TRUE)
+
+plot(1:42, MAPE_mod1, type="l", col=1, xlab="horizon", ylab="MAPE", ylim = c(0,100))
+lines(1:42, MAPE_mod2, type="l",col=2)
+lines(1:42, MAPE_mod3, type="l",col=3)
+legend("topleft",legend=c("1_RandomForest_noregr","2_RandomForest_regr","3_RandomForest_regrDummy"),col=1:3,lty=1)
+```
