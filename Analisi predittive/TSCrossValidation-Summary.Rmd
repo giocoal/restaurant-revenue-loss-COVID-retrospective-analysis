@@ -167,7 +167,7 @@ by_y = 1000
 
 name_map <- list(
   "ARIMA" = list(label = "ARIMA", col = "red"),
-  "UCM" = list(label = "UCM", col = "black"),
+  "UCM" = list(label = "UCM", col = "darkgreen"),
   "RandomForest" = list(label = "Random Forest", col = "blue")
 )
 
@@ -176,14 +176,23 @@ name_map <- list(
 
 #plot(1:74, NULL, type="l", col=1, xlab="horizon", ylab="RMSE", ylim = c(2000,10000), xgap.axis = 1)
 
-plot(x = NULL, y = NULL, type = "n", xlim = c(0, 74), ylim = c(2000, 10000),
-     xlab="horizon", ylab="RMSE",
+#png("highres.png", units = "in", width = 5, height = 4, res = 300)
+
+#png("highres.png", res = 300)
+
+#jpeg(file="saving_plot2.png", width=1280, height=720)
+
+par(oma=c(0, 0, 0, 8), asp=1)
+
+plot(x = NULL, y = NULL, type = "n", xlim = c(i_x, f_x), ylim = c(i_y, f_y),
+     xlab="Forecast Horizon", ylab="RMSE",
      xaxt = "n",
      yaxt = "n", grid = TRUE)
 
-int_seq_x <- seq.int(from = i_x, to = f_x, by = by_x)
+
+int_seq_x <- append(seq.int(from = i_x, to = f_x, by = by_x), f_x)
 axis(side = 1, at = int_seq_x)
-int_seq_y <- seq.int(from = i_y, to = f_y, by = by_y)
+int_seq_y <- append(seq.int(from = i_y, to = f_y, by = by_y), f_y)
 axis(side = 2, at = int_seq_y)
 
 abline(v = int_seq_x, lty = "dotted", col = "lightgray")
@@ -230,8 +239,12 @@ for (key in names(name_map)) {
   lty <- c(lty, lty_map[[key]])
   labels <- c(labels, rep(name_map[[key]]$label, length(grep(key, names(RMSE_PreCovid)))))
 }
-plot(NULL ,xaxt='n',yaxt='n',bty='n',ylab='',xlab='', xlim=0:1, ylim=0:1)
-legend("topright", legend = labels, col = col, lty = lty)
+#plot(NULL ,xaxt='n',yaxt='n',bty='n',ylab='',xlab='', xlim=0:1, ylim=0:1)
+#legend("topright", legend = labels, col = col, lty = lty)
+#legend(side = "topright", bty = "o", cex = 0.8, x.intersp = 1.5, legend = labels, col = col, lty = lty)
+
+legend(par('usr')[2], par('usr')[4], bty='n', xpd=NA,
+       legend = labels, col = col, lty = lty)
 
 ```
 
