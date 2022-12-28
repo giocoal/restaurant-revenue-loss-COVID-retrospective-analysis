@@ -293,3 +293,102 @@ tsCV_RandomForest <- function(my_xts, xreg = NULL,  forecastfunction, h = 1, win
     }   
 }
 
+pre_covid_accuracy_plot <- function(i_x, f_x, by_x, i_y, f_y, by_y, ylab, model_types, accuracy_metrics){
+  
+  accuracy_metrics <- accuracy_metrics[grep(model_types,names(accuracy_metrics))]
+  
+  name_map <- list(
+    "ARIMA" = list(label = "ARIMA", col = "red"),
+    "UCM" = list(label = "UCM", col = "darkgreen"),
+    "RandomForest" = list(label = "RF", col = "blue")
+  )
+  
+  suffix_map <- list(
+    "SARIMA(1,0,0)(1,1,2)",
+    "ARIMAX (2,1,3)-dummy",
+    "SARIMAX(3,1,2)(1,0,1)-fourier",
+    "SARIMAX(3,1,3)(1,0,0)-regressori",
+    "ritardi",
+    "regressori",
+    "regressori+dummy festività",
+    "ritardi",
+    "regressori",
+    "regressori+dummy festività"
+  )
+  
+  # Inizializza il grafico
+  #par(las = 0.5)
+  
+  #plot(1:74, NULL, type="l", col=1, xlab="horizon", ylab="RMSE", ylim = c(2000,10000), xgap.axis = 1)
+  
+  #png("highres.png", units = "in", width = 5, height = 4, res = 300)
+  
+  #png("highres.png", res = 300)
+  
+  #jpeg(file="saving_plot2.png", width=1280, height=720)
+  
+  par(oma=c(0, 0, 0, 8), asp=1)
+  
+  plot(x = NULL, y = NULL, type = "n", xlim = c(i_x, f_x), ylim = c(i_y, f_y),
+       xlab="Forecast Horizon", ylab=ylab,
+       xaxt = "n",
+       yaxt = "n", grid = TRUE)
+  
+  
+  int_seq_x <- append(seq.int(from = i_x, to = f_x, by = by_x), f_x)
+  axis(side = 1, at = int_seq_x)
+  int_seq_y <- append(seq.int(from = i_y, to = f_y, by = by_y), f_y)
+  axis(side = 2, at = int_seq_y)
+  
+  abline(v = int_seq_x, lty = "dotted", col = "lightgray")
+  abline(h = int_seq_y, lty = "dotted", col = "lightgray")
+  
+  # Crea un vettore di tratti per ogni etichetta
+  lty_map <- list()
+  for (label in names(name_map)) {
+    lty_map[[label]] <- seq(1, length(grep(label, names(accuracy_metrics))))
+  }
+  
+  # Plotta le linee per ogni vettore nella lista
+  counter_map <- list()
+  for(i in 1:length(accuracy_metrics)) {
+    # Trova l'etichetta corrispondente al nome del vettore
+    label <- NULL
+    for (key in names(name_map)) {
+      if (grepl(key, names(accuracy_metrics[i]))) {
+        label <- key
+        break
+      }
+    }
+    
+    if (!is.null(label)) {
+      # Inizializza il contatore per il gruppo corrente, se non ancora presente
+      if (!(label %in% names(counter_map))) {
+        counter_map[[label]] <- 1
+      }
+      
+      # Plotta la linea usando il colore e il tratto corrispondenti all'etichetta
+      lines(1:74, accuracy_metrics[[i]], col = name_map[[label]]$col, lty = lty_map[[label]][counter_map[[label]]])
+      
+      # Incrementa il contatore per il gruppo corrente
+      counter_map[[label]] <- counter_map[[label]] + 1
+    }
+  }
+  
+  # Aggiungi la legenda al grafico
+  col <- c()
+  lty <- c()
+  labels <- c()
+  for (key in names(name_map)) {
+    col <- c(col, rep(name_map[[key]]$col, length(grep(key, names(accuracy_metrics)))))
+    lty <- c(lty, lty_map[[key]])
+    labels <- c(labels, 
+                paste(rep(name_map[[key]]$label, length(grep(key, names(accuracy_metrics)))), suffix_map[grep(key, names(accuracy_metrics))], sep="-"))
+  }
+  #plot(NULL ,xaxt='n',yaxt='n',bty='n',ylab='',xlab='', xlim=0:1, ylim=0:1)
+  #legend("topright", legend = labels, col = col, lty = lty)
+  #legend(side = "topright", bty = "o", cex = 0.8, x.intersp = 1.5, legend = labels, col = col, lty = lty)
+  
+  legend(par('usr')[2], par('usr')[4], bty='n', xpd=NA,
+         legend = labels, col = col, lty = lty)
+}
