@@ -165,9 +165,7 @@ vendite_r1[vendite_r1 == 0]
 df$data[df$lordototale == 0 ] # Acuni giorni sono festività, altri invece no. 
 ```
 
-```{r}
-# Nella serie storica pre-covid tali dati sono stati regsitrati, il che equivale al fatto che il ristorante era aperto. Per non distorcere troppo le previsioni, e considerando che i valori mancanti sono comunque pochi, viene deciso di imputare tali valori mancanti
-```
+Nella serie storica pre-covid tali dati sono stati regsitrati, il che equivale al fatto che il ristorante era aperto. Per non distorcere troppo le previsioni, e considerando che i valori mancanti sono comunque pochi, viene deciso di imputare tali valori mancanti
 
 ```{r}
 #La libreria inputTS gestisce ovviamente i NaN e non i valori uguali a zero
@@ -183,10 +181,11 @@ plot(vendite_r1)
 ## Imputazione dei valori mancanti
 
 ```{r}
-library(imputeTS)
+
 ```
 
 ```{r}
+library(imputeTS)
 ggplot_na_distribution(vendite_r1)
 statsNA(vendite_r1)
 ```
@@ -195,7 +194,9 @@ statsNA(vendite_r1)
 # Imputazione tramite algoritmo di Kalman
 vendite_r1_nona <- na_kalman(vendite_r1)
 ggplot_na_imputations(vendite_r1, vendite_r1_nona)
+```
 
+```{r}
 vendite_r1 <- na_kalman(vendite_r1)
 ```
 
@@ -275,7 +276,7 @@ dum_day_df[,"Giorno"] <- as.factor(dum_day_df$Giorno)
 dum_day_df <- dummy_cols(dum_day_df, select_columns = c("Giorno"), 
                       # remove_first_dummy = TRUE, 
                       remove_selected_columns = TRUE)
-dum_day_df <- subset(dum_day_df, select = -c(data,Giorno_Monday))
+dum_day_df <- subset(dum_day_df, select = -c(data,Giorno_Monday)) #Tolgo il Lunedì come variabile dummy
 dum_day_df
 
 # La funzione Arima vuole in input una matrice per i regressori
@@ -285,7 +286,7 @@ dum_day <- as.matrix(dum_day_df)
 ```{r}
 #dummy annuali
 dum_ann_df <- read_xlsx("..\\Dati aggiuntivi\\fest_postcovid.xlsx", col_types = NULL)
-dum_ann_df <- subset(dum_ann_df, date < "2022-05-01", select = -date)
+dum_ann_df <- subset(dum_ann_df, date < "2022-05-01", select = -date) # Non considero le osservazioni dopo il  30/04/22 (fine della serie storica)
 
 dum_ann_df <- as.data.frame(lapply(dum_ann_df, as.integer)) # Trasformo tutte le colonne in interi e ri-trasformo in dataframe
 head(dum_ann_df)
@@ -310,7 +311,7 @@ colnames(xreg)[36] = "Riscaldamento"
 # Variabile dummy Pioggia
 xreg$Pioggia_True[xreg$Pioggia_True == "True"] <- 1 # Trasformo in dummy
 xreg$Pioggia_True[xreg$Pioggia_True == "False"] <- 0
-xreg$Pioggia_True <- as.integer(xreg$Pioggia_True) # Trasformo in integer7
+xreg$Pioggia_True <- as.integer(xreg$Pioggia_True) # Trasformo in integer
 
 #Creo variabili Dummy per il colore della regione
 # Per il periodo pre-Colori imposto colore a bianco
@@ -321,12 +322,13 @@ xreg[,"ColoreCOVID"] <- as.factor(xreg$ColoreCOVID)
 xreg <- dummy_cols(xreg, select_columns = c("ColoreCOVID"), 
                       remove_most_frequent_dummy = TRUE, #tolgo dummy zona bianca
                       remove_selected_columns = TRUE) #inplace
+head(xreg)
 ```
 
 ```{r}
 # Termini di Fourier per modellare stagionalità
 
-four <- fourier(vendite_r1, K=c(3,0))
+four <- fourier(vendite_r1, K=c(3,15))
 four <- as.matrix((four))
 
 ```
@@ -349,7 +351,7 @@ dum_day_predict[,"Giorno"] <- as.factor(dum_day_predict$Giorno)
 dum_day_predict <- dummy_cols(dum_day_predict, select_columns = c("Giorno"),
                       remove_selected_columns = TRUE)
 dum_day_predict <- subset(dum_day_predict, select = -c(Data,Giorno_Lunedì))
-dum_day_predict
+head(dum_day_predict)
 ```
 
 # Stima modelli
@@ -387,8 +389,8 @@ train_dumann<- dum_ann[1:train_date,]
 test_dumann <- dum_ann[-c(1:train_date),]
 
 # Controllo le dimensioni di training e test
-length(train_dumday[,1])
-length(test_dumday[,1])
+length(train_dumann[,1])
+length(test_dumann[,1])
 ```
 
 ```{r}
@@ -606,7 +608,7 @@ lines(mod2$fitted[1:70], col="red", lwd=3)
 ### Previsioni
 
 ```{r}
-pred_mod2 <- forecast(mod2, h = length(test), 
+pred_mod2 <- forecast(mod2, h = nrow(test_dumday), 
                       level = 95,
                       xreg = test_dumday)
 ```
@@ -640,7 +642,7 @@ rmse(test, pred_mod2$mean)
 
 ## Modello 3
 
-Come regressori vengono usati i termini di fourier: 3 armoniche per la stagionalità settimanale
+Come regressori vengono usati i termini di fourier: 3 armoniche per la stagionalità settimanale e 15 per quella annuale
 ```{r}
 mod3 <- Arima(y = train,
               order = c(1, 1, 2),
@@ -706,7 +708,7 @@ lines(mod3$fitted[1:70], col="red", lwd=3)
 Scelgo il modello *mod3* in quanto presenta caratteristiche migliori per quanto riguarda errori di previsioni e residui, anche se risulta essere meno parsimonioso
 
 ```{r}
-pred_mod3 <- forecast(mod3, h = length(test), 
+pred_mod3 <- forecast(mod3, h = nrow(test_four), 
                       level = 95,
                       xreg = test_four
                       )
@@ -745,9 +747,9 @@ Regressori considerati:
 
 -   Termini di fourier per modellare la stagionalità
 
--   Variabili relative al COVID (zone, vaccini)
+-   Variabili relative al COVID (zone)
 
--   Altre variabili (i.e. Costo riscaldamento)
+-   Altre variabili (i.e. Costo riscaldamento, Pioggia)
 
 ```{r}
 # Costruzione della matrice dei regressori per il modello 4
@@ -796,7 +798,40 @@ plot(train[1:70],
 lines(mod4$fitted[1:70], col="red", lwd=3)
 ```
 ```{r}
-pred_mod4 <- forecast(mod4, h = length(xreg_mod4_test), 
+mod4_auto <- auto.arima(train, xreg = xreg_mod4_train, lambda = "auto")
+```
+
+```{r}
+summary(mod4_auto)
+```
+
+```{r}
+tsdisplay(mod4_auto$residuals) 
+```
+
+```{r}
+checkresiduals(mod4_auto, test = FALSE)
+```
+
+```{r}
+checkresiduals(mod4_auto, test = "LB", lag = 25, plot = FALSE)
+```
+
+```{r}
+pars_test(mod4_auto$coef, mod4_auto$var.coef)
+```
+```{r}
+# Fit prime 10 settimane
+plot(train[1:70], 
+     col = "blue", lwd=0.5, 
+     main = "Fitted Values", type = "l")
+lines(mod4_auto$fitted[1:70], col="red", lwd=3)
+```
+
+ Viene scelto il *mod4_auto* in quanto più parsimonioso
+
+```{r}
+pred_mod4 <- forecast(mod4_auto, h = nrow(xreg_mod4_test), 
                       level = 95,
                       xreg = xreg_mod4_test
                       )
@@ -825,6 +860,316 @@ mae(test, pred_mod4$mean)
 ```{r}
 rmse(test, pred_mod4$mean)
 ```
+## Modello5
+
+Regressori considerati:
+
+-   Dummy Annuali
+
+-   Dummy Giornaliere
+
+-   Variabili relative al COVID (zone)
+
+-   Altre variabili (i.e. Costo riscaldamento, Pioggia)
+
+```{r}
+# Costruzione della matrice dei regressori per il modello 4
+
+# Train
+xreg_mod5_train <- cbind(train_dumday, train_dumann, subset(train_xreg, select = c("Pioggia_True", "Benzina", "Gasolio", "ColoreCOVID_arancione", "ColoreCOVID_giallo", "ColoreCOVID_rosso")))
+xreg_mod5_train <- as.matrix(xreg_mod5_train)
+
+xreg_mod5_test <- cbind(test_dumday, test_dumann,  subset(test_xreg, select = c("Pioggia_True", "Benzina", "Gasolio", "ColoreCOVID_arancione", "ColoreCOVID_giallo", "ColoreCOVID_rosso")))
+xreg_mod5_test <- as.matrix(xreg_mod5_test)
+```
+
+```{r}
+mod5_auto <- auto.arima(train, xreg = xreg_mod5_train, lambda = "auto")
+```
+
+```{r}
+summary(mod5_auto)
+```
+
+```{r}
+tsdisplay(mod5_auto$residuals) 
+```
+
+```{r}
+checkresiduals(mod5_auto, test = FALSE)
+```
+
+```{r}
+checkresiduals(mod5_auto, test = "LB", lag = 25, plot = FALSE)
+```
+
+```{r}
+pars_test(mod5_auto$coef, mod5_auto$var.coef)
+```
+```{r}
+# Fit prime 10 settimane
+plot(train[1:70], 
+     col = "blue", lwd=0.5, 
+     main = "Fitted Values", type = "l")
+lines(mod5_auto$fitted[1:70], col="red", lwd=3)
+```
+
+```{r}
+pred_mod5 <- forecast(mod5_auto, h = nrow(xreg_mod5_test), 
+                      level = 95,
+                      xreg = xreg_mod5_test
+                      )
+```
+
+```{r}
+autoplot(pred_mod5)
+```
+
+```{r}
+plot(test, 
+     col = "blue", lwd=0.5, 
+     # ylim = c(min(pred_mod4$lower), max(pred_mod4$upper)), 
+     main = "Predictions")
+lines(pred_mod5$mean, col="red", lwd=3)
+```
+
+```{r}
+mape(test, pred_mod5$mean)
+```
+
+```{r}
+mae(test, pred_mod5$mean)
+```
+
+```{r}
+rmse(test, pred_mod5$mean)
+```
+```{r}
+train_eval <- data.frame(Modelllo=c("Modello1", "Modello2", "Modello3", "Modello4", "Modello5"),
+                         RMSE = c(rmse(train, mod1_auto$fitted), 
+                                rmse(train, mod2$fitted), 
+                                rmse(train, mod3$fitted),
+                                rmse(train, mod4_auto$fitted),
+                                rmse(train, mod5_auto$fitted)),
+                         MAE = c(mae(train, mod1_auto$fitted),
+                                mae(train, mod2$fitted),
+                                mae(train, mod3$fitted),
+                                mae(train, mod4_auto$fitted),
+                                 mae(train, mod5_auto$fitted)),
+                         MAPE = c(mape(train, mod1_auto$fitted),
+                                  mape(train, mod2$fitted),
+                                  mape(train, mod3$fitted),
+                                  mape(train, mod4_auto$fitted),
+                                  mape(train, mod5_auto$fitted)),
+                         AIC = c(mod1_auto$aic, mod2$aic, mod3$aic, mod4_auto$aic, mod5_auto$aic))
+```
+
+
+```{r}
+test_eval <- data.frame(Modelllo=c("Modello1", "Modello2", "Modello3", "Modello4", "Modello5"),
+                         RMSE = c(rmse(test, pred_mod1$mean), 
+                                rmse(test, pred_mod2$mean), 
+                                rmse(test, pred_mod3$mean),
+                                rmse(test, pred_mod4$mean),
+                                rmse(test, pred_mod5$mean)),
+                         MAE = c(mae(test, pred_mod1$mean),
+                                mae(test, pred_mod2$mean),
+                                mae(test, pred_mod3$mean),
+                                mae(test, pred_mod4$mean),
+                                mae(test, pred_mod5$mean)),
+                         MAPE = c(mape(test, pred_mod1$mean),
+                                  mape(test, pred_mod2$mean),
+                                  mape(test, pred_mod3$mean),
+                                  mape(test, pred_mod4$mean),
+                                  mape(test, pred_mod5$mean)))
+
+```
+
+```{r}
+train_eval
+test_eval
+```
+# Evaluation: Confronto forecasting performance dei modelli
+
+## Scelta misura di *forecasting accuracy*
+
+Al fine di confrontare i diversi modelli definiti precedentemente è importante valutare le performance in termini forecasting accuracy. Prima di definire la procedura di calcolo della forecasting accuracy è importante selezionare la propria misura di accuratezza.
+
+Si sceglie di utilizzare due misure di accuratezza (**MAE, RMSE e MSE**) di tipo **scale-dependent** perchè:
+
+-   Misure di accuratezza basate su percentage errors e scaled errors (unit-free) sono indicate per comparare le performance di forecasting tra data set diversi
+
+-   Errori di tipo scale-dependent sono nella stessa scala dei dati, ma in questo caso non è un problema
+
+-   Si evitano tutte le problematiche relative alle misure di percentage errors legate:
+
+    -   al fatto che l'errore viene diviso per il valore dell'osservazione (valori infiniti per y che tende a 0)
+
+    -   penalità maggiori per errori negativi piuttosto che quelli positivi
+
+## Procedura di *Cross-Validation* con *rolling forecasting origin*
+
+Effettuo la procedura di *Time-Series Cross Validation* o *Evaluating on a Rolling Forecasting Origin* al fine di:
+
+-   Confrontare i diversi modelli in termini di Performance di Forecasting
+
+-   Potera allenare i modelli sull'intero dataset e non perdere i dati del test set (essendo questo già piccolo)
+
+-   Ottenere comunque due misure di performarmance di accuratezza di forecasting accuracy
+
+-   Determino la forecasting accuracy (come MAE/RMSE/MSE) per k-step avanti dove k (chiamato h, orizzonte, nella funzione `tsCV()`) sarà il mio orizzonte di previsione nel periodo covid
+
+    -   Confrontare l'andamento dei diversi modelli all'aumentare degli step ci consentirà di selezionare
+
+-   Parametri di cross-validation -\> Scelgo come tipologia di Time Series Cross Validation quella **Constant Holdout**
+
+    -   Scelgo arbitrariamente una finestra iniziale (**fixed origin**) di training (il numero minimo di osservazioni necessario a stimare il modello) come 60 -\> parametro `initial`
+
+    -   **Non-Constant Holdout** -\> in modo da utilizzare tutti i dati per il training (altrimenti il training si fermerebbe all'osservazione n-h)
+
+    -   **Non-Constant In-Sample -\>** Non impostiamo il parametro `window`, che altrimenti andrebbe a settare un dimensione fissata del training set e quindi una moving window
+
+
+## Definizione funzione di Time Series Cross-Validation (`tsCV_ARIMA()`)
+
+_**Prima si eseguire questa parte del notebook eseguire le celle sopra.**_
+
+
+```{r}
+source("My-TSCrossValidation-Functions.R")
+```
+
+```{r}
+summary(mod4_auto)
+```
+
+
+## Definizione funzioni dei modelli
+
+Non includo in modello 5 in quanto presenta elevato overfitting e pessime performance sul test set.
+
+```{r}
+
+# Calcolo tempo di computazione
+start.time <- Sys.time()
+print(start.time)
+
+# Definisco la forecast-function per i diversi modelli
+
+#1_ARIMA
+f_mod1 <- function(x, h, xreg, newxreg) { 
+  forecast(Arima(x,
+                 order = c(1, 0, 1),
+                 seasonal = list(order = c(1, 1, 1)),
+                 include.constant = FALSE,
+                 lambda = "auto"),
+           h = h)
+}
+
+#2_ARIMA w/dum_day
+f_mod2 <- function(x, h, xreg, newxreg) { 
+  forecast(Arima(x,
+                 order = c(1, 1, 3),
+                 seasonal = list(order = c(1, 0, 0)),
+                 xreg = xreg,
+                 include.constant = FALSE,
+                 lambda = "auto"),
+           h = h,
+           xreg=newxreg)
+}
+
+#3_ARIMA w/Fourier
+f_mod3 <- function(x, h, xreg, newxreg) { 
+  forecast(Arima(x,
+                 order = c(1, 1, 2),
+                 seasonal = list(order = c(1, 0, 1)),
+                 xreg = xreg,
+                 include.constant = TRUE,
+                 lambda = "auto"),
+           h = h,
+           xreg=newxreg)
+}
+#4_SARIMAX w/Fourier & xreg
+f_mod4 <- function(x, h, xreg, newxreg) { 
+  forecast(Arima(x,
+                 order = c(2, 0, 0),
+                 seasonal = list(order = c(2, 0, 1)),
+                 xreg = xreg,
+                 include.constant = TRUE,
+                 lambda = "auto"),
+           h = h,
+           xreg=newxreg)
+}
+
+```
+```{r}
+# Parametri di cross-validation globali per i primi due modelli
+h = 60 # 2 mesi
+initial = 180 # 3 volte l'orizzonte
+window = NULL
+
+start.time <- Sys.time()
+print(start.time)
+
+# Stima degli errori di previsione con CV
+
+e_1 <- tsCV_ARIMA(y = vendite_r1, forecastfunction = f_mod1, h=h, initial = initial, window = window)
+#e1 <- tail(e1, n = -initial)
+e1 <- e_1$e
+e1_percentage <- e_1$e_percentage
+e1_estimate <- e_1$y_estimate
+e1_groundtruth <- e_1$y_groundtruth
+
+
+xreg2 <- dum_day
+e_2 <- tsCV_ARIMA(y = vendite_r1, forecastfunction = f_mod2, h=h, xreg=xreg2, initial = initial)
+#e2 <- tail(e1, n = -initial)
+e2 <- e_2$e
+e2_percentage <- e_2$e_percentage
+e2_estimate <- e_2$y_estimate
+e2_groundtruth <- e_2$y_groundtruth
+
+
+end.time <- Sys.time()
+print(end.time)
+time.taken <- end.time - start.time
+print(time.taken)
+
+```
+
+```{r}
+# Parametri di cross-validation globali per il terzo e quarto modello
+
+h = 60 # 2 mesi
+initial = 540 #180*3 modelli maggiormente complessi richiedono un training set iniziale più ampio
+window = NULL
+
+start.time <- Sys.time()
+print(start.time)
+
+
+xreg3 <- four
+e_3 <- tsCV_ARIMA(y = vendite_r1, forecastfunction = f_mod3, h=h, xreg=xreg3, initial = initial)
+#e3 <- tail(e3, n = -initial)
+e3 <- e_3$e
+e3_percentage <- e_3$e_percentage
+e3_estimate <- e_3$y_estimate
+e3_groundtruth <- e_3$y_groundtruth
+
+
+xreg4 <- rbind(xreg_mod4_train, xreg_mod4_test)
+e_4 <- tsCV_ARIMA(y = vendite_r1, forecastfunction = f_mod4, h=h, xreg=xreg4, initial = initial)
+#e4 <- tail(e4, n = -initial)
+e4 <- e_4$e
+e4_percentage <- e_4$e_percentage
+e4_estimate <- e_4$y_estimate
+e4_groundtruth <- e_4$y_groundtruth
+
+end.time <- Sys.time()
+print(end.time)
+time.taken <- end.time - start.time
+print(time.taken)
+```
 
 ## Salvataggio errori
 
@@ -838,4 +1183,88 @@ for (i in 1:length(matrices)) {
             paste0("./Errors/ARIMA/ARIMA_Covid_", names(matrices)[i], ".csv"))
 }
 
+```
+
+
+
+## Confrontro tra i modelli
+
+### RMSE
+
+```{r}
+RMSE_mod1 <- sqrt(colMeans(e1^2, na.rm = TRUE))
+RMSE_mod2 <- sqrt(colMeans(e2^2, na.rm = TRUE))
+RMSE_mod3 <- sqrt(colMeans(e3^2, na.rm = TRUE))
+RMSE_mod4 <- sqrt(colMeans(e4^2, na.rm = TRUE))
+#RMSE_mod6 <- sqrt(colMeans(e6^2, na.rm = TRUE))
+
+
+# Zoom in
+plot(1:60, RMSE_mod1, type="l", col=1, xlab="horizon", ylab="RMSE", ylim = c(2500,6500))
+lines(1:60, RMSE_mod2, type="l",col=2)
+lines(1:60, RMSE_mod3, type="l",col=3)
+lines(1:60, RMSE_mod4, type="l",col=4)
+legend("bottomright",legend=c("1_ARIMA1","2_ARIMA2","3_ARIMA3","4_ARIMA4"),col=1:4,lty=1)
+
+```
+
+### RMdSE
+
+```{r}
+RMSE_mod1 <- sqrt(colMedians(e1^2, na.rm = TRUE, hasNA = TRUE))
+RMSE_mod2 <- sqrt(colMedians(e2^2, na.rm = TRUE, hasNA = TRUE))
+RMSE_mod3 <- sqrt(colMedians(e3^2, na.rm = TRUE, hasNA = TRUE))
+RMSE_mod4 <- sqrt(colMedians(e4^2, na.rm = TRUE, hasNA = TRUE))
+#RMSE_mod6 <- sqrt(colMeans(e6^2, na.rm = TRUE))
+
+
+# Zoom in
+plot(1:60, RMSE_mod1, type="l", col=1, xlab="horizon", ylab="RMSE", ylim = c(1000,4500))
+lines(1:60, RMSE_mod2, type="l",col=2)
+lines(1:60, RMSE_mod3, type="l",col=3)
+lines(1:60, RMSE_mod4, type="l",col=4)
+legend("bottomright",legend=c("1_ARIMA1","2_ARIMA2","3_ARIMA3","4_ARIMA4"),col=1:4,lty=1)
+
+```
+
+**RMSE Medi**
+
+```{r}
+mean(RMSE_mod1)
+mean(RMSE_mod2)
+mean(RMSE_mod3)
+mean(RMSE_mod4)
+```
+
+### MAE
+
+```{r}
+MAE_mod1 <- colMeans(abs(e1), na.rm = TRUE)
+MAE_mod2 <- colMeans(abs(e2), na.rm = TRUE)
+MAE_mod3 <- colMeans(abs(e3), na.rm = TRUE)
+MAE_mod4 <- colMeans(abs(e4), na.rm = TRUE)
+
+plot(1:42, MAE_mod1, type="l", col=1, xlab="horizon", ylab="MAE", ylim = c(0,6000))
+lines(1:42, MAE_mod2, type="l",col=2)
+lines(1:42, MAE_mod3, type="l",col=3)
+lines(1:42, MAE_mod4, type="l",col=4)
+
+legend("topleft",legend=c("1_ARIMA1","2_ARIMA2","3_ARIMA3","4_ARIMA4"),col=1:4,lty=1)
+```
+
+### MAPE
+
+```{r}
+MAPE_mod1 <- colMeans(abs(e1_percentage), na.rm = TRUE)
+MAPE_mod2 <- colMeans(abs(e2_percentage), na.rm = TRUE)
+MAPE_mod3 <- colMeans(abs(e3_percentage), na.rm = TRUE)
+MAPE_mod4 <- colMeans(abs(e4_percentage), na.rm = TRUE)
+
+
+plot(1:42, MAPE_mod1, type="l", col=1, xlab="horizon", ylab="MAPE", ylim = c(0,30))
+lines(1:42, MAPE_mod2, type="l",col=2)
+lines(1:42, MAPE_mod3, type="l",col=3)
+lines(1:42, MAPE_mod4, type="l",col=4)
+
+legend("topleft",legend=c("1_ARIMA1","2_ARIMA2","3_ARIMA3","4_ARIMA4"),col=1:4,lty=1)
 ```
