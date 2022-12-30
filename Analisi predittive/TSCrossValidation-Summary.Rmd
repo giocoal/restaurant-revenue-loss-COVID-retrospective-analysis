@@ -91,6 +91,8 @@ source("My-TSCrossValidation-Functions.R")
 
 ## Load Errors
 
+Errori assoluti 
+
 ```{r message=FALSE, warning=FALSE}
 working_dir = dirname(rstudioapi::getSourceEditorContext()$path)
 setwd(working_dir) # lo applica solo a questo chunk!
@@ -123,6 +125,40 @@ for (dir in items) {
 }
 ```
 
+Errori percentuali
+
+```{r message=FALSE, warning=FALSE}
+working_dir = dirname(rstudioapi::getSourceEditorContext()$path)
+setwd(working_dir) # lo applica solo a questo chunk!
+
+h = 74
+folder_path <- "./Errors"
+error_percentage_df_list_precovid <- list()
+
+
+# Lista dei tipi di modelli
+items <- list.files(folder_path, recursive = FALSE, full.names = TRUE)
+
+for (dir in items) {
+  csv_files <- list.files(path = dir, pattern = "*.csv", full.names = TRUE)
+  filtered_csv_files <- csv_files %>% grep("PreCovid_e[0-9]+_percentage\\.csv$", ., value = TRUE)
+  for (f in filtered_csv_files) {
+    df <- read_csv(f)
+    #df$date  <- parse_date(df$date, "%Y-%m-%d", locale = locale("it"))
+    
+    df <- xts(df[, c(-1,-2)], as.Date(as.character(df$date), format = "%Y-%m-%d"))
+    colnames(df) <- paste("h=", 1:h, sep = "")
+    
+    
+    var_name <- gsub("\\.csv$", "", basename(f))
+    assign(var_name, df)
+    
+    # Aggiungo alla lista
+    error_percentage_df_list_precovid[[var_name]] <- df
+  }
+}
+```
+
 ### RMSE
 
 ```{r}
@@ -149,7 +185,7 @@ f_x = 74
 by_x = 10
 
 i_y = 2000
-f_y = 10000
+f_y = 6000
 by_y = 1000
 
 ylab = "RMSE"
@@ -159,6 +195,11 @@ model_types = "ARIMA|UCM|RandomForest"
 
 pre_covid_accuracy_plot(i_x, f_x, by_x, i_y, f_y, by_y, ylab, model_types, accuracy_metrics)
 
+```
+
+Valori medi
+```{r}
+lapply(RMSE_PreCovid, mean)
 ```
 
 
@@ -183,18 +224,19 @@ for (df_name in names(error_df_list_precovid)) {
 ```
 
 ```{r}
-plot(1:74, NULL, type="l", col=1, xlab="horizon", ylab="RMdSE", ylim = c(1000,4000))
+i_x = 0
+f_x = 74
+by_x = 10
 
-for(i in 1:length(RMdSE_PreCovid)) {
-  #View(RMSE_PreCovid[[i]])
-  lines(1:74, RMdSE_PreCovid[[i]], col = i,  lty = i)
-}
+i_y = 1000
+f_y = 4000
+by_y = 200
+ylab = "RMdSE"
+accuracy_metrics = RMdSE_PreCovid
 
-# Aggiungi la legenda al grafico
-col = seq(1,length(RMdSE_PreCovid))
-plot(NULL ,xaxt='n',yaxt='n',bty='n',ylab='',xlab='', xlim=0:1, ylim=0:1)
-lty = seq(1,length(RMdSE_PreCovid))
-legend("topright", legend = names(RMdSE_PreCovid), col = col, lty = lty)
+model_types = "ARIMA|UCM|RandomForest"
+
+pre_covid_accuracy_plot(i_x, f_x, by_x, i_y, f_y, by_y, ylab, model_types, accuracy_metrics)
 
 ```
 
@@ -248,6 +290,41 @@ pre_covid_accuracy_plot(i_x, f_x, by_x, i_y, f_y, by_y, ylab, model_types, accur
 ```
 
 ### MAPE
+
+```{r}
+MAPE_PreCovid <- list()
+
+for (df_name in names(error_percentage_df_list_precovid)) {
+  # Accedi al dataframe nella lista utilizzando il suo nome
+  df <- error_percentage_df_list_precovid[[df_name]]
+  
+  # Applica la funzione di tua scelta al dataframe
+  result <- colMeans(abs(df), na.rm = TRUE)
+  
+  # Assegna il risultato a una variabile con il nome "MAPE_nomedeldataframe"
+  result_name <- paste0("MAPE_", df_name)
+  
+  MAPE_PreCovid[[result_name]] <- result
+}
+```
+
+```{r}
+# Crea una mappa per associare il nome di ogni vettore all'etichetta e al colore desiderati
+i_x = 0
+f_x = 74
+by_x = 10
+
+i_y = 10
+f_y = 25
+by_y = 5
+ylab = "MAPE"
+accuracy_metrics = MAPE_PreCovid
+
+model_types = "ARIMA|UCM|RandomForest"
+
+pre_covid_accuracy_plot(i_x, f_x, by_x, i_y, f_y, by_y, ylab, model_types, accuracy_metrics)
+```
+
 
 ```{r}
 MAPE_mod1 <- colMeans(abs(e1_percentage), na.rm = TRUE)

@@ -146,7 +146,7 @@ validation <- train_validation[-c(1:validation_ndx), ]
 test <- rf_r1[-c(1:train_ndx), ]
 ```
 
-# Costruzione della matrice dei ritardi
+## Costruzione della matrice dei ritardi
 
 -   Prende il lordo totale del train (non del validation) e costruisce una matrice in cui la prima colonna sono i valori del lordo totale ai vari istanti, le colonne successive sono 14 ritardi partendo da ogni istante temporale
 
@@ -163,7 +163,7 @@ Y <- embed(train, 15) # numero di ritardi + 1 che vogliamo considerare
 colnames(Y) <- c("y", paste0("y_", 1:14))
 ```
 
-# Train modello
+## Train modello
 
 Train:
 
@@ -176,7 +176,7 @@ rf1 <- randomForest(y~., data = Y)
 print(rf1)
 ```
 
-# Costruzione vettore stime - stima ricorsiva (ogni valore stimato viene utilizzato per prevedere il successivo)
+## Costruzione vettore stime - stima ricorsiva (ogni valore stimato viene utilizzato per prevedere il successivo)
 
 Stime:
 
@@ -200,7 +200,7 @@ X <- Y[nrow(Y), -15, drop = FALSE] # Ultima riga della matrice utilizzata per il
 colnames(X) <- colnames(Y)[-1] # Il modello ha bisogno dei nomi esatti
 ```
 
-# Previsioni
+## Previsioni
 
 Predict:
 
@@ -230,14 +230,14 @@ for (h in 1:nrow(validation)) {
 rf_pred1 <- as.xts(y_hat, order.by = date(validation))
 ```
 
-# Confronto previsioni vs. test
+## Confronto previsioni vs. test
 
 ```{r}
 plot(validation, type = "l")
 lines(rf_pred1, type = "l", col = "red")
 ```
 
-# Performance
+## Performance
 
 ```{r}
 mape(validation, rf_pred1)
@@ -641,6 +641,83 @@ df_festivi <- readxl::read_xlsx("../Dati aggiuntivi/fest_precovid.xlsx")
 ## Definizione funzioni dei modelli
 
 ```{r}
+#f_mod1 <- function(Y, h, newxreg = NULL) {
+#  # Definizione e train del modello
+#  rf1 <- randomForest(y~., data = Y)
+#  
+#  # Definizione vettore vuoto che conterrà le previsioni
+#  y_hat <- numeric(h)
+#  
+#  ## Regressori per le previsioni
+#  # Prendo ultima riga della matrice dei regressori, elimino l'ultimo ritardo
+#  X <- Y[nrow(Y), -15, drop = FALSE] 
+#  colnames(X) <- colnames(Y)[-1] 
+#  
+#  # Itero la generazione dei regressori sulle h previsioni
+#  for (i in 1:h) {
+#    y_hat[i] <- predict(rf1, X, predict.all = TRUE)$individual |> median() # predict.all=True #mantiene la stima data da tutti gli alberi nella foresta. Dopodichè si vanno a selezionare tutti #e a prenderne la mediana (in alternativa, la media)
+#    # Produco lo shift in X
+#    # X viene aggionrato ogni volta, le stime entrano dei regressori
+#    X[1, 2:14] <- X[1, 1:13]
+#    X[1, 1] <- y_hat[i]
+#  }
+#  return(y_hat)
+#}
+#
+#f_mod2 <- function(Y, h, newxreg = NULL) {
+#  # Definizione e train del modello
+#  rf1 <- randomForest(y~., data = Y)
+#  
+#  # Definizione vettore vuoto che conterrà le previsioni
+#  y_hat <- numeric(h)
+#  
+#  ## Regressori per le previsioni
+#  # Prendo ultima riga della matrice dei regressori, elimino l'ultimo ritardo
+#  X <- Y[nrow(Y), -15, drop = FALSE] 
+#  colnames(X) <- colnames(Y)[-1] 
+#  
+#  # Itero la generazione dei regressori sulle h previsioni
+#  for (i in 1:h) {
+#    y_hat[i] <- predict(rf1, X, predict.all = TRUE)$individual |> median() # predict.all=True #mantiene la stima data da tutti gli alberi nella foresta. Dopodichè si vanno a selezionare tutti #e a prenderne la mediana (in alternativa, la media)
+#    # Produco lo shift in X
+#    # X viene aggionrato ogni volta, le stime entrano dei regressori
+#    X[1, 2:14] <- X[1, 1:13]
+#    # Aggiorniamo anche i regressori
+#    X[1, c("Festivo", "Pioggia", "yday", "wday")] <- newxreg[i, c("Festivo", "Pioggia", "yday", #"wday")]
+#    X[1, 1] <- y_hat[i]
+#  }
+#  return(y_hat)
+#}
+#
+#f_mod3 <- function(Y, h, newxreg = NULL) {
+#  # Definizione e train del modello
+#  rf1 <- randomForest(y~., data = Y)
+#  
+#  # Definizione vettore vuoto che conterrà le previsioni
+#  y_hat <- numeric(h)
+#  
+#  ## Regressori per le previsioni
+#  # Prendo ultima riga della matrice dei regressori, elimino l'ultimo ritardo
+#  X <- Y[nrow(Y), -15, drop = FALSE] 
+#  colnames(X) <- colnames(Y)[-1] 
+#  
+#  # Itero la generazione dei regressori sulle h previsioni
+#  for (i in 1:h) {
+#    y_hat[i] <- predict(rf1, X, predict.all = TRUE)$individual |> median() # predict.all=True #mantiene la stima data da tutti gli alberi nella foresta. Dopodichè si vanno a selezionare tutti #e a prenderne la mediana (in alternativa, la media)
+#    # Produco lo shift in X
+#    # X viene aggionrato ogni volta, le STIME entrano dei regressori
+#    X[1, 2:14] <- X[1, 1:13]
+#    # Aggiorniamo anche i regressori con i VALORI VERI del validation
+#    X[1, 15:ncol(X)] <- newxreg[i, ]
+#    X[1, 1] <- y_hat[i]
+#  }
+#  return(y_hat)
+#}
+```
+
+### Funzioni fixate
+
+```{r}
 f_mod1 <- function(Y, h, newxreg = NULL) {
   # Definizione e train del modello
   rf1 <- randomForest(y~., data = Y)
@@ -678,12 +755,12 @@ f_mod2 <- function(Y, h, newxreg = NULL) {
   
   # Itero la generazione dei regressori sulle h previsioni
   for (i in 1:h) {
+    # Aggiorniamo anche i regressori
+    X[1, c("Festivo", "Pioggia", "yday", "wday")] <- newxreg[i, c("Festivo", "Pioggia", "yday", "wday")]
     y_hat[i] <- predict(rf1, X, predict.all = TRUE)$individual |> median() # predict.all=True mantiene la stima data da tutti gli alberi nella foresta. Dopodichè si vanno a selezionare tutti e a prenderne la mediana (in alternativa, la media)
     # Produco lo shift in X
     # X viene aggionrato ogni volta, le stime entrano dei regressori
     X[1, 2:14] <- X[1, 1:13]
-    # Aggiorniamo anche i regressori
-    X[1, c("Festivo", "Pioggia", "yday", "wday")] <- newxreg[i, c("Festivo", "Pioggia", "yday", "wday")]
     X[1, 1] <- y_hat[i]
   }
   return(y_hat)
@@ -703,25 +780,24 @@ f_mod3 <- function(Y, h, newxreg = NULL) {
   
   # Itero la generazione dei regressori sulle h previsioni
   for (i in 1:h) {
+    # Aggiorniamo anche i regressori con i VALORI VERI del validation
+    X[1, 15:ncol(X)] <- newxreg[i, ]
     y_hat[i] <- predict(rf1, X, predict.all = TRUE)$individual |> median() # predict.all=True mantiene la stima data da tutti gli alberi nella foresta. Dopodichè si vanno a selezionare tutti e a prenderne la mediana (in alternativa, la media)
     # Produco lo shift in X
     # X viene aggionrato ogni volta, le STIME entrano dei regressori
     X[1, 2:14] <- X[1, 1:13]
-    # Aggiorniamo anche i regressori con i VALORI VERI del validation
-    X[1, 15:ncol(X)] <- newxreg[i, ]
     X[1, 1] <- y_hat[i]
   }
   return(y_hat)
 }
 ```
 
-
 ## Cross-Validation e eventuali processing ad hoc
 
 ```{r}
 # Parametri di cross-validation globali
 h = 74 # 6 settimane
-initial = 365 # Un anno
+initial = 200 # Un anno 365
 window = NULL # no moving window, si rolling origin
 
 # Calcolo tempo di computazione
@@ -963,11 +1039,56 @@ RMSE_mod3 <- sqrt(colMeans(e3^2, na.rm = TRUE))
 #legend("topleft",legend=c("1_RandomForest_noregr","2_RandomForest_regr","3_RandomForest_regr"),col=1:3,lty=1)
 
 # Zoom out
-plot(1:42, RMSE_mod1, type="l", col=1, xlab="horizon", ylab="RMSE", ylim = c(0,13000))
-lines(1:42, RMSE_mod2, type="l",col=2)
-lines(1:42, RMSE_mod3, type="l",col=3)
+plot(1:74, RMSE_mod1, type="l", col=1, xlab="horizon", ylab="RMSE", ylim = c(0,13000))
+lines(1:74, RMSE_mod2, type="l",col=2)
+lines(1:74, RMSE_mod3, type="l",col=3)
 legend("topleft",legend=c("1_RandomForest_noregr","2_RandomForest_regr","3_RandomForest_regr_DUmmy"),col=1:3,lty=1)
 ```
+Valori medi
+```{r}
+mean(RMSE_mod1)
+mean(RMSE_mod2)
+mean(RMSE_mod3)
+
+```
+
+
+Check confronto con quello che dovrebbe essere il risultato di train/test
+```{r}
+subset(e2, index(e2) == "2019-09-25")[,1:43]
+
+sqrt(mean((subset(e1, index(e1) == "2019-09-25")[,1:43])^2))
+
+sqrt(mean((subset(e2, index(e2) == "2019-09-25")[,1:43])^2))
+
+sqrt(mean((subset(e3, index(e3) == "2019-09-25")[,1:43])^2))
+
+```
+```{r}
+plot(1:74, e3_estimate["2019-09-25", ], col = "blue", type = "l")
+lines(1:74, e1_groundtruth["2019-09-25", ], col = "red", type = "l")
+title("Grafico delle misure di e2")
+xlab("Tempo")
+ylab("Misura di e2")
+```
+
+```{r}
+plot(1:74, e2_estimate["2019-09-25", ], col = "blue", type = "l")
+lines(1:74, e2_groundtruth["2019-09-25", ], col = "red", type = "l")
+lines(1:74, c(as.list(e2_estimate["2019-09-25", 2:74]), NA), col = "black", type = "l")
+title("Grafico delle misure di e2")
+xlab("Tempo")
+ylab("Misura di e2")
+```
+```{r}
+stime_shiftate <- c(as.list(e2_estimate["2019-09-25", 2:74]), NA)
+#stime_shiftate <- as.list(e2_estimate["2019-10-25", ])
+truth <- as.list(e2_groundtruth["2019-09-25", ])
+result <- unlist(Map(function(x, y) x - y, truth, stime_shiftate))
+sqrt(mean(result[1:43]^2))
+```
+
+
 ### RMdSE
 
 ```{r}
@@ -978,9 +1099,9 @@ RMdSE_mod2 <- sqrt(colMedians(e2^2, na.rm = TRUE, hasNA = TRUE))
 RMdSE_mod3 <- sqrt(colMedians(e3^2, na.rm = TRUE, hasNA = TRUE))
 
 # Zoom in
-plot(1:42, RMdSE_mod1, type="l", col=1, xlab="horizon", ylab="RMdSE", ylim = c(0,5000))
-lines(1:42, RMdSE_mod2, type="l",col=2)
-lines(1:42, RMdSE_mod3, type="l",col=3)
+plot(1:74, RMdSE_mod1, type="l", col=1, xlab="horizon", ylab="RMdSE", ylim = c(0,5000))
+lines(1:74, RMdSE_mod2, type="l",col=2)
+lines(1:74, RMdSE_mod3, type="l",col=3)
 legend("topleft",legend=c("1_RandomForest_noregr","2_RandomForest_regr","3_RandomForest_regr_DUmmy"),col=1:3,lty=1)
 
 ```
@@ -992,9 +1113,9 @@ MAE_mod1 <- colMeans(abs(e1), na.rm = TRUE)
 MAE_mod2 <- colMeans(abs(e2), na.rm = TRUE)
 MAE_mod3 <- colMeans(abs(e3), na.rm = TRUE)
 
-plot(1:42, MAE_mod1, type="l", col=1, xlab="horizon", ylab="MAE", ylim = c(0,13000))
-lines(1:42, MAE_mod2, type="l",col=2)
-lines(1:42, MAE_mod3, type="l",col=3)
+plot(1:74, MAE_mod1, type="l", col=1, xlab="horizon", ylab="MAE", ylim = c(0,13000))
+lines(1:74, MAE_mod2, type="l",col=2)
+lines(1:74, MAE_mod3, type="l",col=3)
 legend("topleft",legend=c("1_RandomForest_noregr","2_RandomForest_regr","3_RandomForest_regrDummy"),col=1:3,lty=1)
 ```
 ### MAPE
@@ -1004,10 +1125,17 @@ MAPE_mod1 <- colMeans(abs(e1_percentage), na.rm = TRUE)
 MAPE_mod2 <- colMeans(abs(e2_percentage), na.rm = TRUE)
 MAPE_mod3 <- colMeans(abs(e3_percentage), na.rm = TRUE)
 
-plot(1:42, MAPE_mod1, type="l", col=1, xlab="horizon", ylab="MAPE", ylim = c(0,100))
-lines(1:42, MAPE_mod2, type="l",col=2)
-lines(1:42, MAPE_mod3, type="l",col=3)
+plot(1:74, MAPE_mod1, type="l", col=1, xlab="horizon", ylab="MAPE", ylim = c(0,100))
+lines(1:74, MAPE_mod2, type="l",col=2)
+lines(1:74, MAPE_mod3, type="l",col=3)
 legend("topleft",legend=c("1_RandomForest_noregr","2_RandomForest_regr","3_RandomForest_regrDummy"),col=1:3,lty=1)
+```
+Valori medi
+```{r}
+mean(MAPE_mod1)
+mean(MAPE_mod2)
+mean(MAPE_mod3)
+
 ```
 
 ## Debug
