@@ -12,6 +12,11 @@ editor_options:
 
 ## Setup e loading dataset
 
+```{r}
+# Clean Workspace
+rm(list=ls())
+```
+
 Caricamento librerie
 
 ```{r}
@@ -78,21 +83,37 @@ plot(ss$lordototale)
 
 Splitting e imputazione del validation set a NA
 
+```{r, eval=FALSE}
+##train_date <- nrow(precovid1) * 0.8
+##
+##val <- ss[1:train_date,] # Val è la serie intera
+##test <- ss[-c(1:train_date),] # Usare alla fine
+##
+##validation_date <- nrow(val) * 0.9 # Data di fine del train
+##
+##train <- val
+##train$lordototale[validation_date:nrow(val),] <- NA # train corrisponde a validation ma con i valori di lordototale=NA
+
+# QUESTO??
+# train <- ss
+# train$lordototale[train_date:nrow(val),] <- NA # train corrisponde a validation ma con i valori di lordototale=NA
+```
+
+Nuovo split:
+- Train fino a 2019-12-12
+- Test le 73 osservazioni successive
+
 ```{r}
-train_date <- nrow(precovid1) * 0.8
+train_date <- 539
+validation_date <- 467
 
 val <- ss[1:train_date,] # Val è la serie intera
 test <- ss[-c(1:train_date),] # Usare alla fine
 
-validation_date <- nrow(val) * 0.9 # Data di fine del train
-
 train <- val
-train$lordototale[validation_date:nrow(val),] <- NA # train corrisponde a validation ma con i valori di lordototale=NA
-
-# QUESTO??
-train <- ss
-train$lordototale[train_date:nrow(val),] <- NA # train corrisponde a validation ma con i valori di lordototale=NA
+train$lordototale[validation_date:nrow(val),] <- NA # train corrisponde a validation ma con i valori di
 ```
+
 
 ## Definizione modelli
 

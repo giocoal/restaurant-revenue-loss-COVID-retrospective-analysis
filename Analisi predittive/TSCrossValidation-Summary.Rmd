@@ -97,7 +97,7 @@ Errori assoluti
 working_dir = dirname(rstudioapi::getSourceEditorContext()$path)
 setwd(working_dir) # lo applica solo a questo chunk!
 
-h = 74
+h = 73
 folder_path <- "./Errors"
 error_df_list_precovid <- list()
 
@@ -112,7 +112,8 @@ for (dir in items) {
     df <- read_csv(f)
     #df$date  <- parse_date(df$date, "%Y-%m-%d", locale = locale("it"))
     
-    df <- xts(df[, c(-1,-2)], as.Date(as.character(df$date), format = "%Y-%m-%d"))
+    # Tolgo prima, seconda e ultima (h=74) colonne
+    df <- xts(df[, c(-1,-2, -ncol(df))], as.Date(as.character(df$date), format = "%Y-%m-%d"))
     colnames(df) <- paste("h=", 1:h, sep = "")
     
     
@@ -131,7 +132,7 @@ Errori percentuali
 working_dir = dirname(rstudioapi::getSourceEditorContext()$path)
 setwd(working_dir) # lo applica solo a questo chunk!
 
-h = 74
+h = 73
 folder_path <- "./Errors"
 error_percentage_df_list_precovid <- list()
 
@@ -146,7 +147,7 @@ for (dir in items) {
     df <- read_csv(f)
     #df$date  <- parse_date(df$date, "%Y-%m-%d", locale = locale("it"))
     
-    df <- xts(df[, c(-1,-2)], as.Date(as.character(df$date), format = "%Y-%m-%d"))
+    df <- xts(df[, c(-1,-2, -ncol(df))], as.Date(as.character(df$date), format = "%Y-%m-%d"))
     colnames(df) <- paste("h=", 1:h, sep = "")
     
     
@@ -181,7 +182,7 @@ for (df_name in names(error_df_list_precovid)) {
 
 ```{r}
 i_x = 0
-f_x = 74
+f_x = 73
 by_x = 10
 
 i_y = 2000
@@ -200,6 +201,27 @@ pre_covid_accuracy_plot(i_x, f_x, by_x, i_y, f_y, by_y, ylab, model_types, accur
 Valori medi
 ```{r}
 lapply(RMSE_PreCovid, mean)
+```
+
+#### RMSE hold-out 
+
+```{r}
+RMSE_PreCovid_holdout <- list()
+
+for (df_name in names(error_df_list_precovid)) {
+  # Accedi al dataframe nella lista utilizzando il suo nome
+  df <- error_df_list_precovid[[df_name]]
+  
+  # Applica la funzione di tua scelta al dataframe
+  result <- sqrt(rowMeans(df["2019-12-12", ]^2, na.rm = TRUE))
+  
+  # Assegna il risultato a una variabile con il nome "RMSE_nomedeldataframe"
+  result_name <- paste0("RMSE_", df_name)
+  
+  RMSE_PreCovid_holdout[[result_name]] <- result
+}
+
+RMSE_PreCovid_holdout
 ```
 
 
@@ -275,7 +297,7 @@ for (df_name in names(error_df_list_precovid)) {
 ```{r}
 # Crea una mappa per associare il nome di ogni vettore all'etichetta e al colore desiderati
 i_x = 0
-f_x = 74
+f_x = 73
 by_x = 10
 
 i_y = 1800
@@ -288,6 +310,35 @@ model_types = "ARIMA|UCM|RandomForest"
 
 pre_covid_accuracy_plot(i_x, f_x, by_x, i_y, f_y, by_y, ylab, model_types, accuracy_metrics)
 ```
+
+Valori medi
+
+```{r}
+lapply(MAE_PreCovid, mean)
+```
+
+
+#### MAE hold-out
+
+```{r}
+MAE_PreCovid_holdout <- list()
+
+for (df_name in names(error_df_list_precovid)) {
+  # Accedi al dataframe nella lista utilizzando il suo nome
+  df <- error_df_list_precovid[[df_name]]
+  
+  # Applica la funzione di tua scelta al dataframe
+  result <- rowMeans(abs(df["2019-12-12", ]), na.rm = TRUE)
+  
+  # Assegna il risultato a una variabile con il nome "MAE_nomedeldataframe"
+  result_name <- paste0("MAE_", df_name)
+  
+  MAE_PreCovid_holdout[[result_name]] <- result
+}
+
+MAE_PreCovid_holdout
+```
+
 
 ### MAPE
 
@@ -311,7 +362,7 @@ for (df_name in names(error_percentage_df_list_precovid)) {
 ```{r}
 # Crea una mappa per associare il nome di ogni vettore all'etichetta e al colore desiderati
 i_x = 0
-f_x = 74
+f_x = 73
 by_x = 10
 
 i_y = 10
@@ -336,3 +387,31 @@ lines(1:42, MAPE_mod2, type="l",col=2)
 lines(1:42, MAPE_mod3, type="l",col=3)
 legend("topleft",legend=c("1_RandomForest_noregr","2_RandomForest_regr","3_RandomForest_regrDummy"),col=1:3,lty=1)
 ```
+
+Valori medi
+
+```{r}
+lapply(MAPE_PreCovid, mean)
+```
+
+#### MAPE hold-out
+
+```{r}
+MAPE_PreCovid_holdout <- list()
+
+for (df_name in names(error_percentage_df_list_precovid)) {
+  # Accedi al dataframe nella lista utilizzando il suo nome
+  df <- error_percentage_df_list_precovid[[df_name]]
+  
+  # Applica la funzione di tua scelta al dataframe
+  result <- rowMeans(abs(df["2019-12-12", ]), na.rm = TRUE)
+  
+  # Assegna il risultato a una variabile con il nome "MAPE_nomedeldataframe"
+  result_name <- paste0("MAPE_", df_name)
+  
+  MAPE_PreCovid_holdout[[result_name]] <- result
+}
+
+MAPE_PreCovid_holdout
+```
+

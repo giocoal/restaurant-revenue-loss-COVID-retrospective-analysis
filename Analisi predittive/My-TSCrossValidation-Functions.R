@@ -368,7 +368,7 @@ pre_covid_accuracy_plot <- function(i_x, f_x, by_x, i_y, f_y, by_y, ylab, model_
       }
       
       # Plotta la linea usando il colore e il tratto corrispondenti all'etichetta
-      lines(1:74, accuracy_metrics[[i]], col = name_map[[label]]$col, lty = lty_map[[label]][counter_map[[label]]])
+      lines(1:f_x, accuracy_metrics[[i]], col = name_map[[label]]$col, lty = lty_map[[label]][counter_map[[label]]])
       
       # Incrementa il contatore per il gruppo corrente
       counter_map[[label]] <- counter_map[[label]] + 1
