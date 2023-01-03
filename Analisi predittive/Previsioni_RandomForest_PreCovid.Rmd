@@ -1,0 +1,210 @@
+---
+title: "Random Forest - Ristorante 1 - Previsioni"
+output:
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: '5'
+  beamer_presentation:
+    colortheme: lily
+    fig_caption: no
+    fig_height: 6
+    fig_width: 7
+    fonttheme: structurebold
+    theme: Hannover
+    toc: yes
+  prettydoc::html_pretty:
+    df_print: paged
+    highlight: vignette
+    theme: architect
+    toc: yes
+    toc_depth: 5
+  pdf_document:
+    toc: yes
+    toc_depth: 5
+  slidy_presentation:
+    highlight: default
+  ioslides_presentation:
+    css:
+    - css/fonts.css
+    - css/custom.css
+    - css/title-slide.css
+    - css/slide-background.css
+    includes:
+      before_body: html/TimeSeriesAnalysis.html
+    toc: yes
+    transition: default
+    widescreen: yes
+course: Progetto Data Science Lab
+---
+
+
+# Setup
+
+
+```{r}
+# Clean Workspace
+rm(list=ls())
+```
+
+```{r setup, include=FALSE}
+# Use 'verbatim = TRUE' as chunk option to show chunk code as is
+require(knitr)
+hook_source_def = knit_hooks$get('source')
+knit_hooks$set(source = function(x, options){
+  if (!is.null(options$verbatim) && options$verbatim){
+    opts = gsub(",\\s*verbatim\\s*=\\s*TRUE\\s*", "", options$params.src)
+    bef = sprintf('\n\n    ```{r %s}\n', opts, "\n")
+    stringr::str_c(bef, paste(knitr:::indent_block(x, "    "), collapse = '\n'), "\n    ```\n")
+  } else {
+     hook_source_def(x, options)
+  }
+})
+```
+
+```{r}
+set.seed(100)
+
+# Setting librerie utili
+# Package names
+packages <- c("readxl",  "readr", "forecast", "dplyr", "ggplot2",
+              "lubridate", "KFAS", "tseries", "xts", "randomForest") 
+
+# Install packages if not yet installed
+installed_packages <- packages %in% rownames(installed.packages())
+if (any(installed_packages == FALSE)) {
+  install.packages(packages[!installed_packages])
+}
+
+# Packages loading
+invisible(lapply(packages, library, character.only = TRUE))
+
+working_dir = dirname(rstudioapi::getSourceEditorContext()$path)
+setwd(working_dir)
+
+# MAPE 
+mape <- function(actual,pred){
+  mape <- mean(abs((actual - pred)/actual))*100
+  return (mape)
+}
+
+#MSE
+rmse <- function(actual, pred){
+  rmse <- sqrt(mean((actual - pred)^2))
+  return (rmse)
+}
+
+# Significatività dei parametri
+pars_test <- function(coef, var_coef){
+  test <- (1-pnorm(abs(coef)/sqrt(diag(var_coef))))*2
+  return(test)
+}
+
+# Grafico errore percentuale 
+err_plot <- function(actual, pred){
+  require(xts)
+  err_perc <- ((actual - xts(pred, order.by = index(actual)))/(xts(actual, order.by = index(actual))))*100
+  return(plot(err_perc, ylab="% errore", main="Errore percentuale di previsione"))
+
+}
+```
+
+## Caricamento funzione di Cross Validation
+
+```{r}
+#rm(list=ls())
+source("My-TSCrossValidation-Functions.R")
+```
+
+## Load Data
+
+```{r}
+r1 <- read.csv("..\\Dati ristoranti\\r1_previsioni_covid.csv")
+r1$data  <- parse_date(r1$data, "%Y-%m-%d", locale = locale("it"))
+```
+
+## Definizione funzione per modello 2 Random Forest
+
+```{r}
+f_mod2 <- function(Y, h, newxreg = NULL) {
+  # Definizione e train del modello
+  rf1 <- randomForest(y~., data = Y)
+  
+  # Definizione vettore vuoto che conterrà le previsioni
+  y_hat <- numeric(h)
+  
+  ## Regressori per le previsioni
+  # Prendo ultima riga della matrice dei regressori, elimino l'ultimo ritardo
+  X <- Y[nrow(Y), -15, drop = FALSE] 
+  colnames(X) <- colnames(Y)[-1] 
+  
+  # Itero la generazione dei regressori sulle h previsioni
+  for (i in 1:h) {
+    # Aggiorniamo anche i regressori
+    X[1, c("Festivo", "Pioggia", "yday", "wday")] <- newxreg[i, c("Festivo", "Pioggia", "yday", "wday")]
+    y_hat[i] <- predict(rf1, X, predict.all = TRUE)$individual |> median() # predict.all=True mantiene la stima data da tutti gli alberi nella foresta. Dopodichè si vanno a selezionare tutti e a prenderne la mediana (in alternativa, la media)
+    # Produco lo shift in X
+    # X viene aggionrato ogni volta, le stime entrano dei regressori
+    X[1, 2:14] <- X[1, 1:13]
+    X[1, 1] <- y_hat[i]
+  }
+  return(y_hat)
+}
+```
+
+## Previsioni
+
+```{r}
+# Parametri globali
+h = 74
+initial = 538
+window = NULL
+
+# Calcolo tempo di computazione
+start.time <- Sys.time()
+print(start.time)
+
+# Pre processing
+
+rf_r1 <- xts(r1[, c("lordototale", "Festivo", "Pioggia")], as.Date(as.character(r1$data), format = "%Y-%m-%d"))
+
+rf_r1$Festivo[rf_r1$Festivo=="False"] <- 0
+rf_r1$Festivo[rf_r1$Festivo=="True"] <- 1
+rf_r1$Pioggia[rf_r1$Pioggia==""] <- 0
+rf_r1$Pioggia[rf_r1$Pioggia=="True"] <- 1
+yday <- yday(time(rf_r1))
+wday <- wday(time(rf_r1), week_start = getOption("lubridate.week.start", 1))
+data <- cbind(rf_r1, yday, wday)
+
+# CV su MODELLO 2
+
+e_2 <- tsCV_RandomForest(my_xts = data[,1], xreg = data[,-1], forecastfunction = f_mod2, h=h, initial = initial, window = window)
+e2 <- e_2$e
+e2_percentage <- e_2$e_percentage
+e2_estimate <- e_2$y_estimate
+e2_groundtruth <- e_2$y_groundtruth
+
+end.time <- Sys.time()
+print(end.time)
+time.taken <- end.time - start.time
+print(time.taken)
+```
+```{r}
+covid_predictions <- e2_estimate[539] # Prima riga non nulla di e2_estimate
+covid_predictions <- as.data.frame(t(covid_predictions))
+
+prediction_dates <- seq(as.Date("2020-02-24"), as.Date("2020-05-07"), by = 1)
+
+covid_predictions <- cbind(covid_predictions, prediction_dates)
+
+rownames(covid_predictions) <- NULL
+colnames(covid_predictions) <- c("Previsioni", "Date")
+```
+```{r}
+previsioni <- xts(covid_predictions[, c("Previsioni")], as.Date(as.character(covid_predictions$Date), format = "%Y-%m-%d"))
+```
+
+```{r}
+plot(previsioni)
+```
+
