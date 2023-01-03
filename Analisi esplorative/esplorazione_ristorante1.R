@@ -94,12 +94,16 @@ copy_ristorante1$Pandemia <- as.factor(copy_ristorante1$Pandemia)
 ### Giorno della settimana
 ggplot(copy_ristorante1, aes(Giorno, lordototale, fill=Pandemia)) + geom_boxplot() +
   theme_bw() +
+  xlab("") +
+  ylab("Vendite") +
   ggtitle("Box-plot vendite per giorno della settimana")  +
   theme(strip.placement = "outside",
         strip.background = element_blank(),
         panel.grid.minor.x = element_blank(),
         panel.border = element_rect(colour="grey70"),
-        panel.spacing=unit(0,"cm"))
+        panel.spacing=unit(0,"cm"), 
+        legend.position = c(0.06, 0.9),
+        legend.background = element_rect(fill = "white", color = "black"))
 
 ggplot(copy_ristorante1, aes(Giorno, scontrini, fill=Pandemia)) + geom_boxplot() +
   theme_bw() +
@@ -170,12 +174,15 @@ ggplot(copy_ristorante1, aes(Season, scontrini, fill=Pandemia)) + geom_boxplot()
 ### Weekend/settimana (il venerd? ? considerato giorno della settimana)
 ggplot(copy_ristorante1, aes(Weekend, lordototale, fill=Pandemia)) + geom_boxplot() +
   theme_bw() +
+  ylab("Vendite") + 
   ggtitle("Box-plot vendite weekend vs. resto della settimana")  +
   theme(strip.placement = "outside",
         strip.background = element_blank(),
         panel.grid.minor.x = element_blank(),
         panel.border = element_rect(colour="grey70"),
-        panel.spacing=unit(0,"cm"))
+        panel.spacing=unit(0,"cm"),
+        legend.position = c(0.06, 0.9),
+        legend.background = element_rect(fill = "white", color = "black"))
 
 ggplot(copy_ristorante1, aes(Weekend, scontrini, fill=Pandemia)) + geom_boxplot() +
   theme_bw() +
@@ -189,12 +196,15 @@ ggplot(copy_ristorante1, aes(Weekend, scontrini, fill=Pandemia)) + geom_boxplot(
 ### Giorno feriale vs. festivo
 ggplot(copy_ristorante1, aes(Festivo, lordototale, fill=Pandemia)) + geom_boxplot() +
   theme_bw() +
+  ylab("Vendite") +
   ggtitle("Box-plot vendite giorno festivo vs. feriale")  +
   theme(strip.placement = "outside",
         strip.background = element_blank(),
         panel.grid.minor.x = element_blank(),
         panel.border = element_rect(colour="grey70"),
-        panel.spacing=unit(0,"cm"))
+        panel.spacing=unit(0,"cm"),
+        legend.position = c(0.06, 0.9),
+        legend.background = element_rect(fill = "white", color = "black"))
 
 ggplot(copy_ristorante1, aes(Festivo, scontrini, fill=Pandemia)) + geom_boxplot() +
   theme_bw() +
@@ -208,12 +218,15 @@ ggplot(copy_ristorante1, aes(Festivo, scontrini, fill=Pandemia)) + geom_boxplot(
 ### Pioggia si/no
 ggplot(copy_ristorante1, aes(Pioggia, lordototale, fill=Pandemia)) + geom_boxplot() +
   theme_bw() +
+  ylab("Vendite") +
   ggtitle("Box-plot vendite giorni di pioggia")  +
   theme(strip.placement = "outside",
         strip.background = element_blank(),
         panel.grid.minor.x = element_blank(),
         panel.border = element_rect(colour="grey70"),
-        panel.spacing=unit(0,"cm"))
+        panel.spacing=unit(0,"cm"),
+        legend.position = c(0.06, 0.9),
+        legend.background = element_rect(fill = "white", color = "black"))
 
 ggplot(copy_ristorante1, aes(Pioggia, scontrini, fill=Pandemia)) + geom_boxplot() +
   theme_bw() +
@@ -445,15 +458,15 @@ vendite1_sett_avg <- ts(vendite1_sett_avg, start = decimal_date(as.Date("2018-01
 
 print(
   ggseasonplot(vendite1_mens_avg, year.labels=TRUE, year.labels.left=TRUE) +
-    ylab("euro") +
-    ggtitle("Seasonal plot Ristorante 1: vendite mensili")
+    ylab("Vendite") +
+    ggtitle("Seasonal plot: vendite mensili")
 )
 
 ### Seasonal sub series plot
 print(
   ggsubseriesplot(vendite1_mens_avg) +
-    ylab("euro") +
-    ggtitle("Seasonal subseries plot Ristorante 1: vendite medie mensili"))
+    ylab("Vendite") +
+    ggtitle("Seasonal subseries plot - serie storica completa"))
 
 
 ### Stagionalit? considerando il periodo pre-COVID
@@ -474,26 +487,29 @@ print(
 
 print(
   ggsubseriesplot(pre_covid_1_mens_avg) +
-    ylab("euro") +
-    ggtitle("Seasonal subseries plot Ristorante 1: vendite medie mensili pre-COVID")
+    ylab("Vendite") +
+    ggtitle("Seasonal subseries plot - periodo pre-Covid")
 )
 
 
 ### Analisi correlazione tra vendite e scontrini
 
 scon_vend_sett_avg_1 <- ts.intersect(vendite1_sett_avg, scontrini1_sett_avg)
+colnames(scon_vend_sett_avg_1) <- c('Vendite medie settimanali', 'Scontrini medi settimanali')
 
 print(
   autoplot(scon_vend_sett_avg_1, facets=TRUE) +
-    xlab("Anni") + ylab("") +
-    ggtitle("Confronto scontrini e vendite Ristorante 1")
+    xlab("") + ylab("") +
+    ggtitle("Confronto andamento vendite e scontrini")
 )
 
 print(
   qplot(lordototale, scontrini, data=as.data.frame(copy_ristorante1), color=factor(Pandemia)) +
     scale_colour_manual(values = c("red","blue"), name="Pandemia") +
     ylab("Scontrini") + xlab("Vendite")+
-    ggtitle("Correlazione scontrini e vendite Ristorante 1")
+    ggtitle("Correlazione vendite e scontrini") +
+    theme(legend.position = c(0.94, 0.1),
+          legend.background = element_rect(fill = "white", color = "black"))
 )
 
 # Ho usato la copia senza dati aggregati mensilmente
@@ -642,7 +658,9 @@ p <- ggplot(df_scontrino_medio_no_out, aes(x = data, y = Prezzo_medio_per_scontr
   # + stat_smooth(color = "#FC4E07", fill = "#FC4E07", method = "loess") aggiunge una sorta di trend
 print(
   p + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, size = 8)) +
-    ggtitle("Ristorante 1: confronto scontrino medio pre/post COVID")
+    ggtitle("Confronto scontrino medio") + ylab("Prezzo medio per scontrino") + xlab(" ") +
+    theme(legend.position = c(0.95, 0.1),
+          legend.background = element_rect(fill = "white", color = "black"))
 )
 
 # Valuto la differenza fra il valore medio del prezzo per scontrino fra post e pre
@@ -652,6 +670,27 @@ mean_scontrino$mean_val[1] - mean_scontrino$mean_val[2]
 # Varianza pre/post
 
 var_scontrino
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

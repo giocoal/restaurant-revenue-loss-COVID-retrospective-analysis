@@ -416,8 +416,8 @@ vendite6_sett_avg <- ts(vendite6_sett_avg, start = decimal_date(as.Date("2018-01
 
 print(
   ggseasonplot(vendite6_sett_avg, year.labels=TRUE, year.labels.left=TRUE) +
-    ylab("euro") +
-    ggtitle("Seasonal plot Ristorante 6: vendite settimanali")
+    ylab("Vendite") +
+    ggtitle("Seasonal Plot ristorante 6")
 )
 
 # Nel grafico precedente c'? un problema sull'anno 2018, che dovrebbe partire dalla

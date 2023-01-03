@@ -408,10 +408,15 @@ print(
 
 ### Stagionalit? considerando tutti gli anni
 
+vendite5_sett_avg <- as.numeric(vendite5_sett_avg)
+initial <- rep(NA, 36)
+vendite5_sett_avg <- c(initial, vendite5_sett_avg)
+vendite5_sett_avg <- ts(vendite5_sett_avg, start = decimal_date(as.Date("2018-01-01")), frequency=52)
+
 print(
   ggseasonplot(vendite5_sett_avg, year.labels=TRUE, year.labels.left=TRUE) +
-    ylab("euro") +
-    ggtitle("Seasonal plot Ristorante 5: vendite settimanali")
+    ylab("Vendite") +
+    ggtitle("Seasonal Plot ristorante 5")
 )
 
 # Nel grafico precedente c'? un problema sull'anno 2018, che dovrebbe partire dalla
