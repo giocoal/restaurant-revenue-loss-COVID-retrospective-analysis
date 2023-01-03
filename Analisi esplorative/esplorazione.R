@@ -534,7 +534,10 @@ p <- ggplot(ristoranti_ts,
        aes(x = weeks,
            y = value,
            col = variable)) + geom_line()
-p + labs(x = "data", y='lordototale')
+p + labs(x = "Data", y='Vendite') +
+    theme(legend.title = element_blank(),
+        legend.position = c(0.045, 0.825),
+        legend.background = element_rect(fill = "white", color = "black"))
 
 # Serie storica per ristorante (PRE-COVID)
 
@@ -544,4 +547,7 @@ p <- ggplot(ristoranti_ts_covid,
        aes(x = weeks,
            y = value,
            col = variable)) + geom_line()
-p + labs(x = "data", y='lordototale')
+p + labs(x = "Data", y='Vendite') +
+  theme(legend.title = element_blank(),
+        legend.position = c(0.045, 0.825),
+        legend.background = element_rect(fill = "white", color = "black"))
