@@ -156,7 +156,7 @@ f_mod2 <- function(Y, h, newxreg = NULL) {
 
 ```{r}
 # Parametri globali
-h = 74
+h = 73
 initial = 538
 window = NULL
 
@@ -193,7 +193,7 @@ print(time.taken)
 covid_predictions <- e2_estimate[539] # Prima riga non nulla di e2_estimate
 covid_predictions <- as.data.frame(t(covid_predictions))
 
-prediction_dates <- seq(as.Date("2020-02-24"), as.Date("2020-05-07"), by = 1)
+prediction_dates <- seq(as.Date("2020-02-24"), as.Date("2020-05-06"), by = 1)
 
 covid_predictions <- cbind(covid_predictions, prediction_dates)
 
