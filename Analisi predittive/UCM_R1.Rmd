@@ -462,6 +462,11 @@ e1_percentage <- e_1$e_percentage
 e1_estimate <- e_1$y_estimate
 e1_groundtruth <- e_1$y_groundtruth
 
+# Parametri di cross-validation globali
+h = 74 # 6 settimane
+initial = 120 # Un anno
+window = NULL # no moving window, si rolling origin
+
 # CV su MODELLO 4
 e_4 <- tsCV_UCM(my_xts = ss, forecastfunction = mod4_pre, h=h, initial = initial, window = window)
 e4 <- e_4$e
@@ -689,17 +694,26 @@ RMSE_mod4 <- sqrt(colMeans(e4^2, na.rm = TRUE))
 RMSE_mod5 <- sqrt(colMeans(e5^2, na.rm = TRUE))
 
 # Zoom in
-plot(1:42, RMSE_mod1, type="l", col=1, xlab="horizon", ylab="RMSE", ylim = c(2500,5000))
-lines(1:42, RMSE_mod4, type="l",col=2)
-lines(1:42, RMSE_mod5, type="l",col=3)
+plot(1:74, RMSE_mod1, type="l", col=1, xlab="horizon", ylab="RMSE", ylim = c(3000,6000))
+lines(1:74, RMSE_mod4, type="l",col=2)
+lines(1:74, RMSE_mod5, type="l",col=3)
 legend("topleft",legend=c("1_UCM","4_UCM","5_UCM"),col=1:4,lty=1)
 
 # Zoom out
-plot(1:42, RMSE_mod1, type="l", col=1, xlab="horizon", ylab="RMSE", ylim = c(0,10000))
-lines(1:42, RMSE_mod4, type="l",col=2)
-lines(1:42, RMSE_mod5, type="l",col=3)
+plot(1:74, RMSE_mod1, type="l", col=1, xlab="horizon", ylab="RMSE", ylim = c(0,30000))
+lines(1:74, RMSE_mod4, type="l",col=2)
+lines(1:74, RMSE_mod5, type="l",col=3)
 legend("topleft",legend=c("1_UCM","4_UCM","5_UCM"),col=1:4,lty=1)
 abline(h=5000)
+```
+
+Valori medi 
+
+```{r}
+mean(RMSE_mod1)
+mean(RMSE_mod4)
+mean(RMSE_mod5)
+
 ```
 
 ### RMdSE
@@ -712,9 +726,9 @@ RMdSE_mod4 <- sqrt(colMedians(e4^2, na.rm = TRUE, hasNA = TRUE))
 RMdSE_mod5 <- sqrt(colMedians(e5^2, na.rm = TRUE, hasNA = TRUE))
 
 # Zoom in
-plot(1:42, RMdSE_mod1, type="l", col=1, xlab="horizon", ylab="RMdSE", ylim = c(0,5000))
-lines(1:42, RMdSE_mod4, type="l",col=2)
-lines(1:42, RMdSE_mod5, type="l",col=3)
+plot(1:74, RMdSE_mod1, type="l", col=1, xlab="horizon", ylab="RMdSE", ylim = c(0,5000))
+lines(1:74, RMdSE_mod4, type="l",col=2)
+lines(1:74, RMdSE_mod5, type="l",col=3)
 legend("topleft",legend=c("1_UCM","4_UCM","5_UCM"),col=1:3,lty=1)
 
 ```
@@ -726,9 +740,9 @@ MAE_mod1 <- colMeans(abs(e1), na.rm = TRUE)
 MAE_mod4 <- colMeans(abs(e4), na.rm = TRUE)
 MAE_mod5 <- colMeans(abs(e5), na.rm = TRUE)
 
-plot(1:42, MAE_mod1, type="l", col=1, xlab="horizon", ylab="MAE", ylim = c(0,13000))
-lines(1:42, MAE_mod4, type="l",col=2)
-lines(1:42, MAE_mod5, type="l",col=3)
+plot(1:74, MAE_mod1, type="l", col=1, xlab="horizon", ylab="MAE", ylim = c(0,13000))
+lines(1:74, MAE_mod4, type="l",col=2)
+lines(1:74, MAE_mod5, type="l",col=3)
 legend("topleft",legend=c("1_RandomForest_noregr","2_RandomForest_regr","3_RandomForest_regrDummy"),col=1:3,lty=1)
 ```
 
@@ -739,9 +753,9 @@ MAPE_mod1 <- colMeans(abs(e1_percentage), na.rm = TRUE)
 MAPE_mod4 <- colMeans(abs(e4_percentage), na.rm = TRUE)
 MAPE_mod5 <- colMeans(abs(e5_percentage), na.rm = TRUE)
 
-plot(1:42, MAPE_mod1, type="l", col=1, xlab="horizon", ylab="MAPE", ylim = c(0,13000))
-lines(1:42, MAPE_mod2, type="l",col=2)
-lines(1:42, MAPE_mod3, type="l",col=3)
+plot(1:74, MAPE_mod1, type="l", col=1, xlab="horizon", ylab="MAPE", ylim = c(0,100))
+lines(1:74, MAPE_mod4, type="l",col=2)
+lines(1:74, MAPE_mod5, type="l",col=3)
 legend("topleft",legend=c("1_RandomForest_noregr","2_RandomForest_regr","3_RandomForest_regrDummy"),col=1:3,lty=1)
 ```
 
