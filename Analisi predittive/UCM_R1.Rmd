@@ -24,7 +24,7 @@ set.seed(100)
 
 # Setting librerie utili
 # Package names
-packages <- c("KFAS", "xts", "readxl", "fastDummies") 
+packages <- c("KFAS", "xts", "readxl", "fastDummies", "imputeTS") 
 
 # Install packages if not yet installed
 installed_packages <- packages %in% rownames(installed.packages())
@@ -770,6 +770,12 @@ working_dir = dirname(rstudioapi::getSourceEditorContext()$path)
 setwd(working_dir) # lo applica solo a questo chunk!
 
 postcovid1 <- read.csv("../Dati ristoranti/post-covid_r1.csv", row.names = 1)
+
+# Aggiunte: 1) imputazione degli NA 2) rimozione delle ultime due righe
+postcovid1$lordototale[postcovid1$lordototale == 0] <- NA 
+postcovid1$lordototale <- na_kalman(postcovid1$lordototale)
+postcovid1 <- head(postcovid1, - 2) # Rimuovo le ultime due righe che non hanno il dato del lordo 
+
 fest_post <- read_xlsx("../Dati aggiuntivi/fest_postcovid.xlsx")
 ```
 
@@ -792,15 +798,26 @@ plot(ss$lordototale[1:nrow(postcovid1)])
 Splitting e imputazione del validation set a NA
 
 ```{r}
-train_date <- nrow(postcovid1) * 0.8
+#train_date <- nrow(postcovid1) * 0.8
+#
+#val <- ss[1:train_date,] # Val è la serie intera
+#test <- ss[-c(1:train_date),] # Usare alla fine
+#
+#validation_date <- nrow(val) * 0.9 # Data di fine del train
+#
+#train <- val
+#train$lordototale[validation_date:nrow(val),] <- NA # train corrisponde a validation ma con i valori di lordototale=NA
+```
+
+```{r}
+train_date <- 722
+validation_date <- 663
 
 val <- ss[1:train_date,] # Val è la serie intera
 test <- ss[-c(1:train_date),] # Usare alla fine
 
-validation_date <- nrow(val) * 0.9 # Data di fine del train
-
 train <- val
-train$lordototale[validation_date:nrow(val),] <- NA # train corrisponde a validation ma con i valori di lordototale=NA
+train$lordototale[validation_date:nrow(val),] <- NA # train corrisponde a validation ma con i valori di
 ```
 
 ## Definizione modelli
@@ -1213,8 +1230,8 @@ source("My-TSCrossValidation-Functions.R")
 
 ```{r}
 # Parametri di cross-validation globali
-h = 56 # 8 settimane
-initial = 450 # Un anno
+h = 60 # 8 settimane
+initial = 365 # Un anno
 window = NULL # no moving window, si rolling origin
 
 # Calcolo tempo di computazione
@@ -1236,12 +1253,16 @@ e3_percentage <- e_3$e_percentage
 e3_groundtruth <- e_3$e_groundtruth
 e3_estimate <- e_3$e_estimate
 
+initial = 540 # Un anno
+
 # CV su MODELLO 4
 e_4 <- tsCV_UCM(my_xts = ss, forecastfunction = mod4_post, h=h, initial = initial, window = window)
 e4 <- e_4$e
 e4_percentage <- e_4$e_percentage
 e4_groundtruth <- e_4$e_groundtruth
 e4_estimate <- e_4$e_estimate
+
+initial = 365 # Un anno
 
 # CV su MODELLO 5
 e_5 <- tsCV_UCM(my_xts = ss, forecastfunction = mod5_post, h=h, initial = initial, window = window)
@@ -1313,17 +1334,17 @@ RMSE_mod4 <- sqrt(colMeans(e4^2, na.rm = TRUE))
 RMSE_mod5 <- sqrt(colMeans(e5^2, na.rm = TRUE))
 
 # Zoom in
-plot(1:56, RMSE_mod1, type="l", col=1, xlab="horizon", ylab="RMSE", ylim = c(2500,6000))
-lines(1:56, RMSE_mod3, type="l",col=2)
-lines(1:56, RMSE_mod4, type="l",col=3)
-lines(1:56, RMSE_mod5, type="l",col=4)
+plot(1:60, RMSE_mod1, type="l", col=1, xlab="horizon", ylab="RMSE", ylim = c(2500,6000))
+lines(1:60, RMSE_mod3, type="l",col=2)
+lines(1:60, RMSE_mod4, type="l",col=3)
+lines(1:60, RMSE_mod5, type="l",col=4)
 legend("topleft",legend=c("1_UCM", "3_UCM", "4_UCM","5_UCM"),col=1:4,lty=1)
 
 # Zoom out
-plot(1:56, RMSE_mod1, type="l", col=1, xlab="horizon", ylab="RMSE", ylim = c(0,7000))
-lines(1:56, RMSE_mod3, type="l",col=2)
-lines(1:56, RMSE_mod4, type="l",col=3)
-lines(1:56, RMSE_mod5, type="l",col=4)
+plot(1:60, RMSE_mod1, type="l", col=1, xlab="horizon", ylab="RMSE", ylim = c(0,7000))
+lines(1:60, RMSE_mod3, type="l",col=2)
+lines(1:60, RMSE_mod4, type="l",col=3)
+lines(1:60, RMSE_mod5, type="l",col=4)
 #legend("topleft",legend=c("1_UCM", "3_UCM", "4_UCM","5_UCM"),col=1:4,lty=1)
 ```
 
@@ -1335,10 +1356,10 @@ MAE_mod3 <- colMeans(abs(e3), na.rm = TRUE)
 MAE_mod4 <- colMeans(abs(e4), na.rm = TRUE)
 MAE_mod5 <- colMeans(abs(e5), na.rm = TRUE)
 
-plot(1:56, MAE_mod1, type="l", col=1, xlab="horizon", ylab="MAE", ylim = c(0,4000))
-lines(1:56, MAE_mod3, type="l",col=2)
-lines(1:56, MAE_mod4, type="l",col=3)
-lines(1:56, MAE_mod5, type="l",col=4)
+plot(1:60, MAE_mod1, type="l", col=1, xlab="horizon", ylab="MAE", ylim = c(2000,5000))
+lines(1:60, MAE_mod3, type="l",col=2)
+lines(1:60, MAE_mod4, type="l",col=3)
+lines(1:60, MAE_mod5, type="l",col=4)
 legend("topleft",legend=c("1_UCM", "3_UCM", "4_UCM","5_UCM"),col=1:4,lty=1)
 ```
 
@@ -1350,9 +1371,9 @@ MAPE_mod3 <- colMeans(abs(e3_percentage), na.rm = TRUE)
 MAPE_mod4 <- colMeans(abs(e4_percentage), na.rm = TRUE)
 MAPE_mod5 <- colMeans(abs(e5_percentage), na.rm = TRUE)
 
-plot(1:56, MAPE_mod1, type="l", col=1, xlab="horizon", ylab="MAPE", ylim = c(0,13000))
-lines(1:56, MAPE_mod3, type="l",col=2)
-lines(1:56, MAPE_mod4, type="l",col=3)
-lines(1:56, MAPE_mod5, type="l",col=4)
+plot(1:60, MAPE_mod1, type="l", col=1, xlab="horizon", ylab="MAPE", ylim = c(0,40))
+lines(1:60, MAPE_mod3, type="l",col=2)
+lines(1:60, MAPE_mod4, type="l",col=3)
+lines(1:60, MAPE_mod5, type="l",col=4)
 legend("topleft",legend=c("1_UCM", "3_UCM", "4_UCM","5_UCM"),col=1:4,lty=1)
 ```
