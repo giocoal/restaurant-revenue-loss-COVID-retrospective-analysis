@@ -134,7 +134,7 @@ head(vendite_r1)
 # Data exploration
 
 ```{r}
-plot(vendite_r1)
+autoplot(vendite_r1, ylab="Vendite", xlab="Tempo")
 ```
 
 I dati a disposizione sono incassi giornalieri per il Ristorante1. Per dati giornalieri ci possono essere più tipologie di stagionalità. Nel nostro caso abbiamo, molto probabilmente:
@@ -157,6 +157,9 @@ weekend <- tapply(weekend$lordototale, weekend$Giorno, mean, simplify = FALSE)
 
 data.frame(c(feriali,weekend))
 ```
+```{r}
+boxplot(data.frame(c(feriali,weekend)), col="blue", ylab = "Vendite")
+```
 
 Notiamo infatti come le medie giornalieri siano sostanzialmente simili dal Lunedi al Giovedì, mentre aumentano notevolmente nei giorni Venerdì-Sabato-Domenica.
 
@@ -164,7 +167,12 @@ Per valutare la presenza di stagionalità annuale, sfruttiamo la variabile "Fest
 
 ```{r}
 festivo_noweekend <- df[df$Weekend == 'False',c("data", "lordototale", "Giorno", "Festivo")]
-tapply(festivo_noweekend$lordototale, festivo_noweekend$Festivo, mean)
+```
+
+```{r}
+festivo_mean <- data.frame(t(tapply(festivo_noweekend$lordototale, festivo_noweekend$Festivo, mean)))
+colnames(festivo_mean) <- c("Non Festivo", "Festivo")
+boxplot(festivo_mean, ylab ="Vendite")
 ```
 
 Le medie nei giorni festivi risultano essere maggiori rispetto a quelle dei giorni feriali. Ciò quindi ci porta ad affermare la presenza di stagionalità annuale, anche se difficilmente stimabile per via della quantità ridotta di osservazioni.
@@ -184,7 +192,7 @@ Come precedentemente accennato la stagionalità a 365 giorni non viene stimata p
 
 ```{r}
 plot(vendite_r1, main="Trend Vendite giornaliere", xlab ="Time", ylab="Fatturato")
-lines(vendite_r1_dec[,2], col="blue", lwd=2)
+lines(vendite_r1_dec[,2], col="red", lwd=2)
 ```
 
 Notiamo come effettivamente le irregolarità del trend sono dovute a tutte le festività non modellate dalla stagionalità settimanale
@@ -196,6 +204,10 @@ La serie storica è ovviamente non stazionaria, per i seguenti motivi:
 -   Presenza di stagionalità (non stazionarietà stagionale)
 -   Presenza di un trend (osservazioni sistematicamente sopra o sotto la media)
 -   Possibile non stazionarietà in varianza (se guardiamo il grafico della decomposizione, la parte stagionale tende ad un certo punto a restringersi)
+
+```{r}
+tsdisplay(vendite_r1)
+```
 
 ```{r}
 ndiffs(vendite_r1)
@@ -246,7 +258,7 @@ Il test ci indica la necessità di una differenziazione, sia stagionale che non.
 
 
 ```{r}
-tsdisplay(vendite_r1_diff7)
+tsdisplay(diff(vendite_r1_log, 7), main = "")
 ```
 
 ACF non decade a zero lentamente e non presenta pattern stagionali.
@@ -362,7 +374,7 @@ four <- as.matrix((four))
 
 
 ```{r}
-split_vendite <- ts_split(vendite_r1, sample.out =round(length(vendite_r1)*0.2))
+split_vendite <- ts_split(vendite_r1, sample.out =73)
 train <- split_vendite$train
 test <- split_vendite$test
 length(train)
@@ -372,7 +384,7 @@ length(test)
 ```{r}
 # Divisione training-test matrice dummy giornaliere
 
-train_date <- nrow(dum_day) *0.8
+train_date <- nrow(dum_day)-73
 train_dumday<- dum_day[1:train_date,]
 test_dumday <- dum_day[-c(1:train_date),]
 
@@ -384,7 +396,7 @@ length(test_dumday[,1])
 ```{r}
 # Divisione training-test dummy annuali
 
-train_date <- nrow(dum_ann) *0.8
+train_date <- nrow(dum_ann)-73
 train_dumann<- dum_ann[1:train_date,]
 test_dumann <- dum_ann[-c(1:train_date),]
 
@@ -396,7 +408,7 @@ length(test_dumday[,1])
 ```{r}
 # Divisione training-test termini di Fourier
 
-train_date <- nrow(four) *0.8
+train_date <- nrow(four)-73
 train_four<- four[1:train_date,]
 test_four <- four[-c(1:train_date),]
 
@@ -1360,3 +1372,79 @@ lines(1:42, MAPE_mod4, type="l",col=4)
 
 legend("topleft",legend=c("1_ARIMA1","2_ARIMA2","3_ARIMA3","4_ARIMA4"),col=1:4,lty=1)
 ```
+
+
+## Previsioni 
+
+Si sceglie quindi il modello 3, per effettuare le previsioni del fatturato durante il primo lockdown.
+
+```{r}
+# Termini di Fourier per le previsioni
+four_pred <- fourier(vendite_r1, K = c(3,15), h=73)
+```
+
+```{r}
+lockdown <- read.csv("C:\\Users\\marco\\OneDrive\\UNIMIB_DataScience\\99-PROJECTS\\DataScienceLab2022\\Dati ristoranti\\periodo-covid_r1.csv")
+lockdown$data  <- parse_date(lockdown$data, "%Y-%m-%d", locale = locale("it"))
+```
+
+```{r}
+predict_lockdown <- subset(lockdown, lockdown$data < "2020-05-07", select = "data")
+```
+
+
+```{r}
+previsioni <- forecast(Arima(vendite_r1,
+                             order = c(2, 1, 3),
+                             seasonal = list(order = c(1, 0, 1)),
+                             xreg = four,
+                             include.constant = TRUE,
+                             lambda = "auto"),
+           h = 73,
+           xreg=four_pred)
+```
+
+```{r}
+autoplot(previsioni)
+```
+```{r}
+# Creo dataframe con le previsioni e i dati reali
+predict_lockdown$previsioni <- previsioni$mean
+predict_lockdown$lordototale <- lockdown[lockdown$data < "2020-05-07", 9]
+head(predict_lockdown)
+```
+
+
+```{r}
+predict_lockdown <- melt(predict_lockdown, id.vars = "data")
+```
+
+
+RUNNA QUESTO SOTTO
+
+
+
+```{r}
+p <- ggplot(predict_lockdown, 
+            aes(x = data, y = value, col = variable)) + geom_line()
+p + labs(x = "Data", y='Vendite') + ggtitle("Previsioni ARIMA") +
+  theme(legend.title = element_blank(),
+        legend.position = c(0.9, 0.18),
+        legend.background = element_rect(fill = "white", color = "black"))
+```
+
+### Confronto fatturato anno precedente
+
+```{r}
+# Somma fatturato valori predetti
+sum_lockdown <- sum(lockdown$previsioni)
+sum_lockdown
+```
+```{r}
+# Somma fatturato anno 2021 pari a 6864238,728
+percent_fatt <- (sum_lockdown*100)/6864238.728
+percent_fatt
+```
+
+
+

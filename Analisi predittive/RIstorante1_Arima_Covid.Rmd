@@ -40,7 +40,7 @@ course: Progetto Data Science Lab
 
 ```{r}
 # Clean Workspace
-rm(list=ls())
+# rm(list=ls())
 ```
 
 ```{r setup, include=FALSE}
@@ -175,14 +175,10 @@ vendite_r1[vendite_r1 == 0] <- NaN
 ```{r}
 # Trasformo in ts
 vendite_r1 <- msts(vendite_r1, seasonal.periods=c(7,365.25), ts.frequency = 7)
-plot(vendite_r1)
+autoplot(vendite_r1, ylab = "Vendite")
 ```
 
 ## Imputazione dei valori mancanti
-
-```{r}
-
-```
 
 ```{r}
 library(imputeTS)
@@ -194,6 +190,10 @@ statsNA(vendite_r1)
 # Imputazione tramite algoritmo di Kalman
 vendite_r1_nona <- na_kalman(vendite_r1)
 ggplot_na_imputations(vendite_r1, vendite_r1_nona)
+```
+```{r}
+trend <-xts(vendite_r1_dec[,2], order.by = df$data, frequency = 7)
+write.zoo(trend, file="C:\\Users\\marco\\OneDrive\\UNIMIB_DataScience\\99-PROJECTS\\DataScienceLab2022\\Analisi predittive\\trend.csv", sep=",")
 ```
 
 ```{r}
@@ -360,7 +360,7 @@ head(dum_day_predict)
 
 ```{r}
 # Divsione training-test serie storica
-split_vendite <- ts_split(vendite_r1, sample.out =round(length(vendite_r1)*0.2))
+split_vendite <- ts_split(vendite_r1, sample.out =60)
 train <- split_vendite$train
 test <- split_vendite$test
 
@@ -372,7 +372,7 @@ length(test)
 ```{r}
 # Divisione training-test matrice dummy giornaliere
 
-train_date <- nrow(dum_day) *0.8
+train_date <- nrow(dum_day)-60
 train_dumday<- dum_day[1:train_date,]
 test_dumday <- dum_day[-c(1:train_date),]
 
@@ -384,7 +384,7 @@ length(test_dumday[,1])
 ```{r}
 # Divisione training-test dummy annuali
 
-train_date <- nrow(dum_ann) *0.8
+train_date <- nrow(dum_ann)-60
 train_dumann<- dum_ann[1:train_date,]
 test_dumann <- dum_ann[-c(1:train_date),]
 
@@ -396,7 +396,7 @@ length(test_dumann[,1])
 ```{r}
 # Divisione training-test termini di Fourier
 
-train_date <- nrow(four) *0.8
+train_date <- nrow(four)-60
 train_four<- four[1:train_date,]
 test_four <- four[-c(1:train_date),]
 
@@ -408,7 +408,7 @@ length(test_four[,1])
 ```{r}
 # Divsione training-test dataframe xreg
 
-train_date <- nrow(xreg) *0.8
+train_date <- nrow(xreg)-60
 train_xreg<- xreg[1:train_date,]
 test_xreg <- xreg[-c(1:train_date),]
 
@@ -674,7 +674,7 @@ pars_test(mod3$coef, mod3$var.coef)
 ```
 
 ```{r}
-mod3_auto <- auto.arima(train, xreg = train_four, lambda = "auto", stepwise = FALSE)
+# mod3_auto <- auto.arima(train, xreg = train_four, lambda = "auto", stepwise = FALSE)
 ```
 
 ```{r}
@@ -697,13 +697,6 @@ checkresiduals(mod3_auto, test = "LB", lag = 25, plot = FALSE)
 pars_test(mod3_auto$coef, mod3_auto$var.coef)
 ```
 
-```{r}
-# Fit prime 10 settimane
-plot(train[1:70], 
-     col = "blue", lwd=0.5, 
-     main = "Fitted Values", type = "l")
-lines(mod3$fitted[1:70], col="red", lwd=3)
-```
 
 Scelgo il modello *mod3* in quanto presenta caratteristiche migliori per quanto riguarda errori di previsioni e residui, anche se risulta essere meno parsimonioso
 
@@ -1185,6 +1178,39 @@ for (i in 1:length(matrices)) {
 
 ```
 
+```{r}
+# cAMBIO PARAMETRI GLOBALI PER IL TERZO E QUARTO MODELLO
+
+h = 60 # 2 mesi
+initial = 365 #180*3 modelli maggiormente complessi richiedono un training set iniziale più ampio
+window = NULL
+
+start.time <- Sys.time()
+print(start.time)
+
+
+xreg3 <- four
+e_3_1 <- tsCV_ARIMA(y = vendite_r1, forecastfunction = f_mod3, h=h, xreg=xreg3, initial = initial)
+#e3 <- tail(e3, n = -initial)
+e3_1 <- e_3_1$e
+e3_percentage_1 <- e_3_1$e_percentage
+e3_estimate_1 <- e_3_1$y_estimate
+e3_groundtruth_1 <- e_3_1$y_groundtruth
+
+
+xreg4 <- rbind(xreg_mod4_train, xreg_mod4_test)
+e_4_1 <- tsCV_ARIMA(y = vendite_r1, forecastfunction = f_mod4, h=h, xreg=xreg4, initial = initial)
+#e4 <- tail(e4, n = -initial)
+e4_1 <- e_4_1$e
+e4_percentage_1 <- e_4_1$e_percentage
+e4_estimate_1 <- e_4_1$y_estimate
+e4_groundtruth_1 <- e_4_1$y_groundtruth
+
+end.time <- Sys.time()
+print(end.time)
+time.taken <- end.time - start.time
+print(time.taken)
+```
 
 
 ## Confrontro tra i modelli
@@ -1211,18 +1237,19 @@ legend("bottomright",legend=c("1_ARIMA1","2_ARIMA2","3_ARIMA3","4_ARIMA4"),col=1
 ### RMdSE
 
 ```{r}
-RMSE_mod1 <- sqrt(colMedians(e1^2, na.rm = TRUE, hasNA = TRUE))
-RMSE_mod2 <- sqrt(colMedians(e2^2, na.rm = TRUE, hasNA = TRUE))
-RMSE_mod3 <- sqrt(colMedians(e3^2, na.rm = TRUE, hasNA = TRUE))
-RMSE_mod4 <- sqrt(colMedians(e4^2, na.rm = TRUE, hasNA = TRUE))
+library(robustbase)
+RdMSE_mod1 <- sqrt(colMedians(e1^2, na.rm = TRUE, hasNA = TRUE))
+RdMSE_mod2 <- sqrt(colMedians(e2^2, na.rm = TRUE, hasNA = TRUE))
+RdMSE_mod3 <- sqrt(colMedians(e3^2, na.rm = TRUE, hasNA = TRUE))
+RdMSE_mod4 <- sqrt(colMedians(e4^2, na.rm = TRUE, hasNA = TRUE))
 #RMSE_mod6 <- sqrt(colMeans(e6^2, na.rm = TRUE))
 
 
 # Zoom in
-plot(1:60, RMSE_mod1, type="l", col=1, xlab="horizon", ylab="RMSE", ylim = c(1000,4500))
-lines(1:60, RMSE_mod2, type="l",col=2)
-lines(1:60, RMSE_mod3, type="l",col=3)
-lines(1:60, RMSE_mod4, type="l",col=4)
+plot(1:60, RdMSE_mod1, type="l", col=1, xlab="horizon", ylab="RdMSE", ylim = c(1000,4500))
+lines(1:60, RdMSE_mod2, type="l",col=2)
+lines(1:60, RdMSE_mod3, type="l",col=3)
+lines(1:60, RdMSE_mod4, type="l",col=4)
 legend("bottomright",legend=c("1_ARIMA1","2_ARIMA2","3_ARIMA3","4_ARIMA4"),col=1:4,lty=1)
 
 ```
@@ -1244,12 +1271,12 @@ MAE_mod2 <- colMeans(abs(e2), na.rm = TRUE)
 MAE_mod3 <- colMeans(abs(e3), na.rm = TRUE)
 MAE_mod4 <- colMeans(abs(e4), na.rm = TRUE)
 
-plot(1:42, MAE_mod1, type="l", col=1, xlab="horizon", ylab="MAE", ylim = c(0,6000))
-lines(1:42, MAE_mod2, type="l",col=2)
-lines(1:42, MAE_mod3, type="l",col=3)
-lines(1:42, MAE_mod4, type="l",col=4)
+plot(1:60, MAE_mod1, type="l", col=1, xlab="horizon", ylab="MAE", ylim = c(0,6000))
+lines(1:60, MAE_mod2, type="l",col=2)
+lines(1:60, MAE_mod3, type="l",col=3)
+lines(1:60, MAE_mod4, type="l",col=4)
 
-legend("topleft",legend=c("1_ARIMA1","2_ARIMA2","3_ARIMA3","4_ARIMA4"),col=1:4,lty=1)
+legend("bottomright",legend=c("1_ARIMA1","2_ARIMA2","3_ARIMA3","4_ARIMA4"),col=1:4,lty=1)
 ```
 
 ### MAPE
@@ -1268,3 +1295,21 @@ lines(1:42, MAPE_mod4, type="l",col=4)
 
 legend("topleft",legend=c("1_ARIMA1","2_ARIMA2","3_ARIMA3","4_ARIMA4"),col=1:4,lty=1)
 ```
+
+
+```{r}
+RMSE_mod1 <- sqrt(colMeans(e1^2, na.rm = TRUE))
+RMSE_mod2<- sqrt(colMeans(e2^2, na.rm = TRUE))
+RMSE_mod3_1 <- sqrt(colMeans(e3_1^2, na.rm = TRUE))
+RMSE_mod4_1 <- sqrt(colMeans(e4_1^2, na.rm = TRUE))
+#RMSE_mod6 <- sqrt(colMeans(e6^2, na.rm = TRUE))
+
+
+# Zoom in
+plot(1:60, RMSE_mod1, type="l", col=1, xlab="horizon", ylab="RMSE", ylim = c(2500,10000))
+lines(1:60, RMSE_mod2, type="l",col=2)
+lines(1:60, RMSE_mod3_1, type="l",col=3)
+lines(1:60, RMSE_mod4_1, type="l",col=4)
+legend("topleft",legend=c("1_ARIMA1","2_ARIMA2","3_ARIMA3","4_ARIMA4"),col=1:4,lty=1)
+```
+
