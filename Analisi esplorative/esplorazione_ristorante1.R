@@ -670,3 +670,68 @@ mean_scontrino$mean_val[1] - mean_scontrino$mean_val[2]
 # Varianza pre/post
 
 var_scontrino
+
+# Grafico colori regioni
+
+trend <- read.csv("..//Dati ristoranti//trend.csv", header = FALSE)
+trend <- head(trend, -2)
+
+ris1_postcovid <- copy_ristorante1[copy_ristorante1$data > "2020-05-06", c("lordototale", "data", "ColoreCOVID")]
+ris1_postcovid$lordototale[ris1_postcovid$lordototale == 0] <- NA 
+ris1_postcovid$lordototale <- na_kalman(ris1_postcovid$lordototale)
+ris1_postcovid <- head(ris1_postcovid, -2)
+graph_ts <- xts(ris1_postcovid[, c("lordototale")], as.Date(as.character(ris1_postcovid$data), format = "%Y-%m-%d"))
+
+ris1_postcovid = cbind(ris1_postcovid, trend$V2)
+
+date_red <- c("2020-11-06", "2020-11-28", "2020-12-24", "2020-12-27", "2020-12-31", "2021-01-06",
+              "2021-01-17", "2021-01-23", "2021-03-15" ,"2021-04-11")
+date_arancio <- c("2020-11-29", "2020-12-12", "2020-12-28", "2020-12-30", "2021-01-09", "2021-01-16",
+                  "2021-01-24", "2021-01-31", "2021-03-01" ,"2021-03-14", "2021-04-12", "2021-04-25")
+date_giallo <- c("2020-12-13", "2020-12-23", "2021-01-07", "2021-01-08", "2021-02-01", "2021-02-28",
+                 "2021-04-26", "2021-06-13", "2022-01-03", "2022-02-27")
+
+# Color manipulation
+
+t_col <- function(color, percent = 50, name = NULL) {
+  #      color = color name
+  #    percent = % transparency
+  #       name = an optional name for the color
+  
+  ## Get RGB values for named color
+  rgb.val <- col2rgb(color)
+  
+  ## Make new color using input color as base and alpha set by transparency
+  t.col <- rgb(rgb.val[1], rgb.val[2], rgb.val[3],
+               max = 255,
+               alpha = (100 - percent) * 255 / 100,
+               names = name)
+  
+  ## Save the color
+  invisible(t.col)
+}
+
+red.rgb.val <- col2rgb("red")
+my_red <- adjustcolor("red", alpha.f = 0.2)
+
+ggplot(data=ris1_postcovid, aes(x=data)) +
+  geom_rect(data=NULL, aes(xmin=as.Date(date_red[1], "%Y-%m-%d"), xmax=as.Date(date_red[2], "%Y-%m-%d"), ymin=-Inf, ymax=Inf), fill="red", alpha = .15) +
+  geom_rect(data=NULL, aes(xmin=as.Date(date_red[3], "%Y-%m-%d"), xmax=as.Date(date_red[4], "%Y-%m-%d"), ymin=-Inf, ymax=Inf), fill="red", alpha = .15) +
+  geom_rect(data=NULL, aes(xmin=as.Date(date_red[5], "%Y-%m-%d"), xmax=as.Date(date_red[6], "%Y-%m-%d"), ymin=-Inf, ymax=Inf), fill="red", alpha = .15) +
+  geom_rect(data=NULL, aes(xmin=as.Date(date_red[7], "%Y-%m-%d"), xmax=as.Date(date_red[8], "%Y-%m-%d"), ymin=-Inf, ymax=Inf), fill="red", alpha = .15) +
+  geom_rect(data=NULL, aes(xmin=as.Date(date_red[9], "%Y-%m-%d"), xmax=as.Date(date_red[10], "%Y-%m-%d"), ymin=-Inf, ymax=Inf), fill=my_red) +
+  geom_rect(data=NULL, aes(xmin=as.Date(date_arancio[1], "%Y-%m-%d"), xmax=as.Date(date_arancio[2], "%Y-%m-%d"), ymin=-Inf, ymax=Inf), fill="orange", alpha = .15) +
+  geom_rect(data=NULL, aes(xmin=as.Date(date_arancio[3], "%Y-%m-%d"), xmax=as.Date(date_arancio[4], "%Y-%m-%d"), ymin=-Inf, ymax=Inf), fill="orange", alpha = .15) +
+  geom_rect(data=NULL, aes(xmin=as.Date(date_arancio[5], "%Y-%m-%d"), xmax=as.Date(date_arancio[6], "%Y-%m-%d"), ymin=-Inf, ymax=Inf), fill="orange", alpha = .15) +
+  geom_rect(data=NULL, aes(xmin=as.Date(date_arancio[7], "%Y-%m-%d"), xmax=as.Date(date_arancio[8], "%Y-%m-%d"), ymin=-Inf, ymax=Inf), fill="orange", alpha = .15) +
+  geom_rect(data=NULL, aes(xmin=as.Date(date_arancio[9], "%Y-%m-%d"), xmax=as.Date(date_arancio[10], "%Y-%m-%d"), ymin=-Inf, ymax=Inf), fill="orange", alpha = .15) +
+  geom_rect(data=NULL, aes(xmin=as.Date(date_arancio[11], "%Y-%m-%d"), xmax=as.Date(date_arancio[12], "%Y-%m-%d"), ymin=-Inf, ymax=Inf), fill="orange", alpha = .15) +
+  geom_rect(data=NULL, aes(xmin=as.Date(date_giallo[1], "%Y-%m-%d"), xmax=as.Date(date_giallo[2], "%Y-%m-%d"), ymin=-Inf, ymax=Inf), fill="yellow", alpha = .15) +
+  geom_rect(data=NULL, aes(xmin=as.Date(date_giallo[3], "%Y-%m-%d"), xmax=as.Date(date_giallo[4], "%Y-%m-%d"), ymin=-Inf, ymax=Inf), fill="yellow", alpha = .15) +
+  geom_rect(data=NULL, aes(xmin=as.Date(date_giallo[5], "%Y-%m-%d"), xmax=as.Date(date_giallo[6], "%Y-%m-%d"), ymin=-Inf, ymax=Inf), fill="yellow", alpha = .15) +
+  geom_rect(data=NULL, aes(xmin=as.Date(date_giallo[7], "%Y-%m-%d"), xmax=as.Date(date_giallo[8], "%Y-%m-%d"), ymin=-Inf, ymax=Inf), fill="yellow", alpha = .15) +
+  geom_rect(data=NULL, aes(xmin=as.Date(date_giallo[9], "%Y-%m-%d"), xmax=as.Date(date_giallo[10], "%Y-%m-%d"), ymin=-Inf, ymax=Inf), fill="yellow", alpha = .15) +
+  geom_line(aes(y = lordototale), color = "darkgrey") +
+  geom_line(aes(y = trend$V2), color = "black", size = 1) +
+  theme_bw() +
+  ggtitle("Andamento serie storica post lockdown") + ylab("Vendite") + xlab("Data")
