@@ -132,13 +132,15 @@ r1_post <- xts(postcovid1[, "lordototale"], as.Date(as.character(postcovid1$data
 ```
 
 ```{r}
-train_test_split <- nrow(r1_post)*0.8
+#train_test_split <- nrow(r1_post)*0.8
+#train_test_split <- 662
 ```
 
 ```{r}
 train1_post <- r1_post[1:train_test_split, ]
 test1_post <- r1_post[-c(1:train_test_split), ]
 ```
+
 
 ```{r}
 # Matrice dei ritardi
