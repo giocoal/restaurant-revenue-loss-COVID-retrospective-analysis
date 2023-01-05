@@ -214,16 +214,16 @@ for (df_name in names(error_df_list_precovid)) {
 
 ```{r, dpi=1000, fig.height = 4.5, fig.width = 9} 
 color_map <- list(
-    alpha("red", 0.8),
-    alpha("red", 0.8),
+    alpha("red", 0.5),
+    alpha("red", 0.5),
     alpha("red", 1),
-    alpha("red", 0.8),
-    alpha("blue", 0.8),
+    alpha("red", 0.5),
+    alpha("blue", 0.5),
     alpha("blue", 1),
     alpha("blue", 1),
-    alpha("green", 0.8),
-    alpha("green", 0.8),
-    alpha("green", 0.8)
+    alpha("green", 1),
+    alpha("green", 1),
+    alpha("green", 1)
   )
 
 
@@ -237,7 +237,7 @@ by_y = 1000
 
 lwd = 1.4
 
-ylab = "RMSE"
+ylab = "Root Mean Squared Error (RMSE)"
 accuracy_metrics = RMSE_PreCovid
 nome_file = "CV_Precovid_RMSE.png"
 
@@ -308,7 +308,7 @@ by_y = 200
 
 lwd = 1.4
 
-ylab = "RMdSE"
+ylab = "Root Median Squared Error (RMdSE)"
 accuracy_metrics = RMdSE_PreCovid
 nome_file = "CV_Precovid_RMdSE.png"
 
@@ -360,13 +360,13 @@ i_x = 0
 f_x = 73
 by_x = 10
 
-i_y = 1800
-f_y = 4800
-by_y = 200
+i_y = 1900
+f_y = 4400
+by_y = 500
 
 lwd = 1.4
 
-ylab = "MAE"
+ylab = "Mean Absolute Error (MAE)"
 accuracy_metrics = MAE_PreCovid
 nome_file = "CV_Precovid_MAE.png"
 
@@ -435,11 +435,11 @@ by_x = 10
 
 i_y = 10
 f_y = 25
-by_y = 5
+by_y = 3
 
 lwd = 1.4
 
-ylab = "MAPE"
+ylab = "Mean Absolute Percentage Error (MAPE)"
 accuracy_metrics = MAPE_PreCovid
 nome_file = "CV_Precovid_MAPE.png"
 
