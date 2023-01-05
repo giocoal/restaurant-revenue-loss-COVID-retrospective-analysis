@@ -155,56 +155,106 @@ f_mod2 <- function(Y, h, newxreg = NULL) {
 ## Previsioni
 
 ```{r}
-# Parametri globali
-h = 73
-initial = 538
-window = NULL
-
-# Calcolo tempo di computazione
-start.time <- Sys.time()
-print(start.time)
-
-# Pre processing
-
-rf_r1 <- xts(r1[, c("lordototale", "Festivo", "Pioggia")], as.Date(as.character(r1$data), format = "%Y-%m-%d"))
-
-rf_r1$Festivo[rf_r1$Festivo=="False"] <- 0
-rf_r1$Festivo[rf_r1$Festivo=="True"] <- 1
-rf_r1$Pioggia[rf_r1$Pioggia==""] <- 0
-rf_r1$Pioggia[rf_r1$Pioggia=="True"] <- 1
-yday <- yday(time(rf_r1))
-wday <- wday(time(rf_r1), week_start = getOption("lubridate.week.start", 1))
-data <- cbind(rf_r1, yday, wday)
-
-# CV su MODELLO 2
-
-e_2 <- tsCV_RandomForest(my_xts = data[,1], xreg = data[,-1], forecastfunction = f_mod2, h=h, initial = initial, window = window)
-e2 <- e_2$e
-e2_percentage <- e_2$e_percentage
-e2_estimate <- e_2$y_estimate
-e2_groundtruth <- e_2$y_groundtruth
-
-end.time <- Sys.time()
-print(end.time)
-time.taken <- end.time - start.time
-print(time.taken)
+# # Parametri globali
+# h = 73
+# initial = 538
+# window = NULL
+# 
+# # Calcolo tempo di computazione
+# start.time <- Sys.time()
+# print(start.time)
+# 
+# # Pre processing
+# 
+# rf_r1 <- xts(r1[, c("lordototale", "Festivo", "Pioggia")], as.Date(as.character(r1$data), format = "%Y-%m-%d"))
+# 
+# rf_r1$Festivo[rf_r1$Festivo=="False"] <- 0
+# rf_r1$Festivo[rf_r1$Festivo=="True"] <- 1
+# rf_r1$Pioggia[rf_r1$Pioggia==""] <- 0
+# rf_r1$Pioggia[rf_r1$Pioggia=="True"] <- 1
+# yday <- yday(time(rf_r1))
+# wday <- wday(time(rf_r1), week_start = getOption("lubridate.week.start", 1))
+# data <- cbind(rf_r1, yday, wday)
+# 
+# # CV su MODELLO 2
+# 
+# e_2 <- tsCV_RandomForest(my_xts = data[,1], xreg = data[,-1], forecastfunction = f_mod2, h=h, initial = initial, window = window)
+# e2 <- e_2$e
+# e2_percentage <- e_2$e_percentage
+# e2_estimate <- e_2$y_estimate
+# e2_groundtruth <- e_2$y_groundtruth
+# 
+# end.time <- Sys.time()
+# print(end.time)
+# time.taken <- end.time - start.time
+# print(time.taken)
 ```
-```{r}
-covid_predictions <- e2_estimate[539] # Prima riga non nulla di e2_estimate
-covid_predictions <- as.data.frame(t(covid_predictions))
 
+```{r}
+# covid_predictions <- e2_estimate[539] # Prima riga non nulla di e2_estimate
+# covid_predictions <- as.data.frame(t(covid_predictions))
+# 
+# prediction_dates <- seq(as.Date("2020-02-24"), as.Date("2020-05-06"), by = 1)
+# 
+# covid_predictions <- cbind(covid_predictions, prediction_dates)
+# 
+# rownames(covid_predictions) <- NULL
+# colnames(covid_predictions) <- c("Previsioni", "Date")
+```
+
+```{r}
+# previsioni <- xts(covid_predictions[, c("Previsioni")], as.Date(as.character(covid_predictions$Date), format = "%Y-%m-%d"))
+```
+
+```{r}
+# previsioni <- cbind(previsioni, rf_r1$lordototale[prediction_dates])
+# previsioni$perdite <- previsioni$previsioni - previsioni$lordototale
+```
+
+```{r}
+# write.csv(previsioni, "../Dati ristoranti/previsioni_RF.csv")
+```
+
+```{r}
+previsioni <- read.csv("..\\Dati ristoranti\\previsioni_RF.csv")
+previsioni <- previsioni[-c(1)]
+```
+
+```{r}
+# Analisi quantitativa
+
+# Perdita medie e totale
+perdita_media <- mean(previsioni$perdite)
+perdita_totale <- sum(previsioni$perdite)
+
+# Calcolo dell'incasso totale dell'anno precedente
+r1_2019 <- r1[r1$Year == '2019', ]
+incasso_2019 <- sum(r1_2019$lordototale)
+
+percentage <- perdita_totale/incasso_2019*100
+```
+
+Togliere commento seguente se vogliamo tenere anche la variabile "perdite"
+
+```{r}
+# previsioni <- previsioni[-c(3)]
+```
+
+```{r}
 prediction_dates <- seq(as.Date("2020-02-24"), as.Date("2020-05-06"), by = 1)
-
-covid_predictions <- cbind(covid_predictions, prediction_dates)
-
-rownames(covid_predictions) <- NULL
-colnames(covid_predictions) <- c("Previsioni", "Date")
-```
-```{r}
-previsioni <- xts(covid_predictions[, c("Previsioni")], as.Date(as.character(covid_predictions$Date), format = "%Y-%m-%d"))
+previsioni <- cbind(prediction_dates, previsioni)
 ```
 
 ```{r}
-plot(previsioni)
+previsioni <- melt(previsioni, id.vars = "prediction_dates")
+```
+
+```{r}
+p <- ggplot(previsioni, 
+            aes(x = prediction_dates, y = value, col = variable)) + geom_line()
+p + labs(x = "Data", y='Vendite') + ggtitle("Previsioni RF") +
+  theme(legend.title = element_blank(),
+        legend.position = c(0.9, 0.18),
+        legend.background = element_rect(fill = "white", color = "black"))
 ```
 

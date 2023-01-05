@@ -1274,7 +1274,7 @@ source("My-TSCrossValidation-Functions.R")
 ```{r}
 # Parametri di cross-validation globali
 h = 60 # 8 settimane
-initial = 540 # Un anno
+initial = 365 # Un anno
 window = NULL # no moving window, si rolling origin
 
 # Calcolo tempo di computazione
@@ -1296,12 +1296,16 @@ e3_percentage <- e_3$e_percentage
 e3_groundtruth <- e_3$e_groundtruth
 e3_estimate <- e_3$e_estimate
 
+initial = 540 # Un anno
+
 # CV su MODELLO 4
 e_4 <- tsCV_UCM(my_xts = ss, forecastfunction = mod4_post, h=h, initial = initial, window = window)
 e4 <- e_4$e
 e4_percentage <- e_4$e_percentage
 e4_groundtruth <- e_4$e_groundtruth
 e4_estimate <- e_4$e_estimate
+
+initial = 365 # Un anno
 
 # CV su MODELLO 5
 e_5 <- tsCV_UCM(my_xts = ss, forecastfunction = mod5_post, h=h, initial = initial, window = window)

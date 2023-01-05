@@ -84,6 +84,7 @@ invisible(lapply(packages, library, character.only = TRUE))
 
 ```{r}
 source("My-TSCrossValidation-Functions.R")
+image_path <- "./Images"
 ```
 
 
@@ -160,6 +161,37 @@ for (dir in items) {
 }
 ```
 
+Suffix map
+
+```{r}
+suffix_map <- list(
+    "SARIMA(1,0,0)(1,1,2)",
+    "ARIMAX (2,1,3)",
+    "SARIMAX(3,1,2)(1,0,1)",
+    "SARIMAX(3,1,3)(1,0,0)",
+    "RF-ritardi",
+    "RF-regressori",
+    "RF-regressori+dummy",
+    "UCM-ritardi",
+    "UCM-regressori",
+    "UCM-regressori+dummy"
+  )
+
+#suffix_map <- list(
+#    "SARIMA(1,0,0)(1,1,2)",
+#    "ARIMAX (2,1,3)-dummy",
+#    "SARIMAX(3,1,2)(1,0,1)-fourier",
+#    "SARIMAX(3,1,3)(1,0,0)-regressori",
+#    "ritardi",
+#    "regressori",
+#    "regressori+dummy festività",
+#    "ritardi",
+#    "regressori",
+#    "regressori+dummy festività"
+#  )
+```
+
+
 ### RMSE
 
 ```{r}
@@ -180,22 +212,42 @@ for (df_name in names(error_df_list_precovid)) {
 ```
 
 
-```{r}
+```{r, dpi=1000, fig.height = 4.5, fig.width = 9} 
+color_map <- list(
+    alpha("red", 0.8),
+    alpha("red", 0.8),
+    alpha("red", 1),
+    alpha("red", 0.8),
+    alpha("blue", 0.8),
+    alpha("blue", 1),
+    alpha("blue", 1),
+    alpha("green", 0.8),
+    alpha("green", 0.8),
+    alpha("green", 0.8)
+  )
+
+
 i_x = 0
 f_x = 73
 by_x = 10
 
-i_y = 2000
+i_y = 2500
 f_y = 6000
 by_y = 1000
 
+lwd = 1.4
+
 ylab = "RMSE"
 accuracy_metrics = RMSE_PreCovid
+nome_file = "CV_Precovid_RMSE.png"
 
-model_types = "ARIMA|UCM|RandomForest"
+model_types = "ARIMA|RandomForest|UCM"
 
-pre_covid_accuracy_plot(i_x, f_x, by_x, i_y, f_y, by_y, ylab, model_types, accuracy_metrics)
-
+pre_covid_accuracy_plot(i_x, f_x, by_x, i_y, f_y, by_y, ylab, model_types, accuracy_metrics, suffix_map, lwd)
+png(filename=paste(image_path, nome_file, sep = "/"), width = 9, height = 4.5, units = "in", res = 600, type = "cairo-png")
+pre_covid_accuracy_plot(i_x, f_x, by_x, i_y, f_y, by_y, ylab, model_types, accuracy_metrics, suffix_map, lwd)
+dev.off()
+#pre_covid_accuracy_plot(i_x, f_x, by_x, i_y, f_y, by_y, ylab, model_types, accuracy_metrics, suffix_map)
 ```
 
 Valori medi
@@ -247,31 +299,39 @@ for (df_name in names(error_df_list_precovid)) {
 
 ```{r}
 i_x = 0
-f_x = 74
+f_x = 73
 by_x = 10
 
 i_y = 1000
-f_y = 4000
+f_y = 3600
 by_y = 200
+
+lwd = 1.4
+
 ylab = "RMdSE"
 accuracy_metrics = RMdSE_PreCovid
+nome_file = "CV_Precovid_RMdSE.png"
 
-model_types = "ARIMA|UCM|RandomForest"
 
-pre_covid_accuracy_plot(i_x, f_x, by_x, i_y, f_y, by_y, ylab, model_types, accuracy_metrics)
+model_types = "ARIMA|RandomForest|UCM"
+
+pre_covid_accuracy_plot(i_x, f_x, by_x, i_y, f_y, by_y, ylab, model_types, accuracy_metrics, suffix_map, lwd)
+png(filename=paste(image_path, nome_file, sep = "/"), width = 9, height = 4.5, units = "in", res = 600, type = "cairo-png")
+pre_covid_accuracy_plot(i_x, f_x, by_x, i_y, f_y, by_y, ylab, model_types, accuracy_metrics, suffix_map, lwd)
+dev.off()
 
 ```
 
 ```{r, eval=FALSE, echo=FALSE}}
-RMdSE_mod1 <- sqrt(colMedians(e1^2, na.rm = TRUE, hasNA = TRUE))
-RMdSE_mod2 <- sqrt(colMedians(e2^2, na.rm = TRUE, hasNA = TRUE))
-RMdSE_mod3 <- sqrt(colMedians(e3^2, na.rm = TRUE, hasNA = TRUE))
-
-# Zoom in
-plot(1:42, RMdSE_mod1, type="l", col=1, xlab="horizon", ylab="RMdSE", ylim = c(0,5000))
-lines(1:42, RMdSE_mod2, type="l",col=2)
-lines(1:42, RMdSE_mod3, type="l",col=3)
-legend("topleft",legend=c("1_RandomForest_noregr","2_RandomForest_regr","3_RandomForest_regr_DUmmy"),col=1:3,lty=1)
+#RMdSE_mod1 <- sqrt(colMedians(e1^2, na.rm = TRUE, hasNA = TRUE))
+#RMdSE_mod2 <- sqrt(colMedians(e2^2, na.rm = TRUE, hasNA = TRUE))
+#RMdSE_mod3 <- sqrt(colMedians(e3^2, na.rm = TRUE, hasNA = TRUE))
+#
+## Zoom in
+#plot(1:42, RMdSE_mod1, type="l", col=1, xlab="horizon", ylab="RMdSE", ylim = c(0,5000))
+#lines(1:42, RMdSE_mod2, type="l",col=2)
+#lines(1:42, RMdSE_mod3, type="l",col=3)
+#legend("topleft",legend=c("1_RandomForest_noregr","2_RandomForest_regr","3_RandomForest_regr_DUmmy"),col=1:3,lty=1)
 
 ```
 
@@ -303,12 +363,20 @@ by_x = 10
 i_y = 1800
 f_y = 4800
 by_y = 200
+
+lwd = 1.4
+
 ylab = "MAE"
 accuracy_metrics = MAE_PreCovid
+nome_file = "CV_Precovid_MAE.png"
 
-model_types = "ARIMA|UCM|RandomForest"
 
-pre_covid_accuracy_plot(i_x, f_x, by_x, i_y, f_y, by_y, ylab, model_types, accuracy_metrics)
+model_types = "ARIMA|RandomForest|UCM"
+
+pre_covid_accuracy_plot(i_x, f_x, by_x, i_y, f_y, by_y, ylab, model_types, accuracy_metrics, suffix_map, lwd)
+png(filename=paste(image_path, nome_file, sep = "/"), width = 9, height = 4.5, units = "in", res = 600, type = "cairo-png")
+pre_covid_accuracy_plot(i_x, f_x, by_x, i_y, f_y, by_y, ylab, model_types, accuracy_metrics, suffix_map, lwd)
+dev.off()
 ```
 
 Valori medi
@@ -368,24 +436,19 @@ by_x = 10
 i_y = 10
 f_y = 25
 by_y = 5
+
+lwd = 1.4
+
 ylab = "MAPE"
 accuracy_metrics = MAPE_PreCovid
+nome_file = "CV_Precovid_MAPE.png"
 
-model_types = "ARIMA|UCM|RandomForest"
+model_types = "ARIMA|RandomForest|UCM"
 
-pre_covid_accuracy_plot(i_x, f_x, by_x, i_y, f_y, by_y, ylab, model_types, accuracy_metrics)
-```
-
-
-```{r}
-MAPE_mod1 <- colMeans(abs(e1_percentage), na.rm = TRUE)
-MAPE_mod2 <- colMeans(abs(e2_percentage), na.rm = TRUE)
-MAPE_mod3 <- colMeans(abs(e3_percentage), na.rm = TRUE)
-
-plot(1:42, MAPE_mod1, type="l", col=1, xlab="horizon", ylab="MAPE", ylim = c(0,100))
-lines(1:42, MAPE_mod2, type="l",col=2)
-lines(1:42, MAPE_mod3, type="l",col=3)
-legend("topleft",legend=c("1_RandomForest_noregr","2_RandomForest_regr","3_RandomForest_regrDummy"),col=1:3,lty=1)
+pre_covid_accuracy_plot(i_x, f_x, by_x, i_y, f_y, by_y, ylab, model_types, accuracy_metrics, suffix_map, lwd)
+png(filename=paste(image_path, nome_file, sep = "/"), width = 9, height = 4.5, units = "in", res = 600, type = "cairo-png")
+pre_covid_accuracy_plot(i_x, f_x, by_x, i_y, f_y, by_y, ylab, model_types, accuracy_metrics, suffix_map, lwd)
+dev.off()
 ```
 
 Valori medi
@@ -415,3 +478,479 @@ for (df_name in names(error_percentage_df_list_precovid)) {
 MAPE_PreCovid_holdout
 ```
 
+### Tabelle accuracy
+
+### RMSE
+
+```{r}
+# Crea la tabella
+df_temp <- data.frame(RMSE_PreCovid)
+
+# Assegna i nomi alle colonne della tabella utilizzando la lista suffix_map
+colnames(df_temp) <- suffix_map
+
+# Assegna i nomi alle righe della tabella
+rownames(df_temp) <- paste0("h=", 1:73)
+
+# Salva la tabella come file .csv
+write.csv(df_temp, "./Errors/zTables/RMSE_PreCovid.csv")
+```
+
+```{r}
+# Crea la tabella
+df_temp <- data.frame(MAE_PreCovid)
+
+# Assegna i nomi alle colonne della tabella utilizzando la lista suffix_map
+colnames(df_temp) <- suffix_map
+
+# Assegna i nomi alle righe della tabella
+rownames(df_temp) <- paste0("h=", 1:73)
+
+# Salva la tabella come file .csv
+write.csv(df_temp, "./Errors/zTables/MAE_PreCovid.csv")
+
+# Crea la tabella
+df_temp <- data.frame(MAPE_PreCovid)
+
+# Assegna i nomi alle colonne della tabella utilizzando la lista suffix_map
+colnames(df_temp) <- suffix_map
+
+# Assegna i nomi alle righe della tabella
+rownames(df_temp) <- paste0("h=", 1:73)
+
+# Salva la tabella come file .csv
+write.csv(df_temp, "./Errors/zTables/MAPE_PreCovid.csv")
+```
+
+# Post Covid
+
+## Load Errors
+
+Errori assoluti 
+
+```{r message=FALSE, warning=FALSE}
+working_dir = dirname(rstudioapi::getSourceEditorContext()$path)
+setwd(working_dir) # lo applica solo a questo chunk!
+
+h = 60
+folder_path <- "./Errors"
+error_df_list_Covid <- list()
+
+
+# Lista dei tipi di modelli
+items <- list.files(folder_path, recursive = FALSE, full.names = TRUE)
+
+for (dir in items) {
+  csv_files <- list.files(path = dir, pattern = "*.csv", full.names = TRUE)
+  filtered_csv_files <- csv_files %>% grep("_Covid_e[0-9]+\\.csv$", ., value = TRUE)
+  for (f in filtered_csv_files) {
+    df <- read_csv(f)
+    #df$date  <- parse_date(df$date, "%Y-%m-%d", locale = locale("it"))
+    
+    # Tolgo prima, seconda e ultima (h=74) colonne
+    df <- xts(df[, c(-1,-2)], as.Date(as.character(df$date), format = "%Y-%m-%d"))
+    colnames(df) <- paste("h=", 1:h, sep = "")
+    
+    
+    var_name <- gsub("\\.csv$", "", basename(f))
+    assign(var_name, df)
+    
+    # Aggiungo alla lista
+    error_df_list_Covid[[var_name]] <- df
+  }
+}
+```
+
+Errori percentuali
+
+```{r message=FALSE, warning=FALSE}
+working_dir = dirname(rstudioapi::getSourceEditorContext()$path)
+setwd(working_dir) # lo applica solo a questo chunk!
+
+h = 60
+folder_path <- "./Errors"
+error_percentage_df_list_Covid <- list()
+
+
+# Lista dei tipi di modelli
+items <- list.files(folder_path, recursive = FALSE, full.names = TRUE)
+
+for (dir in items) {
+  csv_files <- list.files(path = dir, pattern = "*.csv", full.names = TRUE)
+  filtered_csv_files <- csv_files %>% grep("_Covid_e[0-9]+_percentage\\.csv$", ., value = TRUE)
+  for (f in filtered_csv_files) {
+    df <- read_csv(f)
+    #df$date  <- parse_date(df$date, "%Y-%m-%d", locale = locale("it"))
+    
+    df <- xts(df[, c(-1,-2)], as.Date(as.character(df$date), format = "%Y-%m-%d"))
+    colnames(df) <- paste("h=", 1:h, sep = "")
+    
+    
+    var_name <- gsub("\\.csv$", "", basename(f))
+    assign(var_name, df)
+    
+    # Aggiungo alla lista
+    error_percentage_df_list_Covid[[var_name]] <- df
+  }
+}
+```
+
+Suffix map
+
+```{r}
+suffix_map <- list(
+    "ARIMA1",
+    "ARIMA2",
+    "ARIMA3",
+    "RF-ritardi",
+    "RF-regressori",
+    "RF-regressori+dummy",
+    "UCM-ritardi",
+    "UCM-regressori",
+    "UCM-colori",
+    "UCM-regressori+dummy"
+  )
+
+#suffix_map <- list(
+#    "SARIMA(1,0,0)(1,1,2)",
+#    "ARIMAX (2,1,3)-dummy",
+#    "SARIMAX(3,1,2)(1,0,1)-fourier",
+#    "SARIMAX(3,1,3)(1,0,0)-regressori",
+#    "ritardi",
+#    "regressori",
+#    "regressori+dummy festività",
+#    "ritardi",
+#    "regressori",
+#    "regressori+dummy festività"
+#  )
+```
+
+
+### RMSE
+
+```{r}
+RMSE_Covid <- list()
+
+for (df_name in names(error_df_list_Covid)) {
+  # Accedi al dataframe nella lista utilizzando il suo nome
+  df <- error_df_list_Covid[[df_name]]
+  
+  # Applica la funzione di tua scelta al dataframe
+  result <- sqrt(colMeans(df^2, na.rm = TRUE))
+  
+  # Assegna il risultato a una variabile con il nome "RMSE_nomedeldataframe"
+  result_name <- paste0("RMSE_", df_name)
+  
+  RMSE_Covid[[result_name]] <- result
+}
+```
+
+
+```{r, dpi=1000, fig.height = 4.5, fig.width = 9} 
+#color_map <- list(
+#    alpha("red", 0.8),
+#    alpha("red", 0.8),
+#    alpha("red", 1),
+#    alpha("red", 0.8),
+#    alpha("blue", 0.8),
+#    alpha("blue", 1),
+#    alpha("blue", 1),
+#    alpha("green", 0.8),
+#    alpha("green", 0.8),
+#    alpha("green", 0.8)
+#  )
+
+
+i_x = 0
+f_x = 60
+by_x = 10
+
+i_y = 2500
+f_y = 6000
+by_y = 1000
+
+lwd = 1.4
+
+ylab = "RMSE"
+accuracy_metrics = RMSE_Covid
+nome_file = "CV_Covid_RMSE.png"
+
+model_types = "ARIMA|RandomForest|UCM"
+
+pre_covid_accuracy_plot(i_x, f_x, by_x, i_y, f_y, by_y, ylab, model_types, accuracy_metrics, suffix_map, lwd)
+png(filename=paste(image_path, nome_file, sep = "/"), width = 9, height = 4.5, units = "in", res = 600, type = "cairo-png")
+pre_covid_accuracy_plot(i_x, f_x, by_x, i_y, f_y, by_y, ylab, model_types, accuracy_metrics, suffix_map, lwd)
+dev.off()
+#pre_covid_accuracy_plot(i_x, f_x, by_x, i_y, f_y, by_y, ylab, model_types, accuracy_metrics, suffix_map)
+```
+
+Valori medi
+```{r}
+lapply(RMSE_Covid, mean)
+```
+
+#### RMSE hold-out 
+
+```{r}
+RMSE_Covid_holdout <- list()
+
+for (df_name in names(error_df_list_Covid)) {
+  # Accedi al dataframe nella lista utilizzando il suo nome
+  df <- error_df_list_Covid[[df_name]]
+  
+  # Applica la funzione di tua scelta al dataframe
+  result <- sqrt(rowMeans(df["2019-12-12", ]^2, na.rm = TRUE))
+  
+  # Assegna il risultato a una variabile con il nome "RMSE_nomedeldataframe"
+  result_name <- paste0("RMSE_", df_name)
+  
+  RMSE_Covid_holdout[[result_name]] <- result
+}
+
+RMSE_Covid_holdout
+```
+
+
+### RMdSE
+
+```{r}
+library(robustbase)
+RMdSE_Covid <- list()
+
+for (df_name in names(error_df_list_Covid)) {
+  # Accedi al dataframe nella lista utilizzando il suo nome
+  df <- error_df_list_Covid[[df_name]]
+  
+  # Applica la funzione di tua scelta al dataframe
+  result <- sqrt(colMedians(df^2, na.rm = TRUE, hasNA = TRUE))
+  
+  # Assegna il risultato a una variabile con il nome "RMSE_nomedeldataframe"
+  result_name <- paste0("RMdSE_", df_name)
+  
+  RMdSE_Covid[[result_name]] <- result
+}
+```
+
+```{r}
+i_x = 0
+f_x = 60
+by_x = 10
+
+i_y = 1000
+f_y = 3600
+by_y = 200
+
+lwd = 1.4
+
+ylab = "RMdSE"
+accuracy_metrics = RMdSE_Covid
+nome_file = "CV_Covid_RMdSE.png"
+
+
+model_types = "ARIMA|RandomForest|UCM"
+
+pre_covid_accuracy_plot(i_x, f_x, by_x, i_y, f_y, by_y, ylab, model_types, accuracy_metrics, suffix_map, lwd)
+png(filename=paste(image_path, nome_file, sep = "/"), width = 9, height = 4.5, units = "in", res = 600, type = "cairo-png")
+pre_covid_accuracy_plot(i_x, f_x, by_x, i_y, f_y, by_y, ylab, model_types, accuracy_metrics, suffix_map, lwd)
+dev.off()
+
+```
+
+```{r, eval=FALSE, echo=FALSE}}
+#RMdSE_mod1 <- sqrt(colMedians(e1^2, na.rm = TRUE, hasNA = TRUE))
+#RMdSE_mod2 <- sqrt(colMedians(e2^2, na.rm = TRUE, hasNA = TRUE))
+#RMdSE_mod3 <- sqrt(colMedians(e3^2, na.rm = TRUE, hasNA = TRUE))
+#
+## Zoom in
+#plot(1:42, RMdSE_mod1, type="l", col=1, xlab="horizon", ylab="RMdSE", ylim = c(0,5000))
+#lines(1:42, RMdSE_mod2, type="l",col=2)
+#lines(1:42, RMdSE_mod3, type="l",col=3)
+#legend("topleft",legend=c("1_RandomForest_noregr","2_RandomForest_regr","3_RandomForest_regr_DUmmy"),col=1:3,lty=1)
+
+```
+
+### MAE
+
+```{r}
+MAE_Covid <- list()
+
+for (df_name in names(error_df_list_Covid)) {
+  # Accedi al dataframe nella lista utilizzando il suo nome
+  df <- error_df_list_Covid[[df_name]]
+  
+  # Applica la funzione di tua scelta al dataframe
+  result <- colMeans(abs(df), na.rm = TRUE)
+  
+  # Assegna il risultato a una variabile con il nome "MAE_nomedeldataframe"
+  result_name <- paste0("MAE_", df_name)
+  
+  MAE_Covid[[result_name]] <- result
+}
+```
+
+```{r}
+# Crea una mappa per associare il nome di ogni vettore all'etichetta e al colore desiderati
+i_x = 0
+f_x = 60
+by_x = 10
+
+i_y = 1800
+f_y = 4800
+by_y = 200
+
+lwd = 1.4
+
+ylab = "MAE"
+accuracy_metrics = MAE_Covid
+nome_file = "CV_Covid_MAE.png"
+
+
+model_types = "ARIMA|RandomForest|UCM"
+
+pre_covid_accuracy_plot(i_x, f_x, by_x, i_y, f_y, by_y, ylab, model_types, accuracy_metrics, suffix_map, lwd)
+png(filename=paste(image_path, nome_file, sep = "/"), width = 9, height = 4.5, units = "in", res = 600, type = "cairo-png")
+pre_covid_accuracy_plot(i_x, f_x, by_x, i_y, f_y, by_y, ylab, model_types, accuracy_metrics, suffix_map, lwd)
+dev.off()
+```
+
+Valori medi
+
+```{r}
+lapply(MAE_Covid, mean)
+```
+
+
+#### MAE hold-out
+
+```{r}
+MAE_Covid_holdout <- list()
+
+for (df_name in names(error_df_list_Covid)) {
+  # Accedi al dataframe nella lista utilizzando il suo nome
+  df <- error_df_list_Covid[[df_name]]
+  
+  # Applica la funzione di tua scelta al dataframe
+  result <- rowMeans(abs(df["2019-12-12", ]), na.rm = TRUE)
+  
+  # Assegna il risultato a una variabile con il nome "MAE_nomedeldataframe"
+  result_name <- paste0("MAE_", df_name)
+  
+  MAE_Covid_holdout[[result_name]] <- result
+}
+
+MAE_Covid_holdout
+```
+
+
+### MAPE
+
+```{r}
+MAPE_Covid <- list()
+
+for (df_name in names(error_percentage_df_list_Covid)) {
+  # Accedi al dataframe nella lista utilizzando il suo nome
+  df <- error_percentage_df_list_Covid[[df_name]]
+  
+  # Applica la funzione di tua scelta al dataframe
+  result <- colMeans(abs(df), na.rm = TRUE)
+  
+  # Assegna il risultato a una variabile con il nome "MAPE_nomedeldataframe"
+  result_name <- paste0("MAPE_", df_name)
+  
+  MAPE_Covid[[result_name]] <- result
+}
+```
+
+```{r}
+# Crea una mappa per associare il nome di ogni vettore all'etichetta e al colore desiderati
+i_x = 0
+f_x = 73
+by_x = 10
+
+i_y = 10
+f_y = 25
+by_y = 5
+
+lwd = 1.4
+
+ylab = "MAPE"
+accuracy_metrics = MAPE_Covid
+nome_file = "CV_Covid_MAPE.png"
+
+model_types = "ARIMA|RandomForest|UCM"
+
+pre_covid_accuracy_plot(i_x, f_x, by_x, i_y, f_y, by_y, ylab, model_types, accuracy_metrics, suffix_map, lwd)
+png(filename=paste(image_path, nome_file, sep = "/"), width = 9, height = 4.5, units = "in", res = 600, type = "cairo-png")
+pre_covid_accuracy_plot(i_x, f_x, by_x, i_y, f_y, by_y, ylab, model_types, accuracy_metrics, suffix_map, lwd)
+dev.off()
+```
+
+Valori medi
+
+```{r}
+lapply(MAPE_Covid, mean)
+```
+
+#### MAPE hold-out
+
+```{r}
+MAPE_Covid_holdout <- list()
+
+for (df_name in names(error_percentage_df_list_Covid)) {
+  # Accedi al dataframe nella lista utilizzando il suo nome
+  df <- error_percentage_df_list_Covid[[df_name]]
+  
+  # Applica la funzione di tua scelta al dataframe
+  result <- rowMeans(abs(df["2019-12-12", ]), na.rm = TRUE)
+  
+  # Assegna il risultato a una variabile con il nome "MAPE_nomedeldataframe"
+  result_name <- paste0("MAPE_", df_name)
+  
+  MAPE_Covid_holdout[[result_name]] <- result
+}
+
+MAPE_Covid_holdout
+```
+
+### Tabelle accuracy
+
+### RMSE
+
+```{r}
+# Crea la tabella
+df_temp <- data.frame(RMSE_Covid)
+
+# Assegna i nomi alle colonne della tabella utilizzando la lista suffix_map
+colnames(df_temp) <- suffix_map
+
+# Assegna i nomi alle righe della tabella
+rownames(df_temp) <- paste0("h=", 1:73)
+
+# Salva la tabella come file .csv
+write.csv(df_temp, "./Errors/zTables/RMSE_Covid.csv")
+```
+
+```{r}
+# Crea la tabella
+df_temp <- data.frame(MAE_Covid)
+
+# Assegna i nomi alle colonne della tabella utilizzando la lista suffix_map
+colnames(df_temp) <- suffix_map
+
+# Assegna i nomi alle righe della tabella
+rownames(df_temp) <- paste0("h=", 1:73)
+
+# Salva la tabella come file .csv
+write.csv(df_temp, "./Errors/zTables/MAE_Covid.csv")
+
+# Crea la tabella
+df_temp <- data.frame(MAPE_Covid)
+
+# Assegna i nomi alle colonne della tabella utilizzando la lista suffix_map
+colnames(df_temp) <- suffix_map
+
+# Assegna i nomi alle righe della tabella
+rownames(df_temp) <- paste0("h=", 1:73)
+
+# Salva la tabella come file .csv
+write.csv(df_temp, "./Errors/zTables/MAPE_Covid.csv")
