@@ -24,7 +24,7 @@ set.seed(100)
 
 # Setting librerie utili
 # Package names
-packages <- c("KFAS", "xts", "readxl", "fastDummies", "imputeTS") 
+packages <- c("KFAS", "xts", "readxl", "fastDummies", "imputeTS", "ggplot2") 
 
 # Install packages if not yet installed
 installed_packages <- packages %in% rownames(installed.packages())
@@ -49,6 +49,12 @@ mape <- function(actual,pred){
 rmse <- function(actual, pred){
   rmse <- sqrt(mean((actual - pred)^2))
   return (rmse)
+}
+
+#MAE
+mae <- function(actual,pred){
+  mae <- mean(abs((actual - pred)))
+  return (mae)
 }
 
 # Significativitá regressori
@@ -99,9 +105,8 @@ Splitting e imputazione del validation set a NA
 # train$lordototale[train_date:nrow(val),] <- NA # train corrisponde a validation ma con i valori di lordototale=NA
 ```
 
-Nuovo split:
-- Train fino a 2019-12-12
-- Test le 73 osservazioni successive
+Nuovo split: - Train fino a 2019-12-12 - Test le 73 osservazioni
+successive
 
 ```{r}
 train_date <- 539
@@ -113,7 +118,6 @@ test <- ss[-c(1:train_date),] # Usare alla fine
 train <- val
 train$lordototale[validation_date:nrow(val),] <- NA # train corrisponde a validation ma con i valori di
 ```
-
 
 ## Definizione modelli
 
@@ -352,7 +356,9 @@ comp <- data.frame(Modello=c("mod1", "mod4", "mod5"),
                   rmse(val$lordototale[validation_date:nrow(val),], muhat5_pre[validation_date:nrow(val),])),
            MAPE=c(mape(val$lordototale[validation_date:nrow(val),], muhat1_pre[validation_date:nrow(val),]),
                   mape(val$lordototale[validation_date:nrow(val),], muhat4_pre[validation_date:nrow(val),]),
-                  mape(val$lordototale[validation_date:nrow(val),], muhat5_pre[validation_date:nrow(val),])))
+                  mape(val$lordototale[validation_date:nrow(val),], muhat5_pre[validation_date:nrow(val),])),            MAE=c(mae(val$lordototale[validation_date:nrow(val),], muhat1_pre[validation_date:nrow(val),]),
+                  mae(val$lordototale[validation_date:nrow(val),], muhat4_pre[validation_date:nrow(val),]),
+                  mae(val$lordototale[validation_date:nrow(val),], muhat5_pre[validation_date:nrow(val),])))
 ```
 
 ```{r}
@@ -437,7 +443,8 @@ a Rolling Forecasting Origin* al fine di:
 La funzione che ho definito è nello script
 `My-TSCrossValidation-Functions.R`
 
-_**Prima si eseguire questa parte del notebook eseguire le celle sopra.**_
+***Prima si eseguire questa parte del notebook eseguire le celle
+sopra.***
 
 ```{r}
 source("My-TSCrossValidation-Functions.R")
@@ -486,6 +493,7 @@ print(end.time)
 time.taken <- end.time - start.time
 print(time.taken)
 ```
+
 Salvataggio
 
 ```{r}
@@ -686,7 +694,7 @@ View(check5)
 
 ### Confrontro tra i modelli
 
-### RMSE
+#### RMSE
 
 ```{r}
 RMSE_mod1 <- sqrt(colMeans(e1^2, na.rm = TRUE))
@@ -707,7 +715,7 @@ legend("topleft",legend=c("1_UCM","4_UCM","5_UCM"),col=1:4,lty=1)
 abline(h=5000)
 ```
 
-Valori medi 
+Valori medi
 
 ```{r}
 mean(RMSE_mod1)
@@ -716,7 +724,7 @@ mean(RMSE_mod5)
 
 ```
 
-### RMdSE
+#### RMdSE
 
 ```{r}
 library(robustbase)
@@ -733,7 +741,7 @@ legend("topleft",legend=c("1_UCM","4_UCM","5_UCM"),col=1:3,lty=1)
 
 ```
 
-### MAE
+#### MAE
 
 ```{r}
 MAE_mod1 <- colMeans(abs(e1), na.rm = TRUE)
@@ -746,7 +754,7 @@ lines(1:74, MAE_mod5, type="l",col=3)
 legend("topleft",legend=c("1_RandomForest_noregr","2_RandomForest_regr","3_RandomForest_regrDummy"),col=1:3,lty=1)
 ```
 
-### MAPE
+#### MAPE
 
 ```{r}
 MAPE_mod1 <- colMeans(abs(e1_percentage), na.rm = TRUE)
@@ -757,6 +765,37 @@ plot(1:74, MAPE_mod1, type="l", col=1, xlab="horizon", ylab="MAPE", ylim = c(0,1
 lines(1:74, MAPE_mod4, type="l",col=2)
 lines(1:74, MAPE_mod5, type="l",col=3)
 legend("topleft",legend=c("1_RandomForest_noregr","2_RandomForest_regr","3_RandomForest_regrDummy"),col=1:3,lty=1)
+```
+
+## Prediction
+
+```{r}
+tseq <- seq(from = index(ss[nrow(ss),])+1, length.out = 73, by = 1)
+to_predict_pre <- c(ss$lordototale, xts(rep(as.numeric(NA), length(tseq)), tseq))
+
+prediction_pre <- mod1_pre(to_predict_pre) # utilizzando il modello migliore
+prediction_pre <- prediction_pre[nrow(val):nrow(prediction_pre)]
+```
+
+```{r}
+completeds <- read.csv("../Dati ristoranti/ristorante1.csv")
+completeds$data <- as.Date(completeds$data)
+complete <- xts(completeds$lordototale, completeds$data)
+
+pred_id <- which(index(complete) == "2020-02-23")
+end_id <- which(index(complete) == index(ss[nrow(ss)]))
+
+complete <- complete[pred_id:(end_id+73)]
+complete[is.na(complete)] <- 0
+```
+
+```{r}
+p <- ggplot(prediction_pre, 
+            aes(x = index(complete), y = complete)) + geom_line()
+p + labs(x = "Data", y='Vendite') + ggtitle("Previsioni RF") +
+  theme(legend.title = element_blank(),
+        legend.position = c(0.9, 0.18),
+        legend.background = element_rect(fill = "white", color = "black"))
 ```
 
 # Domanda 2: periodo post lockdown
@@ -1133,6 +1172,10 @@ comp <- data.frame(Modello=c("mod1", "mod3", "mod4", "mod5"),
                   rmse(val$lordototale[validation_date:nrow(val),], muhat3_post[validation_date:nrow(val),]),
                   rmse(val$lordototale[validation_date:nrow(val),], muhat4_post[validation_date:nrow(val),]),
                   rmse(val$lordototale[validation_date:nrow(val),], muhat5_post[validation_date:nrow(val),])),
+           MAE=c(mae(val$lordototale[validation_date:nrow(val),], muhat1_post[validation_date:nrow(val),]),
+                  mae(val$lordototale[validation_date:nrow(val),], muhat3_post[validation_date:nrow(val),]),
+                  mae(val$lordototale[validation_date:nrow(val),], muhat4_post[validation_date:nrow(val),]),
+                  mae(val$lordototale[validation_date:nrow(val),], muhat5_post[validation_date:nrow(val),])),
            MAPE=c(mape(val$lordototale[validation_date:nrow(val),], muhat1_post[validation_date:nrow(val),]),
                   mape(val$lordototale[validation_date:nrow(val),], muhat3_post[validation_date:nrow(val),]),
                   mape(val$lordototale[validation_date:nrow(val),], muhat4_post[validation_date:nrow(val),]),
@@ -1284,6 +1327,7 @@ for (i in 1:length(matrices)) {
 }
 
 ```
+
 #### Alcuni test
 
 ```{r}
@@ -1321,7 +1365,7 @@ class(my_xts_new)
 
 ### Confrontro tra i modelli
 
-### RMSE
+#### RMSE
 
 ```{r}
 RMSE_mod1 <- sqrt(colMeans(e1^2, na.rm = TRUE))
@@ -1344,7 +1388,7 @@ lines(1:60, RMSE_mod5, type="l",col=4)
 #legend("topleft",legend=c("1_UCM", "3_UCM", "4_UCM","5_UCM"),col=1:4,lty=1)
 ```
 
-### MAE
+#### MAE
 
 ```{r}
 MAE_mod1 <- colMeans(abs(e1), na.rm = TRUE)
@@ -1359,7 +1403,7 @@ lines(1:60, MAE_mod5, type="l",col=4)
 legend("topleft",legend=c("1_UCM", "3_UCM", "4_UCM","5_UCM"),col=1:4,lty=1)
 ```
 
-### MAPE
+#### MAPE
 
 ```{r}
 MAPE_mod1 <- colMeans(abs(e1_percentage), na.rm = TRUE)
@@ -1372,4 +1416,10 @@ lines(1:60, MAPE_mod3, type="l",col=2)
 lines(1:60, MAPE_mod4, type="l",col=3)
 lines(1:60, MAPE_mod5, type="l",col=4)
 legend("topleft",legend=c("1_UCM", "3_UCM", "4_UCM","5_UCM"),col=1:4,lty=1)
+```
+
+## Prediction
+
+```{r}
+
 ```
