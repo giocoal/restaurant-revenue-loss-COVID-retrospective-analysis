@@ -293,28 +293,23 @@ tsCV_RandomForest <- function(my_xts, xreg = NULL,  forecastfunction, h = 1, win
     }   
 }
 
-pre_covid_accuracy_plot <- function(i_x, f_x, by_x, i_y, f_y, by_y, ylab, model_types, accuracy_metrics){
+pre_covid_accuracy_plot <- function(i_x, f_x, by_x, i_y, f_y, by_y, ylab, model_types, accuracy_metrics, suffix_map, lwd, col = NULL){
   
   accuracy_metrics <- accuracy_metrics[grep(model_types,names(accuracy_metrics))]
   
   name_map <- list(
     "ARIMA" = list(label = "ARIMA", col = "red"),
-    "UCM" = list(label = "UCM", col = "darkgreen"),
-    "RandomForest" = list(label = "RF", col = "blue")
+    "RandomForest" = list(label = "RF", col = "blue"),
+    "UCM" = list(label = "UCM", col = "darkgreen")
   )
-  
-  suffix_map <- list(
-    "SARIMA(1,0,0)(1,1,2)",
-    "ARIMAX (2,1,3)-dummy",
-    "SARIMAX(3,1,2)(1,0,1)-fourier",
-    "SARIMAX(3,1,3)(1,0,0)-regressori",
-    "ritardi",
-    "regressori",
-    "regressori+dummy festività",
-    "ritardi",
-    "regressori",
-    "regressori+dummy festività"
-  )
+
+  #name_map <- list(
+  #  "ARIMA" = list(label = "ARIMA", col = "red"),
+  #  "UCM" = list(label = "UCM", col = "darkgreen")
+  #  "RandomForest" = list(label = "RF", col = "blue")
+  #)
+
+  suffix_map <- suffix_map
   
   # Inizializza il grafico
   #par(las = 0.5)
@@ -327,7 +322,8 @@ pre_covid_accuracy_plot <- function(i_x, f_x, by_x, i_y, f_y, by_y, ylab, model_
   
   #jpeg(file="saving_plot2.png", width=1280, height=720)
   
-  par(oma=c(0, 0, 0, 8), asp=1)
+  # dev.new(width=20, height=10)
+  par(mai=c(0.8, 0.8, 0.1, 2.7)) #oma=c(0, 0, 0, 8) mar=c(5, 4, 1, 20) asp=1, 
   
   plot(x = NULL, y = NULL, type = "n", xlim = c(i_x, f_x), ylim = c(i_y, f_y),
        xlab="Forecast Horizon", ylab=ylab,
@@ -367,8 +363,13 @@ pre_covid_accuracy_plot <- function(i_x, f_x, by_x, i_y, f_y, by_y, ylab, model_
         counter_map[[label]] <- 1
       }
       
-      # Plotta la linea usando il colore e il tratto corrispondenti all'etichetta
-      lines(1:f_x, accuracy_metrics[[i]], col = name_map[[label]]$col, lty = lty_map[[label]][counter_map[[label]]])
+      if (is.null(col)) {
+        # Plotta la linea usando il colore e il tratto corrispondenti all'etichetta
+        lines(1:f_x, accuracy_metrics[[i]], col = name_map[[label]]$col, lty = lty_map[[label]][counter_map[[label]]], lwd = lwd)
+      } else {
+        # Plotta la linea usando il colore e il tratto corrispondenti all'etichetta
+        lines(1:f_x, accuracy_metrics[[i]], col = col[[i]], lty = lty_map[[label]][counter_map[[label]]], lwd = lwd)
+      }
       
       # Incrementa il contatore per il gruppo corrente
       counter_map[[label]] <- counter_map[[label]] + 1
@@ -382,8 +383,9 @@ pre_covid_accuracy_plot <- function(i_x, f_x, by_x, i_y, f_y, by_y, ylab, model_
   for (key in names(name_map)) {
     col <- c(col, rep(name_map[[key]]$col, length(grep(key, names(accuracy_metrics)))))
     lty <- c(lty, lty_map[[key]])
-    labels <- c(labels, 
-                paste(rep(name_map[[key]]$label, length(grep(key, names(accuracy_metrics)))), suffix_map[grep(key, names(accuracy_metrics))], sep="-"))
+    #labels <- c(labels, 
+    #            paste(rep(name_map[[key]]$label, length(grep(key, names(accuracy_metrics)))), suffix_map[grep(key, names(accuracy_metrics))], sep="-"))
+    labels <- c(labels, suffix_map[grep(key, names(accuracy_metrics))])
   }
   #plot(NULL ,xaxt='n',yaxt='n',bty='n',ylab='',xlab='', xlim=0:1, ylim=0:1)
   #legend("topright", legend = labels, col = col, lty = lty)
