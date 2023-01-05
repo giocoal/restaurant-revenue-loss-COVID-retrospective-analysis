@@ -326,7 +326,7 @@ pre_covid_accuracy_plot <- function(i_x, f_x, by_x, i_y, f_y, by_y, ylab, model_
   par(mai=c(0.8, 0.8, 0.1, 2.7)) #oma=c(0, 0, 0, 8) mar=c(5, 4, 1, 20) asp=1, 
   
   plot(x = NULL, y = NULL, type = "n", xlim = c(i_x, f_x), ylim = c(i_y, f_y),
-       xlab="Forecast Horizon", ylab=ylab,
+       xlab="Orizzonte di Previsione (h)", ylab=ylab,
        xaxt = "n",
        yaxt = "n", grid = TRUE)
   

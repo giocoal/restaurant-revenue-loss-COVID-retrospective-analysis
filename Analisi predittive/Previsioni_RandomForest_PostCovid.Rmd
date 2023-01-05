@@ -1,0 +1,268 @@
+---
+title: "Random Forest - Ristorante 1 - Previsioni POST Covid"
+output:
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: '5'
+  beamer_presentation:
+    colortheme: lily
+    fig_caption: no
+    fig_height: 6
+    fig_width: 7
+    fonttheme: structurebold
+    theme: Hannover
+    toc: yes
+  prettydoc::html_pretty:
+    df_print: paged
+    highlight: vignette
+    theme: architect
+    toc: yes
+    toc_depth: 5
+  pdf_document:
+    toc: yes
+    toc_depth: 5
+  slidy_presentation:
+    highlight: default
+  ioslides_presentation:
+    css:
+    - css/fonts.css
+    - css/custom.css
+    - css/title-slide.css
+    - css/slide-background.css
+    includes:
+      before_body: html/TimeSeriesAnalysis.html
+    toc: yes
+    transition: default
+    widescreen: yes
+course: Progetto Data Science Lab
+---
+
+# Setup
+
+```{r}
+# Clean Workspace
+rm(list=ls())
+```
+
+```{r setup, include=FALSE}
+# Use 'verbatim = TRUE' as chunk option to show chunk code as is
+require(knitr)
+hook_source_def = knit_hooks$get('source')
+knit_hooks$set(source = function(x, options){
+  if (!is.null(options$verbatim) && options$verbatim){
+    opts = gsub(",\\s*verbatim\\s*=\\s*TRUE\\s*", "", options$params.src)
+    bef = sprintf('\n\n    ```{r %s}\n', opts, "\n")
+    stringr::str_c(bef, paste(knitr:::indent_block(x, "    "), collapse = '\n'), "\n    ```\n")
+  } else {
+     hook_source_def(x, options)
+  }
+})
+```
+
+```{r}
+set.seed(100)
+
+# Setting librerie utili
+# Package names
+packages <- c("readxl",  "readr", "forecast", "dplyr", "ggplot2",
+              "lubridate", "KFAS", "tseries", "xts", "randomForest", "imputeTS") 
+
+# Install packages if not yet installed
+installed_packages <- packages %in% rownames(installed.packages())
+if (any(installed_packages == FALSE)) {
+  install.packages(packages[!installed_packages])
+}
+
+# Packages loading
+invisible(lapply(packages, library, character.only = TRUE))
+
+
+# Setting working directory
+# working_dir = "C:/Users/marco/OneDrive/UNIMIB_DataScience/99-PROJECTS/DataScienceLab2022/Dati ristoranti"
+# setwd(working_dir)
+
+# MAPE 
+mape <- function(actual,pred){
+  mape <- mean(abs((actual - pred)/actual))*100
+  return (mape)
+}
+
+#MSE
+rmse <- function(actual, pred){
+  rmse <- sqrt(mean((actual - pred)^2))
+  return (rmse)
+}
+
+# Significatività dei parametri
+pars_test <- function(coef, var_coef){
+  test <- (1-pnorm(abs(coef)/sqrt(diag(var_coef))))*2
+  return(test)
+}
+
+# Grafico errore percentuale 
+err_plot <- function(actual, pred){
+  require(xts)
+  err_perc <- ((actual - xts(pred, order.by = index(actual)))/(xts(actual, order.by = index(actual))))*100
+  return(plot(err_perc, ylab="% errore", main="Errore percentuale di previsione"))
+
+}
+```
+
+
+```{r}
+working_dir = dirname(rstudioapi::getSourceEditorContext()$path)
+setwd(working_dir) # lo applica solo a questo chunk!
+```
+
+# Load Data
+
+```{r}
+postcovid1 <- read.csv("../Dati ristoranti/post-covid_r1.csv", row.names = 1)
+postcovid1$lordototale[postcovid1$lordototale == 0] <- NA 
+postcovid1$lordototale <- na_kalman(postcovid1$lordototale)
+postcovid1 <- head(postcovid1, - 2) # Rimuovo le ultime due righe che non hanno il dato del lordo  
+```
+
+```{r}
+source("My-TSCrossValidation-Functions.R")
+```
+
+```{r}
+f_mod2 <- function(Y, h, newxreg = NULL) {
+  # Definizione e train del modello
+  rf1 <- randomForest(y~., data = Y)
+  
+  # Definizione vettore vuoto che conterrà le previsioni
+  y_hat <- numeric(h)
+  
+  ## Regressori per le previsioni
+  # Prendo ultima riga della matrice dei regressori, elimino l'ultimo ritardo
+  X <- Y[nrow(Y), -15, drop = FALSE] 
+  colnames(X) <- colnames(Y)[-1] 
+  
+  # Itero la generazione dei regressori sulle h previsioni
+  for (i in 1:h) {
+    # Aggiorniamo anche i regressori
+    X[1, c("Festivo","Pioggia","yday","wday","ColoreCOVID_arancione","ColoreCOVID_giallo","ColoreCOVID_nessuno",
+                                          "ColoreCOVID_rosso")] <- newxreg[i, c("Festivo","Pioggia","yday","wday","ColoreCOVID_arancione","ColoreCOVID_giallo","ColoreCOVID_nessuno",
+                                          "ColoreCOVID_rosso")]
+    y_hat[i] <- predict(rf1, X, predict.all = TRUE)$individual |> median() # predict.all=True mantiene la stima data da tutti gli alberi nella foresta. Dopodichè si vanno a selezionare tutti e a prenderne la mediana (in alternativa, la media)
+    # Produco lo shift in X
+    # X viene aggionrato ogni volta, le stime entrano dei regressori
+    X[1, 2:14] <- X[1, 1:13]
+    X[1, 1] <- y_hat[i]
+  }
+  return(y_hat)
+}
+```
+
+```{r}
+# Pre processing modello 2
+
+r1_post2 <- xts(postcovid1[, c("lordototale", "Festivo", "Pioggia", "ColoreCOVID")], as.Date(as.character(postcovid1$data), format = "%Y-%m-%d"))
+
+r1_post2$Festivo[r1_post2$Festivo=="False"] <- 0
+r1_post2$Festivo[r1_post2$Festivo=="True"] <- 1
+
+r1_post2$Pioggia[r1_post2$Pioggia==""] <- 0
+r1_post2$Pioggia[r1_post2$Pioggia=="True"] <- 1
+
+r1_post2$ColoreCOVID[r1_post2$ColoreCOVID == ""] <- "nessuno"
+r1_post2 <- fastDummies::dummy_cols(r1_post2, select_columns = "ColoreCOVID", remove_most_frequent_dummy = TRUE, remove_selected_columns = TRUE)
+r1_post2 <- as.xts(r1_post2[-1], as.Date(r1_post2$index))
+yday <- yday(time(r1_post2))
+wday <- wday(time(r1_post2), week_start = getOption("lubridate.week.start", 1))
+r1_post2 <- cbind(r1_post2, yday, wday)
+```
+
+```{r}
+# Dati e regressori per orizzonte previsivo
+
+prediction_dates <- as.xts(seq(as.Date("2022-04-29"), as.Date("2022-06-27"), by = 1))
+lordo_pred <- rep(0, 60)
+yday_pred <- yday(time(prediction_dates))
+wday_pred <- wday(time(prediction_dates), week_start = getOption("lubridate.week.start", 1))
+
+r1_pred <- cbind(prediction_dates, lordo_pred, yday_pred, wday_pred)
+
+# Definizione giorni festivi
+
+r1_pred$festivo <- 0
+r1_pred$festivo[r1_pred$wday_pred == 7] <- 1
+r1_pred$festivo['2022-05-01'] <- 1
+r1_pred$festivo['2022-06-02'] <- 1
+
+# Dati meteo presi manualmente
+date_pioggia <- c('2022-05-04', '2022-05-05', '2022-05-09', '2022-05-24', '2022-05-28', '2022-06-07', '2022-06-08', '2022-06-09', '2022-06-23', '2022-06-24')
+r1_pred$pioggia <- 0
+r1_pred$pioggia[date_pioggia] <- 1
+
+r1_pred$covid_giallo <- r1_pred$covid_arancione <- r1_pred$covid_rosso <- r1_pred$covid_nessuno <- rep(0, 60)
+
+colnames(r1_pred) <- c("lordototale", "yday", "wday", "Festivo", "Pioggia", "ColoreCOVID_arancione", "ColoreCOVID_giallo", "ColoreCOVID_nessuno", "ColoreCOVID_rosso")
+r1_pred <- r1_pred[, c("lordototale", "Festivo", "Pioggia", "ColoreCOVID_arancione", "ColoreCOVID_giallo", "ColoreCOVID_nessuno", "ColoreCOVID_rosso", "yday", "wday")]
+```
+
+```{r}
+r1_final <- rbind(r1_post2, r1_pred)
+```
+
+```{r}
+# Parametri di cross-validation globali
+h = 60
+initial = 721
+window = NULL
+
+# Calcolo tempo di computazione
+start.time <- Sys.time()
+print(start.time)
+
+# CV su MODELLO 2
+
+e_2 <- tsCV_RandomForest(my_xts = r1_final[,1], xreg = r1_final[,-1], forecastfunction = f_mod2, h=h, initial = initial, window = window)
+e2 <- e_2$e
+e2_percentage <- e_2$e_percentage
+e2_groundtruth <- e_2$y_groundtruth
+e2_estimate <- e_2$y_estimate
+
+end.time <- Sys.time()
+print(end.time)
+time.taken <- end.time - start.time
+print(time.taken)
+```
+```{r}
+predictions <- e2_estimate[722]
+predictions <- as.data.frame(t(predictions))
+dates <- seq(as.Date("2022-04-29"), as.Date("2022-06-27"), by = 1)
+predictions <- cbind(predictions, dates)
+
+rownames(predictions) <- NULL
+colnames(predictions) <- c("Previsioni", "Date")
+
+predictions <- xts(predictions[, c("Previsioni")], as.Date(as.character(predictions$Date), format = "%Y-%m-%d"))
+```
+
+```{r}
+write.csv(predictions, "../Dati ristoranti/previsioni_RF_future.csv")
+```
+
+```{r}
+# Grafico
+
+graph_dates <- seq(as.Date("2022-01-01"), as.Date("2022-04-28"), by = 1)
+real_2022 <- r1_post2[graph_dates]
+
+data_graph <- rbind(real_2022$lordototale, predictions)
+data_graph$previsioni <- 0
+data_graph$previsioni[dates] <- 1
+data_graph$previsioni <- as.factor(data_graph$previsioni)
+data_graph <- fortify(data_graph)
+```
+
+```{r}
+p <- ggplot(data_graph, aes(x = Index, y = lordototale, col = previsioni)) + geom_line()
+p + labs(x = "Data", y='Vendite') + ggtitle("Previsioni future, modello RF ritardi + regressori") +
+  theme(legend.position = "none")
+```
+

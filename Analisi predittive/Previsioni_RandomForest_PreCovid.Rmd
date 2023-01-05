@@ -68,7 +68,7 @@ set.seed(100)
 # Setting librerie utili
 # Package names
 packages <- c("readxl",  "readr", "forecast", "dplyr", "ggplot2",
-              "lubridate", "KFAS", "tseries", "xts", "randomForest") 
+              "lubridate", "KFAS", "tseries", "xts", "randomForest", "reshape") 
 
 # Install packages if not yet installed
 installed_packages <- packages %in% rownames(installed.packages())
@@ -237,7 +237,7 @@ percentage <- perdita_totale/incasso_2019*100
 Togliere commento seguente se vogliamo tenere anche la variabile "perdite"
 
 ```{r}
-# previsioni <- previsioni[-c(3)]
+previsioni <- previsioni[-c(3)]
 ```
 
 ```{r}
@@ -255,6 +255,8 @@ p <- ggplot(previsioni,
 p + labs(x = "Data", y='Vendite') + ggtitle("Previsioni RF") +
   theme(legend.title = element_blank(),
         legend.position = c(0.9, 0.18),
-        legend.background = element_rect(fill = "white", color = "black"))
+        legend.background = element_rect(fill = "white", color = "black")) +
+  xlim(as.Date("2020-02-24", "%Y-%m-%d"), as.Date("2020-05-06", "%Y-%m-%d")) +
+  ylim(0, 40000)
 ```
 
