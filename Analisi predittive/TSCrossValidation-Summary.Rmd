@@ -599,16 +599,17 @@ Suffix map
 
 ```{r}
 suffix_map <- list(
-    "ARIMA1",
-    "ARIMA2",
-    "ARIMA3",
+    "SARIMA(1,0,2)(0,1,2)",
+    "SARIMAX(1,1,3)(1,0,0)",
+    "SARIMAX(1,1,2)(1,0,1)",
+    "SARIMAX(1,0,2)(1,0,2)",
     "RF-ritardi",
     "RF-regressori",
     "RF-regressori+dummy",
     "UCM-ritardi",
     "UCM-regressori",
-    "UCM-colori",
-    "UCM-regressori+dummy"
+    "UCM rit + reg + colori",
+    "UCM-ritardi+dummy"
   )
 
 #suffix_map <- list(
@@ -671,7 +672,7 @@ by_y = 1000
 
 lwd = 1.4
 
-ylab = "RMSE"
+ylab = "Root Mean Squared Error (RMSE)"
 accuracy_metrics = RMSE_Covid
 nome_file = "CV_Covid_RMSE.png"
 
@@ -699,7 +700,7 @@ for (df_name in names(error_df_list_Covid)) {
   df <- error_df_list_Covid[[df_name]]
   
   # Applica la funzione di tua scelta al dataframe
-  result <- sqrt(rowMeans(df["2019-12-12", ]^2, na.rm = TRUE))
+  result <- sqrt(rowMeans(df["2022-02-27", ]^2, na.rm = TRUE))
   
   # Assegna il risultato a una variabile con il nome "RMSE_nomedeldataframe"
   result_name <- paste0("RMSE_", df_name)
@@ -800,7 +801,7 @@ by_y = 200
 
 lwd = 1.4
 
-ylab = "MAE"
+ylab = "Mean Absolute Error (MAE)"
 accuracy_metrics = MAE_Covid
 nome_file = "CV_Covid_MAE.png"
 
@@ -830,7 +831,7 @@ for (df_name in names(error_df_list_Covid)) {
   df <- error_df_list_Covid[[df_name]]
   
   # Applica la funzione di tua scelta al dataframe
-  result <- rowMeans(abs(df["2019-12-12", ]), na.rm = TRUE)
+  result <- rowMeans(abs(df["2022-02-27", ]), na.rm = TRUE)
   
   # Assegna il risultato a una variabile con il nome "MAE_nomedeldataframe"
   result_name <- paste0("MAE_", df_name)
@@ -864,7 +865,7 @@ for (df_name in names(error_percentage_df_list_Covid)) {
 ```{r}
 # Crea una mappa per associare il nome di ogni vettore all'etichetta e al colore desiderati
 i_x = 0
-f_x = 73
+f_x = 60
 by_x = 10
 
 i_y = 10
@@ -873,7 +874,7 @@ by_y = 5
 
 lwd = 1.4
 
-ylab = "MAPE"
+ylab = "Mean Absolute Percentage Error (MAPE)"
 accuracy_metrics = MAPE_Covid
 nome_file = "CV_Covid_MAPE.png"
 
@@ -901,7 +902,7 @@ for (df_name in names(error_percentage_df_list_Covid)) {
   df <- error_percentage_df_list_Covid[[df_name]]
   
   # Applica la funzione di tua scelta al dataframe
-  result <- rowMeans(abs(df["2019-12-12", ]), na.rm = TRUE)
+  result <- rowMeans(abs(df["2022-02-27", ]), na.rm = TRUE)
   
   # Assegna il risultato a una variabile con il nome "MAPE_nomedeldataframe"
   result_name <- paste0("MAPE_", df_name)
@@ -924,7 +925,7 @@ df_temp <- data.frame(RMSE_Covid)
 colnames(df_temp) <- suffix_map
 
 # Assegna i nomi alle righe della tabella
-rownames(df_temp) <- paste0("h=", 1:73)
+rownames(df_temp) <- paste0("h=", 1:60)
 
 # Salva la tabella come file .csv
 write.csv(df_temp, "./Errors/zTables/RMSE_Covid.csv")
@@ -938,7 +939,7 @@ df_temp <- data.frame(MAE_Covid)
 colnames(df_temp) <- suffix_map
 
 # Assegna i nomi alle righe della tabella
-rownames(df_temp) <- paste0("h=", 1:73)
+rownames(df_temp) <- paste0("h=", 1:60)
 
 # Salva la tabella come file .csv
 write.csv(df_temp, "./Errors/zTables/MAE_Covid.csv")
@@ -950,7 +951,8 @@ df_temp <- data.frame(MAPE_Covid)
 colnames(df_temp) <- suffix_map
 
 # Assegna i nomi alle righe della tabella
-rownames(df_temp) <- paste0("h=", 1:73)
+rownames(df_temp) <- paste0("h=", 1:60)
 
 # Salva la tabella come file .csv
 write.csv(df_temp, "./Errors/zTables/MAPE_Covid.csv")
+```
