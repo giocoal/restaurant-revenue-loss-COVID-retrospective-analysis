@@ -1,1 +1,7 @@
-# Data-Science-Lab
+# Restourant's Revenue Loss during first COVID-19 pandemic lockdown: Time Series Analysis and Forecasting
+
+Time Series Analysis and Forecasting (using ARIMA, UCM and Random Forest models) of a restaurant's revenue during the first lockdown of the COVID-19 pandemic in Italy, to estimate the loss incurred.
+
+## Abstract
+
+The proposed project aims to analyse the sales performance of 6 restaurants located in Lombardy and Emilia-Romagna, over a time period from January 2018 to April 2022. Through the data provided, suitably supplemented with additional useful information, the aim is to attempt to answer three questions presence of significant patterns in the time series, provide an estimate of the losses incurred during the period of closure due to the COVID-19 pandemic, and provide an estimate of future restaurant trends. This is first an exploratory analysis of the time series of the different restaurants is conducted, with the aim of identifying and explain certain behaviours, such as seasonality and trends. Subsequently, ` different models for analysing and forecasting time series (ARIMA & SARIMA, UCM and Random Forest). The most robust and accurate for this application turned out to be the SARIMA and Random Forest models. These were able to estimate losses of between 16% and 21% compared to the annual turnover in 2019 due to the due to the lockdown in spring 2020, and allowed the future trend of the historical series to be estimated.
