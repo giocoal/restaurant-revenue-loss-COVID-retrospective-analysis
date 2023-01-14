@@ -1,4 +1,4 @@
-# Restourant's Revenue Loss during first COVID-19 pandemic lockdown: Time Series Analysis and Forecasting
+# Restaurant's Revenue Loss during first COVID-19 pandemic lockdown: Time Series Analysis and Forecasting
 
 Time Series Analysis and Forecasting (using ARIMA, UCM and Random Forest models) of a restaurant's revenue during the first lockdown of the COVID-19 pandemic in Italy, to estimate the loss incurred.
 
