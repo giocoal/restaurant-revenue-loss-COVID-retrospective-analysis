@@ -24,7 +24,7 @@ The proposed project aims to analyse the sales performance of 6 restaurants loca
 [issues-shield]: https://img.shields.io/github/issues/giocoal/restaurant-revenue-loss-COVID-retrospective-analysis.svg?style=for-the-badge
 [issues-url]: https://github.com/giocoal/restaurant-revenue-loss-COVID-retrospective-analysis/issues
 [license-shield]: https://img.shields.io/github/license/giocoal/restaurant-revenue-loss-COVID-retrospective-analysis.svg?style=for-the-badge
-[license-url]: https://github.com/giocoal/restaurant-revenue-loss-COVID-retrospective-analysis/blob/master/LICENSE
+[license-url]: https://github.com/giocoal/restaurant-revenue-loss-COVID-retrospective-analysis/blob/master/LICENSE.md
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
 [linkedin-url]: https://www.linkedin.com/in/giorgio-carbone-63154219b/
 [product-screenshot]: images/screenshot.png
