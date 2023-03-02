@@ -13,6 +13,8 @@ Time Series Analysis and Forecasting (using ARIMA, UCM and Random Forest models)
 
 The proposed project aims to analyze the sales performance of six restaurants located in Lombardy and Emilia-Romagna from January 2018 to April 2022. The objective is to identify significant patterns in the time series and provide estimates of the losses incurred during the period of closure due to the COVID-19 pandemic, as well as an estimate of future restaurant trends. The analysis begins with an exploratory analysis of the time series of the different restaurants to identify and explain certain behaviors such as seasonality and trends. Subsequently, different models for analyzing and forecasting time series, including ARIMA & SARIMA, UCM, and Random Forest, are employed. The most robust and accurate models for this application were found to be the SARIMA and Random Forest models, which were used to estimate losses of between 16% and 21% compared to the annual turnover in 2019 due to the lockdown in spring 2020 and to project future trends in the historical series.
 
+![DataViz](https://raw.githubusercontent.com/giocoal/minimal-portfolio/main/images/data-lab.png)
+
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
 [contributors-shield]: https://img.shields.io/github/contributors/giocoal/restaurant-revenue-loss-COVID-retrospective-analysis.svg?style=for-the-badge
